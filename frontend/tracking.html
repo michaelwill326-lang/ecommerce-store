@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Track Your Order</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: 60px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    .order-info {
+      margin-top: 25px;
+      display: none;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      left: -50%;
+      width: 100%;
+      height: 4px;
+      background: #ddd;
+      z-index: -1;
+    }
+
+    .step:first-child::before {
+      display: none;
+    }
+
+    .circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      margin: 0 auto;
+      background: #ddd;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .active .circle {
+      background: #4CAF50;
+    }
+
+    .label {
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .details {
+      margin-top: 20px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🚚 Track Your Order</h1>
+
+  <input type="text" id="trackingInput" placeholder="Enter Tracking Number (e.g. TRK-123456)">
+  <button onclick="trackOrder()">Track Order</button>
+
+  <div class="order-info" id="orderInfo">
+    <h3>Status</h3>
+
+    <div class="status-bar">
+      <div class="step" data-status="pending">
+        <div class="circle">1</div>
+        <div class="label">Pending</div>
+      </div>
+      <div class="step" data-status="processing">
+        <div class="circle">2</div>
+        <div class="label">Processing</div>
+      </div>
+      <div class="step" data-status="shipped">
+        <div class="circle">3</div>
+        <div class="label">Shipped</div>
+      </div>
+      <div class="step" data-status="out-for-delivery">
+        <div class="circle">4</div>
+        <div class="label">Out for Delivery</div>
+      </div>
+      <div class="step" data-status="delivered">
+        <div class="circle">5</div>
+        <div class="label">Delivered</div>
+      </div>
+    </div>
+
+    <div class="details" id="orderDetails"></div>
+  </div>
+</div>
+
+<script>
+async function trackOrder() {
+  const tracking = document.getElementById("trackingInput").value.trim();
+  if (!tracking) {
+    alert("Please enter a tracking number");
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:5002/api/track/${tracking}`);
+    if (!res.ok) {
+      alert("Tracking number not found");
+      return;
+    }
+
+    const data = await res.json();
+    const order = data.order;
+
+    document.getElementById("orderInfo").style.display = "block";
+    updateStatus(order.status);
+
+    document.getElementById("orderDetails").innerHTML = `
+      <p><strong>Tracking:</strong> ${data.tracking}</p>
+      <p><strong>Status:</strong> ${order.status}</p>
+      <p><strong>Name:</strong> ${order.name}</p>
+      <p><strong>Email:</strong> ${order.email}</p>
+    `;
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to load tracking info");
+  }
+}
+
+function updateStatus(currentStatus) {
+  const steps = document.querySelectorAll(".step");
+  const order = [
+    "pending",
+    "processing",
+    "shipped",
+    "out-for-delivery",
+    "delivered"
+  ];
+
+  const activeIndex = order.indexOf(currentStatus);
+
+  steps.forEach((step, index) => {
+    if (index <= activeIndex) {
+      step.classList.add("active");
+    } else {
+      step.classList.remove("active");
+    }
+  });
+}
+</script>
+
+</body>
+</html>

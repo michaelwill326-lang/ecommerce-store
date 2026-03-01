@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TechMart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+    }
+
+    header {
+      background: #111;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+    }
+
+    .cart-link {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    #cart-count {
+      background: red;
+      padding: 4px 8px;
+      border-radius: 50%;
+      font-size: 12px;
+      margin-left: 5px;
+    }
+
+    .products {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .product {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .product img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .product h3 {
+      margin: 10px 0 5px;
+    }
+
+    .product p {
+      margin: 5px 0;
+    }
+
+    .product button {
+      background: #111;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .product button:hover {
+      background: #333;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>🛒 TechMart</h1>
+  <a href="cart.html" class="cart-link">
+    View Cart
+    <span id="cart-count" style="display:none;">0</span>
+  </a>
+</header>
+
+<h2 style="padding:20px;">Products</h2>
+
+<div class="products" id="product-list">
+  <!-- Products will load here -->
+</div>
+
+<script>
+
+const API = "https://ecommerce-store-production-2a86.up.railway.app";
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const productList = document.getElementById("product-list");
+  const cartCount = document.getElementById("cart-count");
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+  function updateCartBadge() {
+    const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
+    cartCount.textContent = totalQty;
+    cartCount.style.display = totalQty > 0 ? "inline-block" : "none";
+  }
+
+  updateCartBadge();
+
+  async function loadProducts() {
+    try {
+
+      const res = await fetch(`${API}/api/store/products`);
+
+      if (!res.ok) {
+        throw new Error("Server error: " + res.status);
+      }
+
+      const products = await res.json();
+
+      productList.innerHTML = "";
+
+      products.forEach(product => {
+
+        const div = document.createElement("div");
+        div.className = "product";
+
+        div.innerHTML = `
+          <img src="${product.image}" alt="${product.name}">
+          <h3>${product.name}</h3>
+          <p>${product.description}</p>
+          <p><strong>$${Number(product.price).toFixed(2)}</strong></p>
+          <button>Add to Cart</button>
+        `;
+
+        div.querySelector("button").addEventListener("click", () => {
+          addToCart(product);
+        });
+
+        productList.appendChild(div);
+
+      });
+
+    } catch (error) {
+      console.error("❌ Error loading products:", error);
+      productList.innerHTML = "<p style='color:red;'>Failed to load products.</p>";
+    }
+  }
+
+  function addToCart(product) {
+
+    const existingItem = cart.find(item => item._id === product._id);
+
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      cart.push({
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: 1
+      });
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+    updateCartBadge();
+
+    alert("Added to cart!");
+  }
+
+  loadProducts();
+
+});
+
+</script>
+
+</body>
+</html>

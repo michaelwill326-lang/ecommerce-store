@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order History</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .order-card {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .order-card h2 {
+      margin-top: 0;
+    }
+    .product-list {
+      margin-top: 10px;
+    }
+    .product-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+    }
+    .product-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧾 Order History</h1>
+
+  <!-- 🔍 Email Filter Input with Live Search + Clear Button -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <input
+      type="email"
+      id="emailFilter"
+      placeholder="Enter your email to filter"
+      oninput="filterOrders()"
+      style="padding: 10px; width: 280px; border-radius: 6px; border: 1px solid #ccc;"
+    />
+    <button onclick="filterOrders()" style="padding: 10px 15px; margin-left: 10px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer;">
+      Filter
+    </button>
+    <button onclick="clearFilter()" style="padding: 10px 15px; margin-left: 10px; background-color: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer;">
+      Clear
+    </button>
+  </div>
+
+  <div id="orders-container"></div>
+
+  <script>
+    const container = document.getElementById('orders-container');
+  
+    async function fetchOrders() {
+      try {
+        const res = await fetch('http://localhost:5002/api/orders'); // Updated endpoint
+        const data = await res.json();
+        window.allOrders = data;
+        renderOrders(data);
+      } catch (error) {
+        container.innerHTML = "<p style='text-align: center;'>Error fetching orders.</p>";
+        console.error(error);
+      }
+    }
+  
+    function renderOrders(orders) {
+      const filterEmail = document.getElementById('emailFilter')?.value?.trim().toLowerCase() || '';
+      container.innerHTML = '';
+  
+      const filtered = filterEmail
+        ? orders.filter(order => order.email.toLowerCase().includes(filterEmail))
+        : orders;
+  
+      if (filtered.length === 0) {
+        container.innerHTML = "<p style='text-align: center;'>No matching orders found.</p>";
+        return;
+      }
+  
+      filtered.forEach(order => {
+        let productList = '';
+        order.items.forEach(item => {
+          productList += `
+            <div class="product-item">
+              <img src="${item.image}" alt="${item.name}">
+              <div>
+                <strong>${item.name}</strong><br>
+                $${item.price} × ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}
+              </div>
+            </div>
+          `;
+        });
+  
+        container.innerHTML += `
+          <div class="order-card">
+            <h2>Order #${order.id}</h2>
+            <p><strong>Name:</strong> ${order.name}</p>
+            <p><strong>Email:</strong> ${order.email}</p>
+            <p><strong>Address:</strong> ${order.address}</p>
+            <p><strong>Shipping Method:</strong> ${order.shippingMethod}</p>
+            <p><strong>Estimated Delivery:</strong> ${order.eta}</p>
+            <p><strong>Total:</strong> $${order.total}</p>
+            <div class="product-list">${productList}</div>
+          </div>
+        `;
+      });
+    }
+  
+    function filterOrders() {
+      renderOrders(window.allOrders || []);
+    }
+  
+    function clearFilter() {
+      document.getElementById('emailFilter').value = '';
+      renderOrders(window.allOrders || []);
+    }
+  
+    // Load orders on page load
+    fetchOrders();
+  </script>
+  
+
+    function displayOrders(orders) {
+      const container = document.getElementById('orders-container');
+      container.innerHTML = '';
+
+      if (!orders.length) {
+        container.innerHTML = "<p style='text-align: center;'>No matching orders found.</p>";
+        return;
+      }
+
+      orders.forEach(order => {
+        let productList = '';
+        order.items.forEach(item => {
+          productList += `
+            <div class="product-item">
+              <img src="${item.image}" alt="${item.name}">
+              <div>
+                <strong>${item.name}</strong><br>
+                $${item.price} × ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}
+              </div>
+            </div>
+          `;
+        });
+
+        const orderHTML = `
+          <div class="order-card">
+            <h2>Order #${order.id}</h2>
+            <p><strong>Name:</strong> ${order.name}</p>
+            <p><strong>Email:</strong> ${order.email}</p>
+            <p><strong>Address:</strong> ${order.address}</p>
+            <p><strong>Shipping Method:</strong> ${order.shippingMethod}</p>
+            <p><strong>Estimated Delivery:</strong> ${order.eta}</p>
+            <p><strong>Total:</strong> $${order.total}</p>
+            <div class="product-list">${productList}</div>
+          </div>
+        `;
+
+        container.innerHTML += orderHTML;
+      });
+    }
+
+    function filterOrders() {
+      const emailInput = document.getElementById('emailFilter').value.trim().toLowerCase();
+      const orders = loadOrders();
+
+      if (!emailInput) {
+        displayOrders(orders);
+      } else {
+        const filtered = orders.filter(order => order.email.toLowerCase().includes(emailInput));
+        displayOrders(filtered);
+      }
+    }
+
+    function clearFilter() {
+      document.getElementById('emailFilter').value = '';
+      displayOrders(loadOrders());
+    }
+
+    // Initial load
+    displayOrders(loadOrders());
+  </script>
+</body>
+</html>

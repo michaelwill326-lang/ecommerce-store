@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Your Order</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      padding: 50px 20px;
+    }
+    .tracking-container {
+      max-width: 600px;
+      width: 100%;
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .tracking-number {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .step-number {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: #ccc;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .step-label {
+      font-weight: bold;
+      flex-grow: 1;
+    }
+    .step-timestamp {
+      font-size: 13px;
+      color: #666;
+      margin-left: 10px;
+    }
+    .completed {
+      background: #5cb85c;
+    }
+    .in-progress {
+      background: #0275d8;
+    }
+    .pending-step {
+      background: #ccc;
+    }
+    ul {
+      margin-top: 30px;
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .total {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    a {
+      display: inline-block;
+      margin-top: 25px;
+      padding: 12px 20px;
+      background: #4CAF50;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+    a:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="tracking-container">
+    <h2>📦 Track Your Order</h2>
+    <div class="tracking-number" id="tracking-number">Loading tracking info...</div>
+
+    <div id="progress-steps">
+      <!-- Steps will be rendered here -->
+    </div>
+
+    <h3>Order Items</h3>
+    <ul id="order-items"></ul>
+    <p class="total" id="order-total"></p>
+
+    <a href="index.html">Back to Shopping</a>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const trackingNumber = urlParams.get("tracking") || "";
+
+    const progressStepsEl = document.getElementById("progress-steps");
+    const trackingNumberEl = document.getElementById("tracking-number");
+    const orderItemsEl = document.getElementById("order-items");
+    const orderTotalEl = document.getElementById("order-total");
+
+    const steps = [
+      { label: "Pending", timestampKey: null },
+      { label: "Processing", timestampKey: "processing_time" },
+      { label: "Shipped", timestampKey: "shipped_time" },
+      { label: "Out for Delivery", timestampKey: "out_for_delivery_time" },
+      { label: "Delivered", timestampKey: "delivered_time" }
+    ];
+
+    async function loadTrackingInfo() {
+      if (!trackingNumber) {
+        trackingNumberEl.textContent = "Tracking number not provided.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:5002/api/track/${trackingNumber}`);
+        if (!res.ok) throw new Error("Invalid tracking number");
+
+        const data = await res.json();
+        const order = data.order;
+
+        trackingNumberEl.textContent = `Tracking Number: ${data.tracking}`;
+
+        // Render progress steps
+        progressStepsEl.innerHTML = "";
+        let statusReached = false;
+
+        steps.forEach(step => {
+          const stepDiv = document.createElement("div");
+          stepDiv.className = "progress-step";
+
+          const stepNumber = document.createElement("div");
+          stepNumber.className = "step-number pending-step";
+          stepNumber.textContent = steps.indexOf(step) + 1;
+
+          const stepLabel = document.createElement("div");
+          stepLabel.className = "step-label";
+          stepLabel.textContent = step.label;
+
+          const stepTimestamp = document.createElement("div");
+          stepTimestamp.className = "step-timestamp";
+          stepTimestamp.textContent = step.timestampKey && order[step.timestampKey] 
+            ? `(${order[step.timestampKey]})` 
+            : "";
+
+          // Set classes based on current status
+          if (!statusReached && order.status === step.label.toLowerCase()) {
+            stepNumber.className = "step-number in-progress";
+            statusReached = true;
+          } else if (statusReached || steps.indexOf(step) < steps.findIndex(s => s.label.toLowerCase() === order.status)) {
+            stepNumber.className = "step-number completed";
+          }
+
+          stepDiv.appendChild(stepNumber);
+          stepDiv.appendChild(stepLabel);
+          stepDiv.appendChild(stepTimestamp);
+          progressStepsEl.appendChild(stepDiv);
+        });
+
+        // Render order items
+        orderItemsEl.innerHTML = "";
+        let total = 0;
+        order.items.forEach(item => {
+          const li = document.createElement("li");
+          li.textContent = `${item.product_name} × ${item.quantity} — $${(item.price * item.quantity).toFixed(2)}`;
+          orderItemsEl.appendChild(li);
+          total += item.price * item.quantity;
+        });
+        orderTotalEl.textContent = `Total: $${total.toFixed(2)}`;
+      } catch (err) {
+        console.error("❌ Failed to load tracking info:", err);
+        trackingNumberEl.textContent = "Failed to load tracking info.";
+      }
+    }
+
+    loadTrackingInfo();
+
+    // Optional: auto-refresh every 30 seconds
+    setInterval(loadTrackingInfo, 30000);
+  </script>
+</body>
+</html>
