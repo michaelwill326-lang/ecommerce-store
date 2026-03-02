@@ -29,83 +29,11 @@
     </form>
   </div>
 
-  <script>
-    const summaryDiv = document.getElementById("order-summary");
-    const totalEl = document.getElementById("checkout-total");
-    const form = document.getElementById("checkout-form");
+  <!-- Paystack Script MUST come first -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
 
-    let cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-    // If cart empty → redirect
-    if (cart.length === 0) {
-      alert("Your cart is empty!");
-      window.location.href = "index.html";
-    }
-
-    // Render summary
-    function renderSummary() {
-      summaryDiv.innerHTML = "";
-      let total = 0;
-
-      cart.forEach(item => {
-        total += item.price * item.quantity;
-
-        const div = document.createElement("div");
-        div.innerHTML = `
-          <p>
-            ${item.name} × ${item.quantity}
-            <span style="float:right;">$${(item.price * item.quantity).toFixed(2)}</span>
-          </p>
-        `;
-        summaryDiv.appendChild(div);
-      });
-
-      totalEl.textContent = `Total: $${total.toFixed(2)}`;
-    }
-
-    renderSummary();
-
-    // Submit checkout
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const address = document.getElementById("address").value.trim();
-
-      if (!name || !email || !address) {
-        alert("Please fill all fields");
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/create-checkout-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name,
-            email,
-            address,
-            cartItems: cart
-          })
-        });
-
-        const data = await res.json();
-
-        if (data.url) {
-          // Optional: clear cart AFTER Stripe redirect success
-          localStorage.removeItem("cart");
-          window.location.href = data.url;
-        } else {
-          alert("Checkout failed");
-        }
-
-      } catch (err) {
-        console.error("Checkout error:", err);
-        alert("Something went wrong");
-      }
-    });
-  </script>
+  <!-- Your Checkout Logic -->
+  <script src="checkout.js"></script>
 
 </body>
 </html>
