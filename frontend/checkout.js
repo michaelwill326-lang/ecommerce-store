@@ -73,7 +73,6 @@ form.addEventListener("submit", async (e) => {
     });
 
     const initData = await initResponse.json();
-
     console.log("Initialize response:", initData);
 
     if (!initData.status) {
@@ -113,20 +112,32 @@ form.addEventListener("submit", async (e) => {
             }
           })
         })
-        .then(res => res.json())
-        .then(data => {
-          console.log("Verify response:", data);
+        .then(res => {
+          console.log("Raw verify response:", res);
+          return res.text(); // get raw response first
+        })
+        .then(text => {
+          console.log("Raw verify text:", text);
 
-          if (data.success && data.orderId) {
-            localStorage.removeItem("cart");
-            window.location.href = `thankyou.html?orderId=${data.orderId}`;
-          } else {
-            alert("Payment verification failed.");
+          try {
+            const data = JSON.parse(text);
+            console.log("Parsed verify JSON:", data);
+
+            if (data.success && data.orderId) {
+              localStorage.removeItem("cart");
+              window.location.href = `thankyou.html?orderId=${data.orderId}`;
+            } else {
+              alert("Payment verification failed.");
+            }
+
+          } catch (err) {
+            console.error("JSON parse error:", err);
+            alert("Server did not return valid JSON.");
           }
         })
         .catch(err => {
-          console.error("Verification error:", err);
-          alert("Verification failed.");
+          console.error("Verify request failed:", err);
+          alert("Verification request failed.");
         });
       },
 
