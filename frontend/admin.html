@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6,323 +7,236 @@
 <title>TechMart Admin</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css">
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 
 <style>
 body { background:#f6f6f7 }
+
 .sidebar { background:#111827 }
-.sidebar a { transition:0.2s }
+
 .sidebar a:hover { background:#1f2937 }
-.card { background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08) }
-.badge { padding:4px 8px; border-radius:6px; color:white; font-size:12px; cursor:pointer }
+
+.card {
+background:white;
+border-radius:12px;
+box-shadow:0 1px 3px rgba(0,0,0,0.08)
+}
+
+.badge {
+padding:4px 8px;
+border-radius:6px;
+color:white;
+font-size:12px;
+cursor:pointer
+}
+
+.Paid { background:#10b981 }
 .Pending { background:#f59e0b }
 .Processing { background:#3b82f6 }
 .Shipped { background:#6366f1 }
 .Delivered { background:#10b981 }
 .Cancelled { background:#ef4444 }
+
 </style>
+
 </head>
 
 <body class="flex h-screen overflow-hidden">
 
-<!-- ================= LOGIN SCREEN ================= -->
-<div id="loginScreen" class="flex items-center justify-center h-screen w-full bg-gray-100">
-  <div class="bg-white p-8 rounded-xl shadow w-96">
-    <h2 class="text-2xl font-bold mb-6 text-center">TechMart Admin Login</h2>
+<!-- SIDEBAR -->
 
-    <input id="email" type="email" placeholder="Admin Email"
-      class="w-full border p-2 mb-3 rounded">
-
-    <input id="password" type="password" placeholder="Password"
-      class="w-full border p-2 mb-4 rounded">
-
-    <button onclick="login()"
-      class="w-full bg-black text-white p-2 rounded hover:bg-gray-800">
-      Login
-    </button>
-
-    <p id="loginError" class="text-red-600 text-sm mt-3 text-center"></p>
-  </div>
-</div>
-
-<!-- ================= DASHBOARD ================= -->
-<div id="dashboard" class="hidden w-full flex">
-
-<!-- Sidebar -->
 <div class="sidebar text-white w-64 flex flex-col p-5">
-  <h1 class="text-2xl font-bold mb-8">TechMart</h1>
-  <a href="#" class="p-3 rounded">Dashboard</a>
-  <a href="#orders" class="p-3 rounded">Orders</a>
-  <a href="#inventory" class="p-3 rounded">Inventory</a>
-  <button onclick="logout()"
-    class="mt-auto bg-red-600 p-2 rounded hover:bg-red-700">
-    Logout
-  </button>
+
+<h1 class="text-2xl font-bold mb-8">TechMart</h1>
+
+<a href="#" class="p-3 rounded">Dashboard</a> <a href="#orders" class="p-3 rounded">Orders</a>
+
 </div>
 
-<!-- Main Content -->
+<!-- MAIN CONTENT -->
+
 <div class="flex-1 p-8 overflow-y-auto">
 
 <div class="flex justify-between items-center mb-8">
-  <h2 class="text-3xl font-bold">Admin Dashboard</h2>
-  <div class="text-gray-600">Welcome to TechMart Admin</div>
+<h2 class="text-3xl font-bold">Admin Dashboard</h2>
+<div class="text-gray-600">TechMart Management</div>
 </div>
 
 <!-- KPI CARDS -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
 
-  <div class="card p-5">
-    <p class="text-gray-500 text-sm">Total Orders</p>
-    <h3 id="totalOrders" class="text-2xl font-bold">0</h3>
-  </div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
-  <div class="card p-5">
-    <p class="text-gray-500 text-sm">Total Revenue</p>
-    <h3 id="totalRevenue" class="text-2xl font-bold">$0</h3>
-  </div>
+<div class="card p-5">
+<p class="text-gray-500 text-sm">Total Orders</p>
+<h3 id="totalOrders" class="text-2xl font-bold">0</h3>
+</div>
 
-  <div class="card p-5">
-    <p class="text-gray-500 text-sm">This Month</p>
-    <h3 id="thisMonth" class="text-2xl font-bold">$0</h3>
-  </div>
+<div class="card p-5">
+<p class="text-gray-500 text-sm">Total Revenue</p>
+<h3 id="totalRevenue" class="text-2xl font-bold">$0</h3>
+</div>
 
-  <div class="card p-5">
-    <p class="text-gray-500 text-sm">Low Stock Items</p>
-    <h3 id="lowStock" class="text-2xl font-bold text-red-600">0</h3>
-  </div>
+<div class="card p-5">
+<p class="text-gray-500 text-sm">This Month</p>
+<h3 id="thisMonth" class="text-2xl font-bold">$0</h3>
+</div>
 
 </div>
 
-<!-- ================= ORDERS ================= -->
+<!-- ORDERS TABLE -->
+
 <div id="orders" class="card p-6 mb-8">
-  <div class="flex justify-between mb-4">
-    <h3 class="text-xl font-bold">Recent Orders</h3>
-    <button onclick="exportCSV()"
-      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-      Export CSV
-    </button>
-  </div>
 
-  <table class="w-full text-left">
-    <thead>
-      <tr class="border-b">
-        <th>Customer</th>
-        <th>Email</th>
-        <th>Total</th>
-        <th>Status</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody id="ordersTable"></tbody>
-  </table>
-</div>
+<div class="flex justify-between mb-4">
+<h3 class="text-xl font-bold">Recent Orders</h3>
 
-<!-- ================= INVENTORY ================= -->
-<div id="inventory" class="card p-6">
-  <h3 class="text-xl font-bold mb-4">Inventory</h3>
-
-  <div class="flex gap-2 mb-4">
-    <input id="productName" placeholder="Product Name" class="border p-2 rounded">
-    <input id="productPrice" placeholder="Price" type="number" class="border p-2 rounded">
-    <input id="productStock" placeholder="Stock" type="number" class="border p-2 rounded">
-    <button onclick="addProduct()"
-      class="bg-green-600 text-white px-4 rounded hover:bg-green-700">
-      Add
-    </button>
-  </div>
-
-  <table class="w-full text-left">
-    <thead>
-      <tr class="border-b">
-        <th>Name</th>
-        <th>Price</th>
-        <th>Stock</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="inventoryTable"></tbody>
-  </table>
-</div>
+<button onclick="exportCSV()"
+class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+Export CSV </button>
 
 </div>
+
+<table class="w-full text-left">
+
+<thead>
+<tr class="border-b">
+<th class="py-2">Customer</th>
+<th>Email</th>
+<th>Total</th>
+<th>Status</th>
+<th>Date</th>
+</tr>
+</thead>
+
+<tbody id="ordersTable"></tbody>
+
+</table>
+
+</div>
+
 </div>
 
 <script>
-const API = "http://localhost:5002";
-let token = localStorage.getItem("token");
-const socket = io(API);
 
-/* ================= AUTH ================= */
+const API = "https://techmart-backend-ecbi.onrender.com"
 
-async function login(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const res = await fetch(API+"/api/admin/login",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({email,password})
-  });
-
-  const data = await res.json();
-
-  if(!res.ok){
-    document.getElementById("loginError").innerText=data.message;
-    return;
-  }
-
-  token=data.token;
-  localStorage.setItem("token",token);
-  startDashboard();
-}
-
-function logout(){
-  localStorage.removeItem("token");
-  location.reload();
-}
-
-function authFetch(url,options={}){
-  return fetch(url,{
-    ...options,
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":"Bearer "+token
-    }
-  });
-}
-
-/* ================= START ================= */
-
-function startDashboard(){
-  document.getElementById("loginScreen").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-  loadDashboard();
-}
-
-if(token) startDashboard();
-
-/* ================= DASHBOARD ================= */
-
-async function loadDashboard(){
-  await loadOrders();
-  await loadInventory();
-  await loadRevenue();
-}
-
-/* ================= ORDERS ================= */
+/* ================= LOAD ORDERS ================= */
 
 async function loadOrders(){
-  const res=await authFetch(API+"/api/orders?page=1&limit=50");
-  const data=await res.json();
 
-  document.getElementById("totalOrders").innerText=data.total;
+try{
 
-  let revenue=0;
-  const table=document.getElementById("ordersTable");
-  table.innerHTML="";
+const res = await fetch(API + "/api/orders?page=1&limit=50")
 
-  data.orders.forEach(o=>{
-    revenue+=o.totalAmount;
+const data = await res.json()
 
-    table.innerHTML+=`
-      <tr class="border-b hover:bg-gray-50">
-        <td>${o.customerName}</td>
-        <td>${o.email}</td>
-        <td>$${o.totalAmount}</td>
-        <td><span class="badge ${o.status}" onclick="changeStatus('${o._id}')">${o.status}</span></td>
-        <td>${new Date(o.createdAt).toLocaleDateString()}</td>
-      </tr>
-    `;
-  });
+const orders = data.orders || []
+const total = data.total || orders.length
 
-  document.getElementById("totalRevenue").innerText="$"+revenue;
+document.getElementById("totalOrders").innerText = total
+
+let revenue = 0
+
+const table = document.getElementById("ordersTable")
+table.innerHTML = ""
+
+orders.forEach(order=>{
+
+revenue += order.totalAmount
+
+table.innerHTML += `
+<tr class="border-b hover:bg-gray-50">
+
+<td class="py-2">${order.customerName}</td>
+
+<td>${order.email}</td>
+
+<td>$${order.totalAmount}</td>
+
+<td>
+<span class="badge ${order.status}"
+onclick="changeStatus('${order._id}')">
+${order.status}
+</span>
+</td>
+
+<td>${new Date(order.createdAt).toLocaleDateString()}</td>
+
+</tr>
+`
+
+})
+
+document.getElementById("totalRevenue").innerText =
+"$" + revenue.toFixed(2)
+
+}catch(err){
+
+console.error("Failed to load orders:",err)
+
 }
+
+}
+
+/* ================= CHANGE ORDER STATUS ================= */
 
 async function changeStatus(id){
-  const status=prompt("Enter new status (Pending,Processing,Shipped,Delivered,Cancelled)");
-  if(!status) return;
 
-  await authFetch(API+"/api/orders/"+id+"/status",{
-    method:"PUT",
-    body:JSON.stringify({status})
-  });
+const status = prompt(
+"Enter new status: Paid, Processing, Shipped, Delivered, Cancelled"
+)
 
-  loadDashboard();
+if(!status) return
+
+await fetch(API + "/api/orders/" + id + "/status",{
+
+method:"PUT",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({status})
+
+})
+
+loadOrders()
+
 }
 
-/* ================= INVENTORY ================= */
-
-async function loadInventory(){
-  const res=await authFetch(API+"/api/products");
-  const products=await res.json();
-
-  let lowStock=0;
-  const table=document.getElementById("inventoryTable");
-  table.innerHTML="";
-
-  products.forEach(p=>{
-    if(p.stock<5) lowStock++;
-
-    table.innerHTML+=`
-      <tr class="border-b hover:bg-gray-50">
-        <td>${p.name}</td>
-        <td>$${p.price}</td>
-        <td>${p.stock}</td>
-        <td class="flex gap-2">
-          <input id="stock-${p._id}" type="number" class="border p-1 w-20">
-          <button onclick="updateStock('${p._id}')" class="bg-blue-500 text-white px-2 rounded">Save</button>
-          <button onclick="deleteProduct('${p._id}')" class="bg-red-600 text-white px-2 rounded">Delete</button>
-        </td>
-      </tr>
-    `;
-  });
-
-  document.getElementById("lowStock").innerText=lowStock;
-}
-
-async function addProduct(){
-  await authFetch(API+"/api/products",{
-    method:"POST",
-    body:JSON.stringify({
-      name:productName.value,
-      price:productPrice.value,
-      stock:productStock.value
-    })
-  });
-  loadDashboard();
-}
-
-async function updateStock(id){
-  const stock=document.getElementById("stock-"+id).value;
-  await authFetch(API+"/api/products/"+id,{
-    method:"PUT",
-    body:JSON.stringify({stock})
-  });
-  loadDashboard();
-}
-
-async function deleteProduct(id){
-  if(!confirm("Delete this product?")) return;
-  await authFetch(API+"/api/products/"+id,{method:"DELETE"});
-  loadDashboard();
-}
-
-/* ================= CSV ================= */
+/* ================= EXPORT CSV ================= */
 
 function exportCSV(){
-  window.open(API+"/api/orders/export");
+
+window.open(API + "/api/orders/export")
+
 }
 
 /* ================= MONTHLY REVENUE ================= */
 
-async function loadRevenue(){
-  const res=await authFetch(API+"/api/revenue/monthly");
-  const data=await res.json();
-  document.getElementById("thisMonth").innerText="$"+data.thisMonth;
+async function loadMonthlyRevenue(){
+
+try{
+
+const res = await fetch(API + "/api/revenue/monthly")
+
+const data = await res.json()
+
+document.getElementById("thisMonth").innerText =
+"$" + data.thisMonth
+
+}catch(err){
+
+console.log("Monthly revenue API not ready yet")
+
 }
 
-socket.on("update-status",loadDashboard);
-socket.on("new-order",loadDashboard);
+}
+
+/* ================= START ================= */
+
+loadOrders()
+loadMonthlyRevenue()
+
 </script>
 
 </body>

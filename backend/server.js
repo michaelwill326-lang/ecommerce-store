@@ -9,13 +9,18 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 /* ===========================
-   MIDDLEWARE
+   CORS
 =========================== */
-app.use(cors());
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
 
 /* ===========================
-   MONGODB CONNECTION
+   MONGODB
 =========================== */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
@@ -41,11 +46,36 @@ const Order = mongoose.model("Order", orderSchema);
    PRODUCTS ROUTE
 =========================== */
 const products = [
-  { id: 1, name: "Wireless Headphones", price: 99.99, description: "Noise-cancelling over-ear headphones with Bluetooth." },
-  { id: 2, name: "Smart Watch", price: 149.99, description: "Fitness tracking and notifications on your wrist." },
-  { id: 3, name: "Mechanical Keyboard", price: 79.99, description: "RGB backlit keyboard with tactile switches." },
-  { id: 4, name: "4K Monitor", price: 299.99, description: "27-inch UHD display with HDR support." },
-  { id: 5, name: "Gaming Mouse", price: 49.99, description: "High DPI precision with customizable buttons." }
+  {
+    id: 1,
+    name: "Wireless Headphones",
+    price: 99.99,
+    description: "Noise-cancelling over-ear headphones with Bluetooth."
+  },
+  {
+    id: 2,
+    name: "Smart Watch",
+    price: 149.99,
+    description: "Fitness tracking and notifications on your wrist."
+  },
+  {
+    id: 3,
+    name: "Mechanical Keyboard",
+    price: 79.99,
+    description: "RGB backlit keyboard with tactile switches."
+  },
+  {
+    id: 4,
+    name: "4K Monitor",
+    price: 299.99,
+    description: "27-inch UHD display with HDR support."
+  },
+  {
+    id: 5,
+    name: "Gaming Mouse",
+    price: 49.99,
+    description: "High DPI precision with customizable buttons."
+  }
 ];
 
 app.get("/api/products", (req, res) => {
@@ -56,22 +86,34 @@ app.get("/api/products", (req, res) => {
    GET SINGLE ORDER
 =========================== */
 app.get("/api/orders/:id", async (req, res) => {
+
   try {
+
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
     res.json(order);
+
   } catch (err) {
+
     res.status(404).json({ error: "Order not found" });
+
   }
+
 });
 
 /* ===========================
-   INITIALIZE PAYMENT
+   PAYSTACK INITIALIZE
 =========================== */
 app.post("/initialize-payment", async (req, res) => {
+
   const { email, amount } = req.body;
 
   try {
+
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
@@ -89,18 +131,26 @@ app.post("/initialize-payment", async (req, res) => {
     res.json(response.data);
 
   } catch (error) {
+
     console.error("Paystack Init Error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Payment initialization failed" });
+
+    res.status(500).json({
+      error: "Payment initialization failed"
+    });
+
   }
+
 });
 
 /* ===========================
    VERIFY PAYMENT + SAVE ORDER
 =========================== */
 app.post("/verify-payment", async (req, res) => {
+
   const { reference, orderData } = req.body;
 
   try {
+
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
@@ -112,9 +162,8 @@ app.post("/verify-payment", async (req, res) => {
 
     const paymentData = response.data.data;
 
-    console.log("Verification response:", paymentData);
+    console.log("Paystack verification:", paymentData);
 
-    // Only check Paystack status
     if (paymentData.status === "success") {
 
       const newOrder = new Order({
@@ -133,19 +182,29 @@ app.post("/verify-payment", async (req, res) => {
         success: true,
         orderId: savedOrder._id
       });
+
     }
 
     return res.json({ success: false });
 
   } catch (error) {
+
     console.error("Verification Error:", error.response?.data || error.message);
-    return res.status(500).json({ success: false });
+
+    return res.status(500).json({
+      success: false,
+      error: "Verification failed"
+    });
+
   }
+
 });
 
 /* ===========================
    START SERVER
 =========================== */
 app.listen(PORT, () => {
+
   console.log(`🚀 Server running on port ${PORT}`);
+
 });
