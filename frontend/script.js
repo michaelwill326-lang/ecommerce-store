@@ -2,9 +2,49 @@ const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 
 const productsContainer = document.getElementById("products");
 const spinner = document.getElementById("loading-spinner");
+const cartCount = document.getElementById("cart-count");
 
 /* ===========================
-   Load Products From Backend
+   CART STORAGE
+=========================== */
+function getCart() {
+  return JSON.parse(localStorage.getItem("cart")) || [];
+}
+
+function saveCart(cart) {
+  localStorage.setItem("cart", JSON.stringify(cart));
+  updateCartBadge();
+}
+
+function updateCartBadge() {
+  const cart = getCart();
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  cartCount.textContent = totalItems;
+}
+
+/* ===========================
+   ADD TO CART
+=========================== */
+function addToCart(productId) {
+  const cart = getCart();
+  const product = window.products.find(p => p.id === productId);
+
+  const existingItem = cart.find(item => item.id === productId);
+
+  if (existingItem) {
+    existingItem.quantity += 1;
+  } else {
+    cart.push({
+      ...product,
+      quantity: 1
+    });
+  }
+
+  saveCart(cart);
+}
+
+/* ===========================
+   LOAD PRODUCTS
 =========================== */
 async function loadProducts() {
   try {
@@ -18,6 +58,9 @@ async function loadProducts() {
     }
 
     const products = await response.json();
+
+    // Store globally so cart can access
+    window.products = products;
 
     spinner.style.display = "none";
 
@@ -44,11 +87,5 @@ async function loadProducts() {
   }
 }
 
-/* ===========================
-   Cart Logic
-=========================== */
-function addToCart(productId) {
-  alert("Product added to cart!");
-}
-
+updateCartBadge();
 loadProducts();
