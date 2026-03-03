@@ -109,6 +109,9 @@ app.post("/verify-payment", async (req, res) => {
 
     const paymentData = response.data.data;
 
+    // 🔥 DEBUG LOG
+    console.log("Paystack verification response:", paymentData);
+
     if (paymentData.status === "success") {
 
       const newOrder = new Order({
@@ -122,7 +125,6 @@ app.post("/verify-payment", async (req, res) => {
 
       const savedOrder = await newOrder.save();
 
-      // 🔥 CRITICAL FIX: RETURN ORDER ID
       return res.json({
         success: true,
         orderId: savedOrder._id
