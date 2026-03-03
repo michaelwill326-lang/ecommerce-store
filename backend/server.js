@@ -58,6 +58,7 @@ app.get("/api/products", (req, res) => {
 app.get("/api/orders/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
     res.json(order);
   } catch (err) {
     res.status(404).json({ error: "Order not found" });
@@ -83,6 +84,7 @@ app.post("/initialize-payment", async (req, res) => {
     );
 
     res.json(response.data);
+
   } catch (error) {
     console.error("Paystack Init Error:", error.response?.data || error.message);
     res.status(500).json({ error: "Payment initialization failed" });
@@ -120,14 +122,14 @@ app.post("/verify-payment", async (req, res) => {
 
       const savedOrder = await newOrder.save();
 
-      res.json({
+      // 🔥 CRITICAL FIX: RETURN ORDER ID
+      return res.json({
         success: true,
         orderId: savedOrder._id
       });
-
-    } else {
-      res.json({ success: false });
     }
+
+    res.json({ success: false });
 
   } catch (error) {
     console.error("Verification Error:", error.response?.data || error.message);

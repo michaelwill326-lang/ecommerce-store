@@ -39,35 +39,6 @@ function renderSummary() {
 renderSummary();
 
 /* ===========================
-   Verify Payment Function
-=========================== */
-async function verifyPayment(reference, orderData) {
-  try {
-    const verifyResponse = await fetch(`${BACKEND_URL}/verify-payment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reference,
-        orderData
-      })
-    });
-
-    const verifyData = await verifyResponse.json();
-
-    if (verifyData.success) {
-      localStorage.removeItem("cart");
-      window.location.href = `thankyou.html?orderId=${verifyData.orderId}`;
-    } else {
-      alert("Payment verification failed.");
-    }
-
-  } catch (error) {
-    console.error("Verification error:", error);
-    alert("Verification failed.");
-  }
-}
-
-/* ===========================
    Handle Checkout Submit
 =========================== */
 form.addEventListener("submit", async (e) => {
@@ -88,9 +59,9 @@ form.addEventListener("submit", async (e) => {
 
   try {
     /* ===========================
-       Initialize Payment
+       STEP 1: Initialize Payment
     ============================ */
-    const response = await fetch(`${BACKEND_URL}/initialize-payment`, {
+    const initResponse = await fetch(`${BACKEND_URL}/initialize-payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -99,9 +70,9 @@ form.addEventListener("submit", async (e) => {
       })
     });
 
-    const data = await response.json();
+    const initData = await initResponse.json();
 
-    if (!data.status) {
+    if (!initData.status) {
       alert("Payment initialization failed.");
       return;
     }
@@ -112,13 +83,13 @@ form.addEventListener("submit", async (e) => {
     }
 
     /* ===========================
-       Open Paystack Popup
+       STEP 2: Open Paystack Popup
     ============================ */
     const handler = PaystackPop.setup({
       key: "pk_test_c37b9c580095dffc5e9a977f82c04ecac4bd8337",
       email: email,
       amount: totalAmount * 100,
-      ref: data.data.reference,
+      ref: initData.data.reference,
 
       callback: function (response) {
         verifyPayment(response.reference, {
@@ -142,3 +113,32 @@ form.addEventListener("submit", async (e) => {
     alert("Something went wrong.");
   }
 });
+
+/* ===========================
+   STEP 3: Verify Payment + Redirect
+=========================== */
+async function verifyPayment(reference, orderData) {
+  try {
+    const verifyResponse = await fetch(`${BACKEND_URL}/verify-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reference,
+        orderData
+      })
+    });
+
+    const verifyData = await verifyResponse.json();
+
+    if (verifyData.success && verifyData.orderId) {
+      localStorage.removeItem("cart");
+      window.location.href = `thankyou.html?orderId=${verifyData.orderId}`;
+    } else {
+      alert("Payment verification failed.");
+    }
+
+  } catch (error) {
+    console.error("Verification error:", error);
+    alert("Verification failed.");
+  }
+}
