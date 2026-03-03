@@ -1,79 +1,54 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const productList = document.getElementById("product-list");
-  const cartCount = document.getElementById("cart-count");
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 
-  // ✅ Production backend (Railway)
-  const API = "https://ecommerce-store-production-2a86.up.railway.app";
+const productsContainer = document.getElementById("products");
+const spinner = document.getElementById("loading-spinner");
 
-  // Load cart from localStorage
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+/* ===========================
+   Load Products From Backend
+=========================== */
+async function loadProducts() {
+  try {
+    spinner.style.display = "block";
+    productsContainer.innerHTML = "";
 
-  // Update cart badge
-  function updateCartBadge() {
-    if (!cartCount) return;
-    const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
-    cartCount.textContent = totalQty;
-    cartCount.style.display = totalQty > 0 ? "inline-block" : "none";
-  }
+    const response = await fetch(`${BACKEND_URL}/api/products`);
 
-  updateCartBadge();
-
-  // Add to cart
-  function addToCart(product) {
-    const existingItem = cart.find((item) => item._id === product._id);
-
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      cart.push({
-        _id: product._id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        quantity: 1
-      });
+    if (!response.ok) {
+      throw new Error("Failed to fetch products");
     }
 
-    localStorage.setItem("cart", JSON.stringify(cart));
-    updateCartBadge();
-    alert("Added to cart!");
+    const products = await response.json();
+
+    spinner.style.display = "none";
+
+    products.forEach(product => {
+      const div = document.createElement("div");
+      div.classList.add("product");
+
+      div.innerHTML = `
+        <h3>${product.name}</h3>
+        <p>${product.description}</p>
+        <p><strong>$${product.price}</strong></p>
+        <button class="add-to-cart" onclick="addToCart(${product.id})">
+          Add to Cart
+        </button>
+      `;
+
+      productsContainer.appendChild(div);
+    });
+
+  } catch (error) {
+    spinner.style.display = "none";
+    productsContainer.innerHTML = "<p>Failed to load products.</p>";
+    console.error(error);
   }
+}
 
-  // Load products from backend
-  async function loadProducts() {
-    try {
-      const res = await fetch(`${API}/api/store/products`);
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+/* ===========================
+   Cart Logic
+=========================== */
+function addToCart(productId) {
+  alert("Product added to cart!");
+}
 
-      const products = await res.json();
-      productList.innerHTML = "";
-
-      if (!Array.isArray(products) || products.length === 0) {
-        productList.innerHTML = "<p>No products available.</p>";
-        return;
-      }
-
-      products.forEach((product) => {
-        const div = document.createElement("div");
-        div.className = "product";
-
-        // ✅ NOTE: Name appears only ONCE now
-        div.innerHTML = `
-          ${product.image ? `<img src="${product.image}" alt="${product.name}" style="width:200px;max-width:100%;border-radius:8px;">` : ""}
-          <h3>${product.name}</h3>
-          ${product.description ? `<p>${product.description}</p>` : ""}
-          <p><strong>$${Number(product.price).toFixed(2)}</strong></p>
-          <button class="add-btn">Add to Cart</button>
-        `;
-
-        div.querySelector(".add-btn").addEventListener("click", () => addToCart(product));
-        productList.appendChild(div);
-      });
-    } catch (error) {
-      console.error("❌ Error loading products:", error);
-      productList.innerHTML = "<p style='color:red;'>Failed to load products.</p>";
-    }
-  }
-
-  loadProducts();
-});
+loadProducts();
