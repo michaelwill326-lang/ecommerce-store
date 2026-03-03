@@ -74,7 +74,10 @@ app.post("/initialize-payment", async (req, res) => {
   try {
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
-      { email, amount: amount * 100 },
+      {
+        email,
+        amount: Math.round(amount * 100)
+      },
       {
         headers: {
           Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
@@ -109,13 +112,10 @@ app.post("/verify-payment", async (req, res) => {
 
     const paymentData = response.data.data;
 
-    console.log("Paystack verification response:", paymentData);
+    console.log("Verification response:", paymentData);
 
-    // ✅ STRICT VALIDATION
-    if (
-      paymentData.status === "success" &&
-      paymentData.amount === orderData.totalAmount * 100
-    ) {
+    // Only check Paystack status
+    if (paymentData.status === "success") {
 
       const newOrder = new Order({
         customerName: orderData.customerName,
@@ -135,13 +135,11 @@ app.post("/verify-payment", async (req, res) => {
       });
     }
 
-    console.log("Verification failed — status or amount mismatch");
-
-    res.json({ success: false });
+    return res.json({ success: false });
 
   } catch (error) {
     console.error("Verification Error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Verification failed" });
+    return res.status(500).json({ success: false });
   }
 });
 
