@@ -56,7 +56,7 @@ async function verifyPayment(reference, orderData) {
 
     if (verifyData.success) {
       localStorage.removeItem("cart");
-      window.location.href = "thankyou.html";
+      window.location.href = `thankyou.html?orderId=${verifyData.orderId}`;
     } else {
       alert("Payment verification failed.");
     }

@@ -44,16 +44,6 @@
       margin-top: 15px;
     }
     a:hover { background: #45a049; }
-    #trackOrderBtn {
-      padding: 12px 20px;
-      background: #2196F3;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-bottom: 10px;
-    }
-    #trackOrderBtn:hover { background: #1976D2; }
   </style>
 </head>
 <body>
@@ -66,68 +56,62 @@
     <ul id="order-items"></ul>
     <p class="total" id="order-total"></p>
 
-    <p id="tracking-number">📦 Tracking Number: Loading...</p>
+    <p id="payment-reference">Payment Reference: Loading...</p>
 
-    <button id="trackOrderBtn">📦 Track My Order</button>
-    <br>
     <a href="index.html">Continue Shopping</a>
   </div>
 
   <script>
-    localStorage.removeItem("cart");
+    const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 
-    let trackingNumber = "";
+    // Clear cart
+    localStorage.removeItem("cart");
 
     async function loadOrder() {
       try {
         const params = new URLSearchParams(window.location.search);
-        const orderId = params.get("order_id");
+        const orderId = params.get("orderId");
 
         if (!orderId) {
-          document.getElementById("tracking-number").textContent = "Order not found.";
+          document.getElementById("payment-reference").textContent = "Order not found.";
           return;
         }
 
-        const res = await fetch("/api/orders/" + orderId);
-        const order = await res.json();
+        const response = await fetch(`${BACKEND_URL}/api/orders/${orderId}`);
+        const order = await response.json();
 
-        if (!order || !order.items) return;
+        if (!order || order.error) {
+          document.getElementById("payment-reference").textContent = "Order not found.";
+          return;
+        }
 
-        trackingNumber = order.tracking_number || "";
-
-        document.getElementById("tracking-number").textContent =
-          trackingNumber ? "📦 Tracking Number: " + trackingNumber : "Tracking not available yet";
-
-        const items = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
         const orderList = document.getElementById("order-items");
         const orderTotal = document.getElementById("order-total");
 
         let total = 0;
         orderList.innerHTML = "";
-        items.forEach(function(item) {
+
+        order.items.forEach(item => {
           const li = document.createElement("li");
-          li.textContent = item.name + " x " + item.quantity + " — $" + (item.price * item.quantity).toFixed(2);
+          li.textContent =
+            `${item.name} x ${item.quantity} — $${(item.price * item.quantity).toFixed(2)}`;
           orderList.appendChild(li);
           total += item.price * item.quantity;
         });
 
         orderTotal.textContent = "Total: $" + total.toFixed(2);
 
-      } catch (err) {
-        console.error("Failed to load order:", err);
-        document.getElementById("tracking-number").textContent = "Could not load order details.";
+        document.getElementById("payment-reference").textContent =
+          "Payment Reference: " + order.paymentReference;
+
+      } catch (error) {
+        console.error("Error loading order:", error);
+        document.getElementById("payment-reference").textContent =
+          "Could not load order details.";
       }
     }
 
     loadOrder();
-
-    document.getElementById("trackOrderBtn").addEventListener("click", function() {
-      if (trackingNumber) {
-        window.location.href = "track-order.html?tracking=" + trackingNumber;
-      } else {
-        alert("Tracking number not available yet.");
-      }
-    });
   </script>
 
 </body>
