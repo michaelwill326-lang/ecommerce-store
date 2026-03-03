@@ -109,10 +109,13 @@ app.post("/verify-payment", async (req, res) => {
 
     const paymentData = response.data.data;
 
-    // 🔥 DEBUG LOG
     console.log("Paystack verification response:", paymentData);
 
-    if (paymentData.status === "success") {
+    // ✅ STRICT VALIDATION
+    if (
+      paymentData.status === "success" &&
+      paymentData.amount === orderData.totalAmount * 100
+    ) {
 
       const newOrder = new Order({
         customerName: orderData.customerName,
@@ -120,7 +123,8 @@ app.post("/verify-payment", async (req, res) => {
         address: orderData.address,
         items: orderData.items,
         totalAmount: orderData.totalAmount,
-        paymentReference: reference
+        paymentReference: reference,
+        status: "Paid"
       });
 
       const savedOrder = await newOrder.save();
@@ -130,6 +134,8 @@ app.post("/verify-payment", async (req, res) => {
         orderId: savedOrder._id
       });
     }
+
+    console.log("Verification failed — status or amount mismatch");
 
     res.json({ success: false });
 
