@@ -1,27 +1,32 @@
-require("dotenv").config();
+require("dotenv").config()
 
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const axios = require("axios");
+const express = require("express")
+const cors = require("cors")
+const mongoose = require("mongoose")
+const axios = require("axios")
+const nodemailer = require("nodemailer")
 
-const http = require("http");
-const { Server } = require("socket.io");
+const multer = require("multer")
+const { CloudinaryStorage } = require("multer-storage-cloudinary")
+const cloudinary = require("cloudinary").v2
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+const http = require("http")
+const { Server } = require("socket.io")
+
+const app = express()
+const PORT = process.env.PORT || 10000
 
 /* ===========================
    CORS
 =========================== */
 
 app.use(cors({
-  origin: "*",
-  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"]
-}));
+origin:"*",
+methods:["GET","POST","PUT","DELETE"],
+allowedHeaders:["Content-Type","Authorization"]
+}))
 
-app.use(express.json());
+app.use(express.json())
 
 /* ===========================
    MONGODB
@@ -29,7 +34,42 @@ app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI)
 .then(()=>console.log("✅ MongoDB Connected"))
-.catch(err=>console.error("❌ MongoDB Error:",err));
+.catch(err=>console.error("MongoDB Error:",err))
+
+/* ===========================
+   CLOUDINARY
+=========================== */
+
+cloudinary.config({
+cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
+api_key:process.env.CLOUDINARY_API_KEY,
+api_secret:process.env.CLOUDINARY_API_SECRET
+})
+
+const storage = new CloudinaryStorage({
+
+cloudinary,
+
+params:{
+folder:"techmart_products",
+allowed_formats:["jpg","png","jpeg"]
+}
+
+})
+
+const upload = multer({storage})
+
+/* ===========================
+   EMAIL
+=========================== */
+
+const transporter = nodemailer.createTransport({
+service:"gmail",
+auth:{
+user:process.env.EMAIL_USER,
+pass:process.env.EMAIL_PASS
+}
+})
 
 /* ===========================
    ORDER SCHEMA
@@ -67,71 +107,170 @@ type:Date,
 default:Date.now
 }
 
-});
+})
 
-const Order = mongoose.model("Order",orderSchema);
+const Order = mongoose.model("Order",orderSchema)
 
 /* ===========================
-   PRODUCTS
+   PRODUCT SCHEMA
 =========================== */
 
-const products = [
+const productSchema = new mongoose.Schema({
 
-{
-id:1,
-name:"Wireless Headphones",
-price:99.99,
-description:"Noise-cancelling over-ear headphones with Bluetooth.",
-stock:25
-},
+name:String,
+slug:String,
+price:Number,
+description:String,
+stock:Number,
+image:String,
 
-{
-id:2,
-name:"Smart Watch",
-price:149.99,
-description:"Fitness tracking and notifications on your wrist.",
-stock:20
-},
+reviews:[{
 
-{
-id:3,
-name:"Mechanical Keyboard",
-price:79.99,
-description:"RGB backlit keyboard with tactile switches.",
-stock:15
-},
+name:String,
+rating:Number,
+comment:String,
 
-{
-id:4,
-name:"4K Monitor",
-price:299.99,
-description:"27-inch UHD display with HDR support.",
-stock:10
-},
-
-{
-id:5,
-name:"Gaming Mouse",
-price:49.99,
-description:"High DPI precision with customizable buttons.",
-stock:30
+createdAt:{
+type:Date,
+default:Date.now
 }
 
-];
+}],
+
+createdAt:{
+type:Date,
+default:Date.now
+}
+
+})
+
+const Product = mongoose.model("Product",productSchema)
 
 /* ===========================
-   PRODUCTS API
+   GET PRODUCTS
 =========================== */
 
-app.get("/api/products",(req,res)=>{
+app.get("/api/products", async (req,res)=>{
+
+const products = await Product.find()
+
 res.json(products)
-});
+
+})
 
 /* ===========================
-   GET ALL ORDERS
+   GET PRODUCT BY SLUG
 =========================== */
 
-app.get("/api/orders",async(req,res)=>{
+app.get("/api/products/:slug", async (req,res)=>{
+
+const product = await Product.findOne({
+slug:req.params.slug
+})
+
+if(!product){
+return res.status(404).json({error:"Product not found"})
+}
+
+res.json(product)
+
+})
+
+/* ===========================
+   ADD PRODUCT
+=========================== */
+
+app.post("/api/products", upload.single("image"), async (req,res)=>{
+
+const {name,price,description,stock} = req.body
+
+const slug = name
+.toLowerCase()
+.replace(/[^a-z0-9]+/g,"-")
+.replace(/(^-|-$)/g,"")
+
+const image = req.file ? req.file.path : ""
+
+const product = new Product({
+
+name,
+slug,
+price,
+description,
+stock,
+image
+
+})
+
+const saved = await product.save()
+
+res.json(saved)
+
+})
+
+/* ===========================
+   DELETE PRODUCT
+=========================== */
+
+app.delete("/api/products/:id", async (req,res)=>{
+
+await Product.findByIdAndDelete(req.params.id)
+
+res.json({success:true})
+
+})
+
+/* ===========================
+   ADD PRODUCT REVIEW
+=========================== */
+
+app.post("/api/products/:slug/reviews", async (req,res)=>{
+
+const {name,rating,comment} = req.body
+
+const product = await Product.findOne({
+slug:req.params.slug
+})
+
+if(!product){
+return res.status(404).json({error:"Product not found"})
+}
+
+product.reviews.push({
+name,
+rating,
+comment
+})
+
+await product.save()
+
+res.json(product)
+
+})
+
+/* ===========================
+   GET PRODUCT REVIEWS
+=========================== */
+
+app.get("/api/products/:slug/reviews", async (req,res)=>{
+
+const product = await Product.findOne({
+slug:req.params.slug
+})
+
+if(!product){
+return res.status(404).json({error:"Product not found"})
+}
+
+res.json(product.reviews)
+
+})
+
+/* ===========================
+   GET ORDERS
+=========================== */
+
+app.get("/api/orders", async (req,res)=>{
 
 const page=parseInt(req.query.page)||1
 const limit=parseInt(req.query.limit)||50
@@ -153,36 +292,14 @@ total
 })
 
 /* ===========================
-   GET SINGLE ORDER
-=========================== */
-
-app.get("/api/orders/:id",async(req,res)=>{
-
-try{
-
-const order=await Order.findById(req.params.id)
-
-if(!order){
-return res.status(404).json({error:"Order not found"})
-}
-
-res.json(order)
-
-}catch(err){
-res.status(404).json({error:"Order not found"})
-}
-
-})
-
-/* ===========================
    UPDATE ORDER STATUS
 =========================== */
 
-app.put("/api/orders/:id/status",async(req,res)=>{
+app.put("/api/orders/:id/status", async (req,res)=>{
 
 const {status}=req.body
 
-const order=await Order.findByIdAndUpdate(
+const order = await Order.findByIdAndUpdate(
 req.params.id,
 {status},
 {new:true}
@@ -196,11 +313,11 @@ res.json(order)
    UPDATE TRACKING
 =========================== */
 
-app.put("/api/orders/:id/tracking",async(req,res)=>{
+app.put("/api/orders/:id/tracking", async (req,res)=>{
 
 const {trackingNumber,carrier,status}=req.body
 
-const order=await Order.findByIdAndUpdate(
+const order = await Order.findByIdAndUpdate(
 
 req.params.id,
 
@@ -214,6 +331,38 @@ status
 
 )
 
+if(status==="Shipped" && trackingNumber){
+
+const trackingLink=`https://yourstore.netlify.app/track.html?tracking=${trackingNumber}`
+
+await transporter.sendMail({
+
+from:`TechMart <${process.env.EMAIL_USER}>`,
+to:order.email,
+
+subject:"Your TechMart Order Has Shipped 🚚",
+
+html:`
+
+<h2>Your order has shipped!</h2>
+
+<p><b>Carrier:</b> ${carrier}</p>
+<p><b>Tracking Number:</b> ${trackingNumber}</p>
+
+<p>
+Track your order here:
+<br><br>
+<a href="${trackingLink}">
+${trackingLink}
+</a>
+</p>
+
+`
+
+})
+
+}
+
 res.json(order)
 
 })
@@ -222,9 +371,9 @@ res.json(order)
    TRACK ORDER
 =========================== */
 
-app.get("/api/track/:trackingNumber",async(req,res)=>{
+app.get("/api/track/:trackingNumber", async (req,res)=>{
 
-const order=await Order.findOne({
+const order = await Order.findOne({
 trackingNumber:req.params.trackingNumber
 })
 
@@ -240,9 +389,9 @@ res.json(order)
    EXPORT CSV
 =========================== */
 
-app.get("/api/orders/export",async(req,res)=>{
+app.get("/api/orders/export", async (req,res)=>{
 
-const orders=await Order.find()
+const orders = await Order.find()
 
 let csv="Customer,Email,Total,Status,Date\n"
 
@@ -260,7 +409,7 @@ res.send(csv)
    MONTHLY REVENUE
 =========================== */
 
-app.get("/api/revenue/monthly",async(req,res)=>{
+app.get("/api/revenue/monthly", async (req,res)=>{
 
 const start=new Date()
 start.setDate(1)
@@ -282,7 +431,7 @@ thisMonth:total
    SALES CHART
 =========================== */
 
-app.get("/api/revenue/chart",async(req,res)=>{
+app.get("/api/revenue/chart", async (req,res)=>{
 
 const orders=await Order.find({status:"Paid"})
 
@@ -301,19 +450,17 @@ days[date]+=order.totalAmount
 })
 
 res.json({
-
 labels:Object.keys(days),
 values:Object.values(days)
-
 })
 
 })
 
 /* ===========================
-   TOP SELLING PRODUCTS
+   TOP PRODUCTS
 =========================== */
 
-app.get("/api/analytics/top-products",async(req,res)=>{
+app.get("/api/analytics/top-products", async (req,res)=>{
 
 const orders=await Order.find({status:"Paid"})
 
@@ -334,10 +481,8 @@ sales[item.name]+=item.quantity
 })
 
 res.json({
-
 labels:Object.keys(sales),
 values:Object.values(sales)
-
 })
 
 })
@@ -346,7 +491,7 @@ values:Object.values(sales)
    PAYSTACK INITIALIZE
 =========================== */
 
-app.post("/initialize-payment",async(req,res)=>{
+app.post("/initialize-payment", async (req,res)=>{
 
 const {email,amount}=req.body
 
@@ -374,8 +519,6 @@ res.json(response.data)
 
 }catch(error){
 
-console.error("Paystack Init Error:",error.response?.data||error.message)
-
 res.status(500).json({
 error:"Payment initialization failed"
 })
@@ -388,7 +531,7 @@ error:"Payment initialization failed"
    VERIFY PAYMENT
 =========================== */
 
-app.post("/verify-payment",async(req,res)=>{
+app.post("/verify-payment", async (req,res)=>{
 
 const {reference,orderData}=req.body
 
@@ -407,8 +550,6 @@ Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
 )
 
 const paymentData=response.data.data
-
-console.log("Paystack verification:",paymentData)
 
 if(paymentData.status==="success"){
 
@@ -429,10 +570,8 @@ const savedOrder=await newOrder.save()
 io.emit("new-order",savedOrder)
 
 return res.json({
-
 success:true,
 orderId:savedOrder._id
-
 })
 
 }
@@ -441,13 +580,9 @@ return res.json({success:false})
 
 }catch(error){
 
-console.error("Verification Error:",error.response?.data||error.message)
-
 return res.status(500).json({
-
 success:false,
 error:"Verification failed"
-
 })
 
 }

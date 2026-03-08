@@ -7,6 +7,7 @@ const cartCount = document.getElementById("cart-count");
 /* ===========================
    CART STORAGE
 =========================== */
+
 function getCart() {
   return JSON.parse(localStorage.getItem("cart")) || [];
 }
@@ -25,29 +26,42 @@ function updateCartBadge() {
 /* ===========================
    ADD TO CART
 =========================== */
-function addToCart(productId) {
-  const cart = getCart();
-  const product = window.products.find(p => p.id === productId);
 
-  const existingItem = cart.find(item => item.id === productId);
+function addToCart(productId) {
+
+  const cart = getCart();
+
+  const product = window.products.find(p => p._id === productId);
+
+  if (!product) return;
+
+  const existingItem = cart.find(item => item._id === productId);
 
   if (existingItem) {
+
     existingItem.quantity += 1;
+
   } else {
+
     cart.push({
       ...product,
       quantity: 1
     });
+
   }
 
   saveCart(cart);
+
 }
 
 /* ===========================
    LOAD PRODUCTS
 =========================== */
+
 async function loadProducts() {
+
   try {
+
     spinner.style.display = "block";
     productsContainer.innerHTML = "";
 
@@ -65,27 +79,50 @@ async function loadProducts() {
     spinner.style.display = "none";
 
     products.forEach(product => {
+
+      const price = new Intl.NumberFormat("en-NG", {
+        style: "currency",
+        currency: "NGN"
+      }).format(product.price);
+
       const div = document.createElement("div");
       div.classList.add("product");
 
       div.innerHTML = `
+
         <h3>${product.name}</h3>
-        <p>${product.description}</p>
-        <p><strong>$${product.price}</strong></p>
-        <button class="add-to-cart" onclick="addToCart(${product.id})">
+
+        ${product.image ? `<img src="${product.image}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-bottom:10px;">` : ""}
+
+        <p>${product.description || ""}</p>
+
+        <p><strong>${price}</strong></p>
+
+        <button class="add-to-cart" onclick="addToCart('${product._id}')">
           Add to Cart
         </button>
+
       `;
 
       productsContainer.appendChild(div);
+
     });
 
   } catch (error) {
+
     spinner.style.display = "none";
+
     productsContainer.innerHTML = "<p>Failed to load products.</p>";
+
     console.error(error);
+
   }
+
 }
+
+/* ===========================
+   INIT
+=========================== */
 
 updateCartBadge();
 loadProducts();

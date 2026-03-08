@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>TechMart Admin</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css">
@@ -11,9 +13,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { background:#f6f6f7 }
-.sidebar { background:#111827 }
-.sidebar a:hover { background:#1f2937 }
+
+body{background:#f6f6f7}
+
+.sidebar{background:#111827}
+
+.sidebar a:hover{background:#1f2937}
 
 .card{
 background:white;
@@ -29,11 +34,11 @@ font-size:12px;
 cursor:pointer
 }
 
-.Pending{background:#f59e0b}
 .Processing{background:#3b82f6}
 .Shipped{background:#6366f1}
 .Delivered{background:#10b981}
 .Cancelled{background:#ef4444}
+
 </style>
 
 </head>
@@ -57,7 +62,7 @@ class="w-full border p-2 mb-3 rounded">
 class="w-full border p-2 mb-4 rounded">
 
 <button onclick="login()"
-class="w-full bg-black text-white p-2 rounded hover:bg-gray-800">
+class="w-full bg-black text-white p-2 rounded">
 Login
 </button>
 
@@ -81,7 +86,7 @@ Login
 <a href="#inventory" class="p-3 rounded">Inventory</a>
 
 <button onclick="logout()"
-class="mt-auto bg-red-600 p-2 rounded hover:bg-red-700">
+class="mt-auto bg-red-600 p-2 rounded">
 Logout
 </button>
 
@@ -91,21 +96,13 @@ Logout
 
 <div class="flex-1 p-8 overflow-y-auto">
 
-<div class="flex justify-between items-center mb-8">
-
-<h2 class="text-3xl font-bold">
+<h2 class="text-3xl font-bold mb-6">
 Admin Dashboard
 </h2>
 
-<div class="text-gray-600">
-Welcome to TechMart Admin
-</div>
-
-</div>
-
 <!-- KPI CARDS -->
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-4 gap-6 mb-8">
 
 <div class="card p-5">
 <p class="text-gray-500 text-sm">Total Orders</p>
@@ -123,23 +120,23 @@ Welcome to TechMart Admin
 </div>
 
 <div class="card p-5">
-<p class="text-gray-500 text-sm">Low Stock Items</p>
+<p class="text-gray-500 text-sm">Low Stock</p>
 <h3 id="lowStock" class="text-2xl font-bold text-red-600">0</h3>
 </div>
 
 </div>
 
-<!-- ANALYTICS -->
+<!-- CHARTS -->
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+<div class="grid grid-cols-2 gap-6 mb-8">
 
 <div class="card p-6">
-<h3 class="text-xl font-bold mb-4">Daily Revenue</h3>
+<h3 class="text-xl font-bold mb-4">Revenue</h3>
 <canvas id="revenueChart"></canvas>
 </div>
 
 <div class="card p-6">
-<h3 class="text-xl font-bold mb-4">Top Selling Products</h3>
+<h3 class="text-xl font-bold mb-4">Top Products</h3>
 <canvas id="topProductsChart"></canvas>
 </div>
 
@@ -151,27 +148,29 @@ Welcome to TechMart Admin
 
 <div class="flex justify-between mb-4">
 
-<h3 class="text-xl font-bold">
-Recent Orders
-</h3>
+<h3 class="text-xl font-bold">Orders</h3>
 
 <button onclick="exportCSV()"
-class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+class="bg-blue-600 text-white px-4 py-2 rounded">
 Export CSV
 </button>
 
 </div>
 
-<table class="w-full text-left">
+<table class="w-full">
 
 <thead>
+
 <tr class="border-b">
+
 <th>Customer</th>
 <th>Email</th>
 <th>Total</th>
 <th>Status</th>
 <th>Date</th>
+
 </tr>
+
 </thead>
 
 <tbody id="ordersTable"></tbody>
@@ -188,7 +187,7 @@ Export CSV
 Inventory
 </h3>
 
-<div class="flex gap-2 mb-4">
+<div class="flex flex-col gap-3 mb-4">
 
 <input id="productName"
 placeholder="Product Name"
@@ -204,22 +203,43 @@ placeholder="Stock"
 type="number"
 class="border p-2 rounded">
 
+<textarea id="productDescription"
+placeholder="Product Description"
+class="border p-2 rounded"></textarea>
+
+<div id="dropZone"
+class="border-2 border-dashed p-6 text-center rounded cursor-pointer">
+
+<p>Drag & Drop Product Image</p>
+<p class="text-sm text-gray-500">or click to upload</p>
+
+<input type="file" id="productImage" hidden>
+
+</div>
+
+<img id="imagePreview"
+class="w-32 mt-3 rounded hidden">
+
 <button onclick="addProduct()"
-class="bg-green-600 text-white px-4 rounded hover:bg-green-700">
-Add
+class="bg-green-600 text-white px-4 py-2 rounded">
+Add Product
 </button>
 
 </div>
 
-<table class="w-full text-left">
+<table class="w-full">
 
 <thead>
+
 <tr class="border-b">
+
 <th>Name</th>
 <th>Price</th>
 <th>Stock</th>
 <th>Actions</th>
+
 </tr>
+
 </thead>
 
 <tbody id="inventoryTable"></tbody>
@@ -235,9 +255,9 @@ Add
 
 const API="https://techmart-backend-ecbi.onrender.com"
 
-let token=localStorage.getItem("token")
-
 const socket=io(API)
+
+let token=localStorage.getItem("token")
 
 /* LOGIN */
 
@@ -267,10 +287,8 @@ startDashboard()
 }
 
 function logout(){
-
 localStorage.removeItem("token")
 location.reload()
-
 }
 
 function authFetch(url,options={}){
@@ -278,14 +296,11 @@ function authFetch(url,options={}){
 return fetch(url,{
 ...options,
 headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer "+token
+Authorization:"Bearer "+token
 }
 })
 
 }
-
-/* START */
 
 function startDashboard(){
 
@@ -302,10 +317,10 @@ if(token) startDashboard()
 
 async function loadDashboard(){
 
-await loadOrders()
-await loadInventory()
-await loadRevenue()
-await loadCharts()
+loadOrders()
+loadInventory()
+loadRevenue()
+loadCharts()
 
 }
 
@@ -318,9 +333,11 @@ const data=await res.json()
 
 document.getElementById("totalOrders").innerText=data.total
 
-let revenue=0
 const table=document.getElementById("ordersTable")
+
 table.innerHTML=""
+
+let revenue=0
 
 data.orders.forEach(o=>{
 
@@ -328,17 +345,14 @@ revenue+=o.totalAmount
 
 table.innerHTML+=`
 
-<tr class="border-b hover:bg-gray-50">
+<tr class="border-b">
 
 <td>${o.customerName}</td>
-
 <td>${o.email}</td>
-
 <td>$${o.totalAmount}</td>
 
 <td>
-<span class="badge ${o.status}"
-onclick="changeStatus('${o._id}')">
+<span class="badge ${o.status}">
 ${o.status}
 </span>
 </td>
@@ -359,7 +373,7 @@ document.getElementById("totalRevenue").innerText="$"+revenue
 
 async function loadInventory(){
 
-const res=await authFetch(API+"/api/products")
+const res=await fetch(API+"/api/products")
 const products=await res.json()
 
 const table=document.getElementById("inventoryTable")
@@ -370,18 +384,16 @@ products.forEach(p=>{
 
 table.innerHTML+=`
 
-<tr class="border-b hover:bg-gray-50">
+<tr class="border-b">
 
 <td>${p.name}</td>
-
 <td>$${p.price}</td>
-
 <td>${p.stock}</td>
 
 <td>
 
-<button class="bg-red-500 text-white px-2 rounded"
-onclick="deleteProduct('${p._id}')">
+<button onclick="deleteProduct('${p._id}')"
+class="bg-red-500 text-white px-2 rounded">
 Delete
 </button>
 
@@ -395,74 +407,84 @@ Delete
 
 }
 
-/* REVENUE */
+/* ADD PRODUCT */
 
-async function loadRevenue(){
+async function addProduct(){
 
-const res=await authFetch(API+"/api/revenue/monthly")
-const data=await res.json()
+const name=document.getElementById("productName").value
+const price=document.getElementById("productPrice").value
+const stock=document.getElementById("productStock").value
+const description=document.getElementById("productDescription").value
+const image=document.getElementById("productImage").files[0]
 
-document.getElementById("thisMonth").innerText="$"+data.thisMonth
+const formData=new FormData()
 
+formData.append("name",name)
+formData.append("price",price)
+formData.append("stock",stock)
+formData.append("description",description)
+
+if(image){
+formData.append("image",image)
 }
 
-/* CHARTS */
-
-let revenueChart
-let topProductsChart
-
-async function loadCharts(){
-
-const revenueRes=await fetch(API+"/api/revenue/chart")
-const revenue=await revenueRes.json()
-
-const topRes=await fetch(API+"/api/analytics/top-products")
-const top=await topRes.json()
-
-drawRevenueChart(revenue)
-drawTopProducts(top)
-
-}
-
-function drawRevenueChart(data){
-
-const ctx=document.getElementById("revenueChart")
-
-if(revenueChart) revenueChart.destroy()
-
-revenueChart=new Chart(ctx,{
-type:"line",
-data:{
-labels:data.labels,
-datasets:[{
-label:"Revenue",
-data:data.values,
-borderColor:"#3b82f6",
-backgroundColor:"rgba(59,130,246,0.2)",
-fill:true
-}]
-}
+await fetch(API+"/api/products",{
+method:"POST",
+body:formData
 })
 
+loadInventory()
+
 }
 
-function drawTopProducts(data){
+/* DELETE PRODUCT */
 
-const ctx=document.getElementById("topProductsChart")
+async function deleteProduct(id){
 
-if(topProductsChart) topProductsChart.destroy()
-
-topProductsChart=new Chart(ctx,{
-type:"bar",
-data:{
-labels:data.labels,
-datasets:[{
-label:"Units Sold",
-data:data.values,
-backgroundColor:"#10b981"
-}]
-}
+await authFetch(API+"/api/products/"+id,{
+method:"DELETE"
 })
+
+loadInventory()
+
+}
+
+/* IMAGE DRAG DROP */
+
+const dropZone=document.getElementById("dropZone")
+const fileInput=document.getElementById("productImage")
+const preview=document.getElementById("imagePreview")
+
+dropZone.onclick=()=>fileInput.click()
+
+dropZone.addEventListener("dragover",e=>{
+e.preventDefault()
+})
+
+dropZone.addEventListener("drop",e=>{
+e.preventDefault()
+
+fileInput.files=e.dataTransfer.files
+
+showPreview(fileInput.files[0])
+})
+
+fileInput.addEventListener("change",()=>{
+showPreview(fileInput.files[0])
+})
+
+function showPreview(file){
+
+const reader=new FileReader()
+
+reader.onload=function(e){
+
+preview.src=e.target.result
+preview.classList.remove("hidden")
+
+}
+
+reader.readAsDataURL(file)
 
 }
 

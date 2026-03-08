@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Product</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f9;
+padding:40px
+}
+
+.container{
+max-width:900px;
+margin:auto;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:40px;
+background:white;
+padding:30px;
+border-radius:10px
+}
+
+img{
+width:100%;
+border-radius:10px
+}
+
+button{
+background:#3b82f6;
+color:white;
+border:none;
+padding:12px 20px;
+border-radius:6px;
+cursor:pointer
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="productContainer"></div>
+
+<script>
+
+const API="https://techmart-backend-ecbi.onrender.com"
+
+const slug = window.location.pathname.split("/").pop()
+
+async function loadProduct(){
+
+const res = await fetch(API+"/api/products/"+slug)
+
+const product = await res.json()
+
+const container=document.getElementById("productContainer")
+
+container.innerHTML = `
+
+<div class="container">
+
+<img src="${product.image}">
+
+<div>
+
+<h1>${product.name}</h1>
+
+<p>${product.description}</p>
+
+<h2>$${product.price}</h2>
+
+<p>Stock: ${product.stock}</p>
+
+<button>Add to Cart</button>
+
+</div>
+
+</div>
+
+`
+
+}
+
+loadProduct()
+
+</script>
+
+</body>
+
+</html>

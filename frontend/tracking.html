@@ -1,202 +1,170 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Track Your Order</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f9;
-      margin: 0;
-      padding: 0;
-    }
 
-    .container {
-      max-width: 650px;
-      margin: 60px auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+<title>Track Your Order</title>
 
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+<style>
 
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      font-size: 16px;
-    }
+body{
+font-family:Arial;
+background:#f4f6f9;
+padding:40px;
+text-align:center;
+}
 
-    button {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 6px;
-    }
+.container{
+background:white;
+padding:30px;
+border-radius:10px;
+max-width:600px;
+margin:auto;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
 
-    button:hover {
-      background: #45a049;
-    }
+input{
+padding:10px;
+width:60%;
+margin:10px;
+border:1px solid #ccc;
+border-radius:5px;
+}
 
-    .order-info {
-      margin-top: 25px;
-      display: none;
-    }
+button{
+padding:10px 20px;
+background:#007bff;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
 
-    .status-bar {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
-    }
+.progress{
+margin-top:30px;
+display:flex;
+justify-content:space-between;
+}
 
-    .step {
-      flex: 1;
-      text-align: center;
-      position: relative;
-    }
+.step{
+flex:1;
+padding:10px;
+font-size:14px;
+}
 
-    .step::before {
-      content: "";
-      position: absolute;
-      top: 12px;
-      left: -50%;
-      width: 100%;
-      height: 4px;
-      background: #ddd;
-      z-index: -1;
-    }
+.active{
+color:green;
+font-weight:bold;
+}
 
-    .step:first-child::before {
-      display: none;
-    }
+</style>
 
-    .circle {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      margin: 0 auto;
-      background: #ddd;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-    }
-
-    .active .circle {
-      background: #4CAF50;
-    }
-
-    .label {
-      font-size: 12px;
-      margin-top: 6px;
-    }
-
-    .details {
-      margin-top: 20px;
-      font-size: 15px;
-    }
-  </style>
 </head>
+
 <body>
 
 <div class="container">
-  <h1>🚚 Track Your Order</h1>
 
-  <input type="text" id="trackingInput" placeholder="Enter Tracking Number (e.g. TRK-123456)">
-  <button onclick="trackOrder()">Track Order</button>
+<h2>📦 Track Your Order</h2>
 
-  <div class="order-info" id="orderInfo">
-    <h3>Status</h3>
+<input id="trackingInput" placeholder="Enter Tracking Number">
 
-    <div class="status-bar">
-      <div class="step" data-status="pending">
-        <div class="circle">1</div>
-        <div class="label">Pending</div>
-      </div>
-      <div class="step" data-status="processing">
-        <div class="circle">2</div>
-        <div class="label">Processing</div>
-      </div>
-      <div class="step" data-status="shipped">
-        <div class="circle">3</div>
-        <div class="label">Shipped</div>
-      </div>
-      <div class="step" data-status="out-for-delivery">
-        <div class="circle">4</div>
-        <div class="label">Out for Delivery</div>
-      </div>
-      <div class="step" data-status="delivered">
-        <div class="circle">5</div>
-        <div class="label">Delivered</div>
-      </div>
-    </div>
+<br>
 
-    <div class="details" id="orderDetails"></div>
-  </div>
+<button onclick="trackOrder()">Track</button>
+
+<div id="result"></div>
+
+<div class="progress">
+
+<div id="step1" class="step">Order Placed</div>
+<div id="step2" class="step">Processing</div>
+<div id="step3" class="step">Shipped</div>
+<div id="step4" class="step">Out for Delivery</div>
+<div id="step5" class="step">Delivered</div>
+
+</div>
+
 </div>
 
 <script>
-async function trackOrder() {
-  const tracking = document.getElementById("trackingInput").value.trim();
-  if (!tracking) {
-    alert("Please enter a tracking number");
-    return;
-  }
 
-  try {
-    const res = await fetch(`http://localhost:5002/api/track/${tracking}`);
-    if (!res.ok) {
-      alert("Tracking number not found");
-      return;
-    }
+const API_URL = "https://techmart-backend-ecbi.onrender.com"
 
-    const data = await res.json();
-    const order = data.order;
+async function trackOrder(trackingNumber){
 
-    document.getElementById("orderInfo").style.display = "block";
-    updateStatus(order.status);
+let tracking = trackingNumber || document.getElementById("trackingInput").value
 
-    document.getElementById("orderDetails").innerHTML = `
-      <p><strong>Tracking:</strong> ${data.tracking}</p>
-      <p><strong>Status:</strong> ${order.status}</p>
-      <p><strong>Name:</strong> ${order.name}</p>
-      <p><strong>Email:</strong> ${order.email}</p>
-    `;
-
-  } catch (err) {
-    console.error(err);
-    alert("Failed to load tracking info");
-  }
+if(!tracking){
+document.getElementById("result").innerHTML="⚠️ Please enter a tracking number"
+return
 }
 
-function updateStatus(currentStatus) {
-  const steps = document.querySelectorAll(".step");
-  const order = [
-    "pending",
-    "processing",
-    "shipped",
-    "out-for-delivery",
-    "delivered"
-  ];
+try{
 
-  const activeIndex = order.indexOf(currentStatus);
+const res = await fetch(`${API_URL}/api/track/${tracking}`)
 
-  steps.forEach((step, index) => {
-    if (index <= activeIndex) {
-      step.classList.add("active");
-    } else {
-      step.classList.remove("active");
-    }
-  });
+const data = await res.json()
+
+if(data.error){
+document.getElementById("result").innerHTML="❌ Tracking not found"
+return
 }
+
+document.getElementById("trackingInput").value = tracking
+
+document.getElementById("result").innerHTML = `
+<p><b>Status:</b> ${data.status}</p>
+<p><b>Carrier:</b> ${data.carrier}</p>
+<p><b>Tracking Number:</b> ${data.trackingNumber}</p>
+`
+
+updateProgress(data.status)
+
+}catch(err){
+
+document.getElementById("result").innerHTML="❌ Error contacting server"
+
+}
+
+}
+
+function updateProgress(status){
+
+document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"))
+
+document.getElementById("step1").classList.add("active")
+
+if(status==="Processing"){
+document.getElementById("step2").classList.add("active")
+}
+
+if(status==="Shipped"){
+document.getElementById("step2").classList.add("active")
+document.getElementById("step3").classList.add("active")
+}
+
+if(status==="Out for Delivery"){
+document.getElementById("step2").classList.add("active")
+document.getElementById("step3").classList.add("active")
+document.getElementById("step4").classList.add("active")
+}
+
+if(status==="Delivered"){
+document.querySelectorAll(".step").forEach(s=>s.classList.add("active"))
+}
+
+}
+
+/* AUTO LOAD TRACKING FROM URL */
+
+const params = new URLSearchParams(window.location.search)
+
+const trackingFromURL = params.get("tracking")
+
+if(trackingFromURL){
+trackOrder(trackingFromURL)
+}
+
 </script>
 
 </body>
