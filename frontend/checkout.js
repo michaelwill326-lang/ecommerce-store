@@ -14,14 +14,19 @@ if (cart.length === 0) {
 /* ===========================
    Render Order Summary
 =========================== */
+
 function renderSummary() {
+
   summaryDiv.innerHTML = "";
+
   let total = 0;
 
   cart.forEach(item => {
+
     total += item.price * item.quantity;
 
     const div = document.createElement("div");
+
     div.innerHTML = `
       <p>
         ${item.name} × ${item.quantity}
@@ -30,10 +35,13 @@ function renderSummary() {
         </span>
       </p>
     `;
+
     summaryDiv.appendChild(div);
+
   });
 
   totalEl.textContent = `Total: ₦${total.toFixed(2)}`;
+
 }
 
 renderSummary();
@@ -41,7 +49,9 @@ renderSummary();
 /* ===========================
    Handle Checkout Submit
 =========================== */
+
 form.addEventListener("submit", async (e) => {
+
   e.preventDefault();
 
   const customerName = document.getElementById("name").value.trim();
@@ -60,19 +70,31 @@ form.addEventListener("submit", async (e) => {
   const amountInKobo = Math.round(totalAmount * 100);
 
   try {
+
     /* ===========================
        STEP 1: Initialize Payment
     ============================ */
+
     const initResponse = await fetch(`${BACKEND_URL}/initialize-payment`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         email,
         amount: totalAmount
       })
     });
 
+    if (!initResponse.ok) {
+      const errorText = await initResponse.text();
+      console.error("Initialize payment error:", errorText);
+      alert("Payment initialization failed.");
+      return;
+    }
+
     const initData = await initResponse.json();
+
     console.log("Initialize response:", initData);
 
     if (!initData.status) {
@@ -88,68 +110,102 @@ form.addEventListener("submit", async (e) => {
     /* ===========================
        STEP 2: Open Paystack Popup
     ============================ */
+
     const handler = PaystackPop.setup({
+
       key: "pk_test_c37b9c580095dffc5e9a977f82c04ecac4bd8337",
+
       email: email,
+
       amount: amountInKobo,
+
       currency: "NGN",
+
       ref: initData.data.reference,
 
-      callback: function (response) {
-        console.log("Callback triggered:", response);
+      callback: async function (response) {
 
-        fetch(`${BACKEND_URL}/verify-payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reference: response.reference,
-            orderData: {
-              customerName,
-              email,
-              address,
-              items: cart,
-              totalAmount
-            }
-          })
-        })
-        .then(res => {
-          console.log("Raw verify response:", res);
-          return res.text(); // get raw response first
-        })
-        .then(text => {
-          console.log("Raw verify text:", text);
+        console.log("Payment successful:", response);
 
-          try {
-            const data = JSON.parse(text);
-            console.log("Parsed verify JSON:", data);
+        try {
 
-            if (data.success && data.orderId) {
-              localStorage.removeItem("cart");
-              window.location.href = `thankyou.html?orderId=${data.orderId}`;
-            } else {
-              alert("Payment verification failed.");
-            }
+          const verifyResponse = await fetch(`${BACKEND_URL}/verify-payment`, {
 
-          } catch (err) {
-            console.error("JSON parse error:", err);
-            alert("Server did not return valid JSON.");
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+              reference: response.reference,
+
+              orderData: {
+                customerName,
+                email,
+                address,
+                items: cart,
+                totalAmount
+              }
+
+            })
+
+          });
+
+          if (!verifyResponse.ok) {
+
+            const errorText = await verifyResponse.text();
+            console.error("Verify payment error:", errorText);
+
+            alert("Payment verification failed.");
+            return;
+
           }
-        })
-        .catch(err => {
-          console.error("Verify request failed:", err);
+
+          const data = await verifyResponse.json();
+
+          console.log("Verify response:", data);
+
+          if (data.success && data.orderId) {
+
+            localStorage.removeItem("cart");
+
+            window.location.href =
+              `thankyou.html?orderId=${data.orderId}`;
+
+          } else {
+
+            alert("Payment verification failed.");
+
+          }
+
+        } catch (err) {
+
+          console.error("Verification error:", err);
+
           alert("Verification request failed.");
-        });
+
+        }
+
       },
 
       onClose: function () {
+
         console.log("Payment popup closed.");
+
       }
+
     });
 
     handler.openIframe();
 
   } catch (error) {
+
     console.error("Checkout error:", error);
+
     alert("Something went wrong.");
+
   }
+
 });
