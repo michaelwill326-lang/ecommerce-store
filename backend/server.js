@@ -453,6 +453,11 @@ res.json(product.reviews)
 
 app.post("/initialize-payment", async (req,res)=>{
 
+   console.log(
+   "Paystack key loaded:",
+   process.env.PAYSTACK_SECRET_KEY ? "YES" : "NO"
+   )
+   
    const {email,amount} = req.body
    
    try{
