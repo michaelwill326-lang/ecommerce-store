@@ -27,10 +27,6 @@ border-radius:10px;
 box-shadow:0 3px 8px rgba(0,0,0,0.08);
 }
 
-h2{
-margin-top:0;
-}
-
 input{
 width:100%;
 padding:10px;
@@ -54,12 +50,14 @@ button:hover{
 background:#1d4ed8;
 }
 
-hr{
-margin:25px 0;
+.error{
+color:red;
+font-size:14px;
+margin-top:5px;
 }
 
-.dashboard{
-text-align:center;
+hr{
+margin:25px 0;
 }
 
 </style>
@@ -72,9 +70,21 @@ text-align:center;
 
 <h2>Customer Account</h2>
 
-<!-- LOGIN + REGISTER -->
-
 <div id="auth-section">
+
+<h3>Create Account</h3>
+
+<input id="reg-name" placeholder="Full Name">
+
+<input id="reg-email" placeholder="Email">
+
+<input id="reg-password" type="password" placeholder="Password">
+
+<button onclick="register()">Create Account</button>
+
+<p class="error" id="register-error"></p>
+
+<hr>
 
 <h3>Login</h3>
 
@@ -84,23 +94,11 @@ text-align:center;
 
 <button onclick="login()">Login</button>
 
-<hr>
-
-<h3>Create Account</h3>
-
-<input id="register-name" placeholder="Full Name">
-
-<input id="register-email" placeholder="Email">
-
-<input id="register-password" type="password" placeholder="Password">
-
-<button onclick="register()">Register</button>
+<p class="error" id="login-error"></p>
 
 </div>
 
-<!-- ACCOUNT DASHBOARD -->
-
-<div id="account-section" style="display:none" class="dashboard">
+<div id="dashboard" style="display:none">
 
 <h3>Welcome</h3>
 
@@ -120,15 +118,17 @@ text-align:center;
 
 const API="https://techmart-backend-ecbi.onrender.com"
 
-/* =========================
-REGISTER
-========================= */
+/* REGISTER */
 
 async function register(){
 
-const name=document.getElementById("register-name").value
-const email=document.getElementById("register-email").value
-const password=document.getElementById("register-password").value
+const name=document.getElementById("reg-name").value
+const email=document.getElementById("reg-email").value
+const password=document.getElementById("reg-password").value
+
+document.getElementById("register-error").innerText=""
+
+try{
 
 const res=await fetch(API+"/api/users/register",{
 
@@ -144,18 +144,36 @@ body:JSON.stringify({name,email,password})
 
 const data=await res.json()
 
-alert(data.message || data.error)
+if(res.ok){
+
+alert("Account created successfully")
+
+loginAfterRegister(email,password)
+
+}else{
+
+document.getElementById("register-error").innerText=data.error
 
 }
 
-/* =========================
-LOGIN
-========================= */
+}catch(err){
+
+document.getElementById("register-error").innerText="Server error"
+
+}
+
+}
+
+/* LOGIN */
 
 async function login(){
 
 const email=document.getElementById("login-email").value
 const password=document.getElementById("login-password").value
+
+document.getElementById("login-error").innerText=""
+
+try{
 
 const res=await fetch(API+"/api/users/login",{
 
@@ -180,15 +198,30 @@ loadAccount()
 
 }else{
 
-alert(data.error)
+document.getElementById("login-error").innerText=data.error
+
+}
+
+}catch(err){
+
+document.getElementById("login-error").innerText="Server error"
 
 }
 
 }
 
-/* =========================
-LOAD ACCOUNT
-========================= */
+/* AUTO LOGIN AFTER REGISTER */
+
+function loginAfterRegister(email,password){
+
+document.getElementById("login-email").value=email
+document.getElementById("login-password").value=password
+
+login()
+
+}
+
+/* LOAD ACCOUNT */
 
 function loadAccount(){
 
@@ -198,7 +231,7 @@ if(!email) return
 
 document.getElementById("auth-section").style.display="none"
 
-document.getElementById("account-section").style.display="block"
+document.getElementById("dashboard").style.display="block"
 
 document.getElementById("user-email").innerText=email
 
@@ -206,9 +239,7 @@ document.getElementById("user-email").innerText=email
 
 loadAccount()
 
-/* =========================
-LOGOUT
-========================= */
+/* LOGOUT */
 
 function logout(){
 
@@ -219,9 +250,7 @@ location.reload()
 
 }
 
-/* =========================
-NAVIGATION
-========================= */
+/* NAVIGATION */
 
 function goOrders(){
 
