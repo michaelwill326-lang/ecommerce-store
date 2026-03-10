@@ -1,202 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Order History</title>
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .order-card {
-      background: #fff;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .order-card h2 {
-      margin-top: 0;
-    }
-    .product-list {
-      margin-top: 10px;
-    }
-    .product-item {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 10px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
-    }
-    .product-item img {
-      width: 60px;
-      height: 60px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-  </style>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Product</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+body{
+font-family:Arial;
+padding:40px;
+background:#f4f6f9;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:10px;
+}
+
+.review{
+border-bottom:1px solid #eee;
+padding:10px 0;
+}
+
+.star{
+color:gold;
+font-size:18px;
+}
+
+</style>
+
 </head>
+
 <body>
 
-  <h1>🧾 Order History</h1>
+<div class="container">
 
-  <!-- 🔍 Email Filter Input with Live Search + Clear Button -->
-  <div style="text-align: center; margin-bottom: 20px;">
-    <input
-      type="email"
-      id="emailFilter"
-      placeholder="Enter your email to filter"
-      oninput="filterOrders()"
-      style="padding: 10px; width: 280px; border-radius: 6px; border: 1px solid #ccc;"
-    />
-    <button onclick="filterOrders()" style="padding: 10px 15px; margin-left: 10px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer;">
-      Filter
-    </button>
-    <button onclick="clearFilter()" style="padding: 10px 15px; margin-left: 10px; background-color: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer;">
-      Clear
-    </button>
-  </div>
+<h1 id="product-name"></h1>
 
-  <div id="orders-container"></div>
+<img id="product-image" width="250">
 
-  <script>
-    const container = document.getElementById('orders-container');
-  
-    async function fetchOrders() {
-      try {
-        const res = await fetch('http://localhost:5002/api/orders'); // Updated endpoint
-        const data = await res.json();
-        window.allOrders = data;
-        renderOrders(data);
-      } catch (error) {
-        container.innerHTML = "<p style='text-align: center;'>Error fetching orders.</p>";
-        console.error(error);
-      }
-    }
-  
-    function renderOrders(orders) {
-      const filterEmail = document.getElementById('emailFilter')?.value?.trim().toLowerCase() || '';
-      container.innerHTML = '';
-  
-      const filtered = filterEmail
-        ? orders.filter(order => order.email.toLowerCase().includes(filterEmail))
-        : orders;
-  
-      if (filtered.length === 0) {
-        container.innerHTML = "<p style='text-align: center;'>No matching orders found.</p>";
-        return;
-      }
-  
-      filtered.forEach(order => {
-        let productList = '';
-        order.items.forEach(item => {
-          productList += `
-            <div class="product-item">
-              <img src="${item.image}" alt="${item.name}">
-              <div>
-                <strong>${item.name}</strong><br>
-                $${item.price} × ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}
-              </div>
-            </div>
-          `;
-        });
-  
-        container.innerHTML += `
-          <div class="order-card">
-            <h2>Order #${order.id}</h2>
-            <p><strong>Name:</strong> ${order.name}</p>
-            <p><strong>Email:</strong> ${order.email}</p>
-            <p><strong>Address:</strong> ${order.address}</p>
-            <p><strong>Shipping Method:</strong> ${order.shippingMethod}</p>
-            <p><strong>Estimated Delivery:</strong> ${order.eta}</p>
-            <p><strong>Total:</strong> $${order.total}</p>
-            <div class="product-list">${productList}</div>
-          </div>
-        `;
-      });
-    }
-  
-    function filterOrders() {
-      renderOrders(window.allOrders || []);
-    }
-  
-    function clearFilter() {
-      document.getElementById('emailFilter').value = '';
-      renderOrders(window.allOrders || []);
-    }
-  
-    // Load orders on page load
-    fetchOrders();
-  </script>
-  
+<p id="product-description"></p>
 
-    function displayOrders(orders) {
-      const container = document.getElementById('orders-container');
-      container.innerHTML = '';
+<h2 id="product-price"></h2>
 
-      if (!orders.length) {
-        container.innerHTML = "<p style='text-align: center;'>No matching orders found.</p>";
-        return;
-      }
+<button onclick="addToCart()">Add to Cart</button>
 
-      orders.forEach(order => {
-        let productList = '';
-        order.items.forEach(item => {
-          productList += `
-            <div class="product-item">
-              <img src="${item.image}" alt="${item.name}">
-              <div>
-                <strong>${item.name}</strong><br>
-                $${item.price} × ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}
-              </div>
-            </div>
-          `;
-        });
+<hr>
 
-        const orderHTML = `
-          <div class="order-card">
-            <h2>Order #${order.id}</h2>
-            <p><strong>Name:</strong> ${order.name}</p>
-            <p><strong>Email:</strong> ${order.email}</p>
-            <p><strong>Address:</strong> ${order.address}</p>
-            <p><strong>Shipping Method:</strong> ${order.shippingMethod}</p>
-            <p><strong>Estimated Delivery:</strong> ${order.eta}</p>
-            <p><strong>Total:</strong> $${order.total}</p>
-            <div class="product-list">${productList}</div>
-          </div>
-        `;
+<h2>⭐ Reviews</h2>
 
-        container.innerHTML += orderHTML;
-      });
-    }
+<div id="reviews"></div>
 
-    function filterOrders() {
-      const emailInput = document.getElementById('emailFilter').value.trim().toLowerCase();
-      const orders = loadOrders();
+<hr>
 
-      if (!emailInput) {
-        displayOrders(orders);
-      } else {
-        const filtered = orders.filter(order => order.email.toLowerCase().includes(emailInput));
-        displayOrders(filtered);
-      }
-    }
+<h3>Leave a Review</h3>
 
-    function clearFilter() {
-      document.getElementById('emailFilter').value = '';
-      displayOrders(loadOrders());
-    }
+<input id="review-name" placeholder="Your Name">
 
-    // Initial load
-    displayOrders(loadOrders());
-  </script>
+<br><br>
+
+<select id="review-rating">
+<option value="5">⭐⭐⭐⭐⭐</option>
+<option value="4">⭐⭐⭐⭐</option>
+<option value="3">⭐⭐⭐</option>
+<option value="2">⭐⭐</option>
+<option value="1">⭐</option>
+</select>
+
+<br><br>
+
+<textarea id="review-comment" placeholder="Write review"></textarea>
+
+<br><br>
+
+<button onclick="submitReview()">Submit Review</button>
+
+</div>
+
+<script>
+
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+
+const slug=new URLSearchParams(window.location.search).get("slug")
+
+let product
+
+async function loadProduct(){
+
+const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
+
+product=await res.json()
+
+document.getElementById("product-name").innerText=product.name
+
+document.getElementById("product-image").src=product.image
+
+document.getElementById("product-description").innerText=product.description
+
+document.getElementById("product-price").innerText=`₦${product.price}`
+
+loadReviews()
+
+}
+
+function addToCart(){
+
+let cart=JSON.parse(localStorage.getItem("cart"))||[]
+
+const existing=cart.find(i=>i._id===product._id)
+
+if(existing){
+
+existing.quantity++
+
+}else{
+
+cart.push({...product,quantity:1})
+
+}
+
+localStorage.setItem("cart",JSON.stringify(cart))
+
+alert("Added to cart")
+
+}
+
+async function loadReviews(){
+
+const res=await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`)
+
+const reviews=await res.json()
+
+const container=document.getElementById("reviews")
+
+container.innerHTML=""
+
+reviews.forEach(r=>{
+
+let stars=""
+
+for(let i=0;i<r.rating;i++){
+
+stars+="⭐"
+
+}
+
+container.innerHTML+=`
+
+<div class="review">
+
+<strong>${r.name}</strong>
+
+<div class="star">${stars}</div>
+
+<p>${r.comment}</p>
+
+</div>
+
+`
+
+})
+
+}
+
+async function submitReview(){
+
+const name=document.getElementById("review-name").value
+
+const rating=document.getElementById("review-rating").value
+
+const comment=document.getElementById("review-comment").value
+
+await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`,{
+
+method:"POST",
+
+headers:{"Content-Type":"application/json"},
+
+body:JSON.stringify({name,rating,comment})
+
+})
+
+document.getElementById("review-comment").value=""
+
+loadReviews()
+
+}
+
+loadProduct()
+
+</script>
+
 </body>
 </html>
