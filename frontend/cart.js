@@ -1,52 +1,88 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const cartList = document.getElementById("cart-items");
-  const totalElement = document.getElementById("cart-total");
-  const clearCartBtn = document.getElementById("clear-cart");
-  const checkoutBtn = document.getElementById("checkout-btn");
+const cartContainer = document.getElementById("cart-items")
+const totalElement = document.getElementById("cart-total")
 
-  // Load cart from localStorage
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+function getCart(){
+return JSON.parse(localStorage.getItem("cart")) || []
+}
 
-  // ✅ Render cart items
-  function renderCart() {
-    cartList.innerHTML = "";
-    let total = 0;
+function saveCart(cart){
+localStorage.setItem("cart",JSON.stringify(cart))
+renderCart()
+}
 
-    if (cart.length === 0) {
-      cartList.innerHTML = `<li>Your cart is empty.</li>`;
-      totalElement.textContent = "Total: $0.00";
-      return;
-    }
+function removeItem(id){
 
-    cart.forEach(item => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <img src="${item.image}" alt="${item.name}" width="50">
-        ${item.name} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}
-      `;
-      cartList.appendChild(li);
+let cart = getCart()
 
-      total += item.price * item.quantity;
-    });
+cart = cart.filter(item => item._id !== id)
 
-    totalElement.textContent = `Total: $${total.toFixed(2)}`;
-  }
+saveCart(cart)
 
-  // ✅ Clear cart
-  clearCartBtn.addEventListener("click", () => {
-    cart = [];
-    localStorage.removeItem("cart");
-    renderCart();
-  });
+}
 
-  // ✅ Proceed to checkout
-  checkoutBtn.addEventListener("click", () => {
-    if (cart.length === 0) {
-      alert("Your cart is empty!");
-      return;
-    }
-    window.location.href = "checkout.html";
-  });
+function changeQty(id,amount){
 
-  renderCart();
-});
+let cart = getCart()
+
+const item = cart.find(i => i._id === id)
+
+if(!item) return
+
+item.quantity += amount
+
+if(item.quantity <= 0){
+removeItem(id)
+return
+}
+
+saveCart(cart)
+
+}
+
+function renderCart(){
+
+const cart = getCart()
+
+cartContainer.innerHTML=""
+
+let total = 0
+
+cart.forEach(item=>{
+
+total += item.price * item.quantity
+
+cartContainer.innerHTML+=`
+
+<div class="cart-item">
+
+<img src="${item.image}" width="80">
+
+<div>
+
+<h3>${item.name}</h3>
+
+<p>₦${item.price}</p>
+
+<button onclick="changeQty('${item._id}',-1)">-</button>
+
+${item.quantity}
+
+<button onclick="changeQty('${item._id}',1)">+</button>
+
+<button onclick="removeItem('${item._id}')">
+Remove
+</button>
+
+</div>
+
+</div>
+
+`
+
+})
+
+totalElement.textContent = `Total: ₦${total}`
+
+}
+
+renderCart()

@@ -1,138 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shopping Cart</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shopping Cart</title>
+
+<link rel="stylesheet" href="style.css">
+
 </head>
 <body>
 
-  <div class="checkout-container">
-    <h2>🛒 Your Shopping Cart</h2>
+<div class="checkout-container">
 
-    <div id="cart-items"></div>
+<h2>🛒 Your Shopping Cart</h2>
 
-    <p id="cart-total" style="text-align:right; font-size:18px; font-weight:bold; margin-top:15px;">
-      Total: $0.00
-    </p>
+<div id="cart-items"></div>
 
-    <div style="display:flex; justify-content:space-between; margin-top:20px;">
-      <button class="clear-cart-btn" id="clear-cart">Clear Cart</button>
-      <button class="back-to-shop-btn" id="checkout-btn">Proceed to Checkout</button>
-    </div>
-  </div>
+<p id="cart-total"
+style="text-align:right;font-size:18px;font-weight:bold;margin-top:15px;">
+Total: ₦0.00
+</p>
 
-  <script>
-    const cartItemsDiv = document.getElementById("cart-items");
-    const cartTotalEl = document.getElementById("cart-total");
+<div style="display:flex;justify-content:space-between;margin-top:20px;">
 
-    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+<button id="clear-cart">
+Clear Cart
+</button>
 
-    // Render cart items
-    function renderCart() {
-      cartItemsDiv.innerHTML = "";
+<button id="checkout-btn">
+Proceed to Checkout
+</button>
 
-      if (cart.length === 0) {
-        cartItemsDiv.innerHTML = "<p>Your cart is empty.</p>";
-        cartTotalEl.textContent = "Total: $0.00";
-        return;
-      }
+</div>
 
-      cart.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "ordered-product";
+</div>
 
-        div.innerHTML = `
-          <img src="${item.image}" alt="${item.name}">
-          <div class="ordered-product-details">
-            <p><strong>${item.name}</strong></p>
-            <p>Price: $${item.price.toFixed(2)}</p>
-            <p>
-              Quantity:
-              <button class="decrease" data-id="${item.id}">−</button>
-              ${item.quantity}
-              <button class="increase" data-id="${item.id}">+</button>
-            </p>
-            <button class="remove-item-btn" data-id="${item.id}">Remove</button>
-          </div>
-        `;
+<script>
 
-        cartItemsDiv.appendChild(div);
-      });
+const cartItemsDiv = document.getElementById("cart-items")
+const cartTotalEl = document.getElementById("cart-total")
 
-      updateTotal();
-      attachEventListeners();
-    }
+let cart = JSON.parse(localStorage.getItem("cart")) || []
 
-    // Update total price
-    function updateTotal() {
-      const total = cart.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
-      cartTotalEl.textContent = `Total: $${total.toFixed(2)}`;
-    }
+/* ===========================
+   RENDER CART
+=========================== */
 
-    // Attach button events
-    function attachEventListeners() {
+function renderCart(){
 
-      document.querySelectorAll(".increase").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = Number(btn.dataset.id);
-          const item = cart.find(i => i.id === id);
-          item.quantity++;
-          saveCart();
-          renderCart();
-        });
-      });
+cartItemsDiv.innerHTML=""
 
-      document.querySelectorAll(".decrease").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = Number(btn.dataset.id);
-          const item = cart.find(i => i.id === id);
+if(cart.length===0){
 
-          if (item.quantity > 1) {
-            item.quantity--;
-          } else {
-            cart = cart.filter(i => i.id !== id);
-          }
+cartItemsDiv.innerHTML="<p>Your cart is empty.</p>"
+cartTotalEl.textContent="Total: ₦0.00"
 
-          saveCart();
-          renderCart();
-        });
-      });
+return
+}
 
-      document.querySelectorAll(".remove-item-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = Number(btn.dataset.id);
-          cart = cart.filter(i => i.id !== id);
-          saveCart();
-          renderCart();
-        });
-      });
-    }
+cart.forEach(item=>{
 
-    function saveCart() {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
+const div=document.createElement("div")
 
-    document.getElementById("clear-cart").addEventListener("click", () => {
-      cart = [];
-      saveCart();
-      renderCart();
-    });
+div.className="ordered-product"
 
-    document.getElementById("checkout-btn").addEventListener("click", () => {
-      if (cart.length === 0) {
-        alert("Your cart is empty!");
-        return;
-      }
-      window.location.href = "checkout.html";
-    });
+div.innerHTML=`
 
-    renderCart();
-  </script>
+<img src="${item.image}" width="80">
+
+<div class="ordered-product-details">
+
+<p><strong>${item.name}</strong></p>
+
+<p>Price: ₦${item.price}</p>
+
+<p>
+
+Quantity:
+
+<button class="decrease" data-id="${item._id}">−</button>
+
+${item.quantity}
+
+<button class="increase" data-id="${item._id}">+</button>
+
+</p>
+
+<button class="remove-item-btn" data-id="${item._id}">
+Remove
+</button>
+
+</div>
+
+`
+
+cartItemsDiv.appendChild(div)
+
+})
+
+updateTotal()
+attachEvents()
+
+}
+
+/* ===========================
+   UPDATE TOTAL
+=========================== */
+
+function updateTotal(){
+
+const total = cart.reduce((sum,item)=>{
+
+return sum + item.price * item.quantity
+
+},0)
+
+cartTotalEl.textContent=`Total: ₦${total}`
+
+}
+
+/* ===========================
+   BUTTON EVENTS
+=========================== */
+
+function attachEvents(){
+
+document.querySelectorAll(".increase").forEach(btn=>{
+
+btn.addEventListener("click",()=>{
+
+const id = btn.dataset.id
+
+const item = cart.find(i=>i._id===id)
+
+item.quantity++
+
+saveCart()
+
+renderCart()
+
+})
+
+})
+
+document.querySelectorAll(".decrease").forEach(btn=>{
+
+btn.addEventListener("click",()=>{
+
+const id = btn.dataset.id
+
+const item = cart.find(i=>i._id===id)
+
+if(item.quantity>1){
+
+item.quantity--
+
+}else{
+
+cart = cart.filter(i=>i._id!==id)
+
+}
+
+saveCart()
+
+renderCart()
+
+})
+
+})
+
+document.querySelectorAll(".remove-item-btn").forEach(btn=>{
+
+btn.addEventListener("click",()=>{
+
+const id = btn.dataset.id
+
+cart = cart.filter(i=>i._id!==id)
+
+saveCart()
+
+renderCart()
+
+})
+
+})
+
+}
+
+/* ===========================
+   SAVE CART
+=========================== */
+
+function saveCart(){
+
+localStorage.setItem("cart",JSON.stringify(cart))
+
+}
+
+/* ===========================
+   CLEAR CART
+=========================== */
+
+document.getElementById("clear-cart").addEventListener("click",()=>{
+
+cart=[]
+
+saveCart()
+
+renderCart()
+
+})
+
+/* ===========================
+   CHECKOUT
+=========================== */
+
+document.getElementById("checkout-btn").addEventListener("click",()=>{
+
+if(cart.length===0){
+
+alert("Your cart is empty!")
+
+return
+
+}
+
+window.location.href="checkout.html"
+
+})
+
+renderCart()
+
+</script>
 
 </body>
 </html>

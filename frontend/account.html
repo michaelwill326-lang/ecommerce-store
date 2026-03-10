@@ -1,50 +1,40 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
-<title>My Account</title>
+<title>Account</title>
+
+<link rel="stylesheet" href="style.css">
 
 <style>
 
 body{
 font-family:Arial;
 background:#f4f6f9;
-padding:40px
+padding:40px;
 }
 
 .container{
-max-width:900px;
+max-width:400px;
 margin:auto;
 background:white;
 padding:30px;
-border-radius:10px
+border-radius:10px;
 }
 
 input{
-padding:10px;
 width:100%;
-margin-bottom:10px
+padding:10px;
+margin:8px 0;
 }
 
 button{
-padding:10px 20px;
-background:#3b82f6;
+width:100%;
+padding:10px;
+background:black;
 color:white;
 border:none;
-border-radius:6px;
-cursor:pointer
-}
-
-table{
-width:100%;
-margin-top:20px;
-border-collapse:collapse
-}
-
-th,td{
-padding:10px;
-border-bottom:1px solid #ddd
+cursor:pointer;
 }
 
 </style>
@@ -57,44 +47,39 @@ border-bottom:1px solid #ddd
 
 <h2>Customer Account</h2>
 
-<div id="loginSection">
+<div id="auth-section">
 
 <h3>Login</h3>
 
-<input id="email" placeholder="Email">
+<input id="login-email" placeholder="Email">
 
-<input id="password" type="password" placeholder="Password">
+<input id="login-password" type="password" placeholder="Password">
 
 <button onclick="login()">Login</button>
 
+<hr>
+
+<h3>Create Account</h3>
+
+<input id="register-name" placeholder="Name">
+
+<input id="register-email" placeholder="Email">
+
+<input id="register-password" type="password" placeholder="Password">
+
+<button onclick="register()">Register</button>
+
 </div>
 
-<div id="dashboard" style="display:none">
+<div id="account-section" style="display:none">
 
-<h3>Welcome <span id="userName"></span></h3>
+<h3>Welcome</h3>
+
+<p id="user-email"></p>
+
+<button onclick="viewOrders()">My Orders</button>
 
 <button onclick="logout()">Logout</button>
-
-<h3>Your Orders</h3>
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>Date</th>
-<th>Total</th>
-<th>Status</th>
-<th>Tracking</th>
-
-</tr>
-
-</thead>
-
-<tbody id="ordersTable"></tbody>
-
-</table>
 
 </div>
 
@@ -104,18 +89,17 @@ border-bottom:1px solid #ddd
 
 const API="https://techmart-backend-ecbi.onrender.com"
 
-let token = localStorage.getItem("userToken")
+/* =====================
+REGISTER
+===================== */
 
-/* ===========================
-LOGIN
-=========================== */
+async function register(){
 
-async function login(){
+const name=document.getElementById("register-name").value
+const email=document.getElementById("register-email").value
+const password=document.getElementById("register-password").value
 
-const email=document.getElementById("email").value
-const password=document.getElementById("password").value
-
-const res = await fetch(API+"/api/users/login",{
+const res=await fetch(API+"/api/users/register",{
 
 method:"POST",
 
@@ -124,20 +108,48 @@ headers:{
 },
 
 body:JSON.stringify({
-email,
-password
+name,email,password
 })
 
 })
 
-const data = await res.json()
+const data=await res.json()
+
+alert(data.message || data.error)
+
+}
+
+/* =====================
+LOGIN
+===================== */
+
+async function login(){
+
+const email=document.getElementById("login-email").value
+const password=document.getElementById("login-password").value
+
+const res=await fetch(API+"/api/users/login",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+email,password
+})
+
+})
+
+const data=await res.json()
 
 if(data.token){
 
-localStorage.setItem("userToken",data.token)
-localStorage.setItem("userName",data.user.name)
+localStorage.setItem("token",data.token)
+localStorage.setItem("userEmail",data.user.email)
 
-startDashboard()
+loadAccount()
 
 }else{
 
@@ -147,82 +159,50 @@ alert(data.error)
 
 }
 
-/* ===========================
-START DASHBOARD
-=========================== */
+/* =====================
+LOAD ACCOUNT
+===================== */
 
-function startDashboard(){
+function loadAccount(){
 
-document.getElementById("loginSection").style.display="none"
-document.getElementById("dashboard").style.display="block"
+const email=localStorage.getItem("userEmail")
 
-document.getElementById("userName").innerText =
-localStorage.getItem("userName")
+if(!email) return
 
-loadOrders()
+document.getElementById("auth-section").style.display="none"
 
-}
+document.getElementById("account-section").style.display="block"
 
-if(token){
-startDashboard()
-}
-
-/* ===========================
-LOAD ORDERS
-=========================== */
-
-async function loadOrders(){
-
-const res = await fetch(API+"/api/orders")
-
-const data = await res.json()
-
-const table = document.getElementById("ordersTable")
-
-table.innerHTML=""
-
-data.orders.forEach(order=>{
-
-const price = new Intl.NumberFormat("en-NG",{
-style:"currency",
-currency:"NGN"
-}).format(order.totalAmount)
-
-table.innerHTML+=`
-
-<tr>
-
-<td>${new Date(order.createdAt).toLocaleDateString()}</td>
-
-<td>${price}</td>
-
-<td>${order.status}</td>
-
-<td>${order.trackingNumber || "-"}</td>
-
-</tr>
-
-`
-
-})
+document.getElementById("user-email").innerText=email
 
 }
 
-/* ===========================
+loadAccount()
+
+/* =====================
 LOGOUT
-=========================== */
+===================== */
 
 function logout(){
 
-localStorage.removeItem("userToken")
-localStorage.removeItem("userName")
+localStorage.removeItem("token")
+localStorage.removeItem("userEmail")
 
 location.reload()
+
+}
+
+/* =====================
+VIEW ORDERS
+===================== */
+
+function viewOrders(){
+
+window.location.href="orders.html"
 
 }
 
 </script>
 
 </body>
-
 </html>

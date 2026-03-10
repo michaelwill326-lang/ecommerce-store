@@ -18,41 +18,46 @@ function saveCart(cart) {
 }
 
 function updateCartBadge() {
+
   const cart = getCart();
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  cartCount.textContent = totalItems;
+
+  const totalItems = cart.reduce((sum,item)=>{
+    return sum + item.quantity
+  },0)
+
+  if(cartCount){
+    cartCount.textContent = totalItems
+  }
+
 }
 
 /* ===========================
    ADD TO CART
 =========================== */
 
-function addToCart(productId) {
+function addToCart(product){
 
-  const cart = getCart();
+  let cart = getCart()
 
-  const product = window.products.find(p => p._id === productId);
+  const existing = cart.find(item => item._id === product._id)
 
-  const existingItem = cart.find(item => item._id === productId);
+  if(existing){
 
-  if (existingItem) {
+    existing.quantity += 1
 
-    existingItem.quantity += 1;
-
-  } else {
+  }else{
 
     cart.push({
       _id: product._id,
       name: product.name,
       price: product.price,
+      image: product.image,
       quantity: 1
-    });
+    })
 
   }
 
-  saveCart(cart);
-
-  alert(product.name + " added to cart");
+  saveCart(cart)
 
 }
 
@@ -60,55 +65,53 @@ function addToCart(productId) {
    LOAD PRODUCTS
 =========================== */
 
-async function loadProducts() {
+async function loadProducts(){
 
-  try {
+try{
 
-    spinner.style.display = "block";
-    productsContainer.innerHTML = "";
+spinner.style.display="block"
 
-    const response = await fetch(`${BACKEND_URL}/api/products`);
+const res = await fetch(`${BACKEND_URL}/api/products`)
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch products");
-    }
+const products = await res.json()
 
-    const products = await response.json();
+spinner.style.display="none"
 
-    window.products = products;
+productsContainer.innerHTML=""
 
-    spinner.style.display = "none";
+products.forEach(product=>{
 
-    products.forEach(product => {
+productsContainer.innerHTML+=`
 
-      const div = document.createElement("div");
-      div.classList.add("product");
+<div class="product">
 
-      div.innerHTML = `
-      <a href="product.html?slug=${product.slug}">
-        <h3>${product.name}</h3>
-      </a>
-      <p>${product.description || ""}</p>
-      <p><strong>₦${product.price}</strong></p>
-    
-      <button onclick="addToCart('${product._id}')">
-        Add to Cart
-      </button>
-    `;
+<img src="${product.image}" width="150">
 
-      productsContainer.appendChild(div);
+<h3>${product.name}</h3>
 
-    });
+<p>${product.description}</p>
 
-  } catch (error) {
+<p><strong>₦${product.price}</strong></p>
 
-    spinner.style.display = "none";
-    productsContainer.innerHTML = "<p>Failed to load products.</p>";
-    console.error(error);
+<button onclick='addToCart(${JSON.stringify(product)})'>
+Add to Cart
+</button>
 
-  }
+</div>
+
+`
+
+})
+
+}catch(err){
+
+console.error(err)
+
+productsContainer.innerHTML="Failed to load products"
 
 }
 
-updateCartBadge();
-loadProducts();
+}
+
+updateCartBadge()
+loadProducts()
