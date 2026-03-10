@@ -1,8 +1,12 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 <head>
 
-<title>Account</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Customer Account</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -15,26 +19,47 @@ padding:40px;
 }
 
 .container{
-max-width:400px;
+max-width:420px;
 margin:auto;
 background:white;
 padding:30px;
 border-radius:10px;
+box-shadow:0 3px 8px rgba(0,0,0,0.08);
+}
+
+h2{
+margin-top:0;
 }
 
 input{
 width:100%;
 padding:10px;
 margin:8px 0;
+border:1px solid #ccc;
+border-radius:6px;
 }
 
 button{
 width:100%;
 padding:10px;
-background:black;
+margin-top:10px;
+background:#2563eb;
 color:white;
 border:none;
+border-radius:6px;
 cursor:pointer;
+}
+
+button:hover{
+background:#1d4ed8;
+}
+
+hr{
+margin:25px 0;
+}
+
+.dashboard{
+text-align:center;
 }
 
 </style>
@@ -46,6 +71,8 @@ cursor:pointer;
 <div class="container">
 
 <h2>Customer Account</h2>
+
+<!-- LOGIN + REGISTER -->
 
 <div id="auth-section">
 
@@ -61,7 +88,7 @@ cursor:pointer;
 
 <h3>Create Account</h3>
 
-<input id="register-name" placeholder="Name">
+<input id="register-name" placeholder="Full Name">
 
 <input id="register-email" placeholder="Email">
 
@@ -71,13 +98,17 @@ cursor:pointer;
 
 </div>
 
-<div id="account-section" style="display:none">
+<!-- ACCOUNT DASHBOARD -->
+
+<div id="account-section" style="display:none" class="dashboard">
 
 <h3>Welcome</h3>
 
 <p id="user-email"></p>
 
-<button onclick="viewOrders()">My Orders</button>
+<button onclick="goOrders()">My Orders</button>
+
+<button onclick="goWishlist()">Wishlist</button>
 
 <button onclick="logout()">Logout</button>
 
@@ -89,9 +120,9 @@ cursor:pointer;
 
 const API="https://techmart-backend-ecbi.onrender.com"
 
-/* =====================
+/* =========================
 REGISTER
-===================== */
+========================= */
 
 async function register(){
 
@@ -107,9 +138,7 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({
-name,email,password
-})
+body:JSON.stringify({name,email,password})
 
 })
 
@@ -119,9 +148,9 @@ alert(data.message || data.error)
 
 }
 
-/* =====================
+/* =========================
 LOGIN
-===================== */
+========================= */
 
 async function login(){
 
@@ -136,9 +165,7 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({
-email,password
-})
+body:JSON.stringify({email,password})
 
 })
 
@@ -159,9 +186,9 @@ alert(data.error)
 
 }
 
-/* =====================
+/* =========================
 LOAD ACCOUNT
-===================== */
+========================= */
 
 function loadAccount(){
 
@@ -179,9 +206,9 @@ document.getElementById("user-email").innerText=email
 
 loadAccount()
 
-/* =====================
+/* =========================
 LOGOUT
-===================== */
+========================= */
 
 function logout(){
 
@@ -192,13 +219,19 @@ location.reload()
 
 }
 
-/* =====================
-VIEW ORDERS
-===================== */
+/* =========================
+NAVIGATION
+========================= */
 
-function viewOrders(){
+function goOrders(){
 
 window.location.href="orders.html"
+
+}
+
+function goWishlist(){
+
+window.location.href="wishlist.html"
 
 }
 
