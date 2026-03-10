@@ -39,26 +39,19 @@ loadProducts();
    RENDER PRODUCTS
 =========================== */
 
-function renderProducts(products) {
-
-productsContainer.innerHTML = "";
-
-if (!products.length) {
-
-productsContainer.innerHTML = "<p>No products found.</p>";
-return;
-
-}
-
-products.forEach(product => {
-
 productsContainer.innerHTML += `
 
 <div class="product">
 
+<a href="product.html?slug=${product.slug}">
 <img src="${product.image}" alt="${product.name}" style="width:100%;height:180px;object-fit:cover;border-radius:6px;">
+</a>
 
-<h3>${product.name}</h3>
+<h3>
+<a href="product.html?slug=${product.slug}">
+${product.name}
+</a>
+</h3>
 
 <p>${product.description || ""}</p>
 
@@ -81,10 +74,6 @@ ${product.price},
 </div>
 
 `;
-
-});
-
-}
 
 /* ===========================
    SEARCH PRODUCTS

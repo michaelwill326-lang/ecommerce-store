@@ -1,170 +1,156 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Product</title>
+
+<link rel="stylesheet" href="style.css">
 
 <style>
 
 body{
 font-family:Arial;
 background:#f4f6f9;
-padding:40px;
-}
-
-.container{
-max-width:900px;
-margin:auto;
-background:white;
+margin:0;
 padding:30px;
-border-radius:10px;
 }
 
-.product{
-display:flex;
+.product-page{
+max-width:1000px;
+margin:auto;
+display:grid;
+grid-template-columns:1fr 1fr;
 gap:40px;
 }
 
-img{
-max-width:350px;
-border-radius:8px;
+.product-page img{
+width:100%;
+border-radius:10px;
 }
 
-.details{
-flex:1;
-}
-
-button{
-padding:10px 20px;
-background:#2563eb;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-margin-top:10px;
-}
-
-.review-box{
+.recommendations{
 margin-top:40px;
 }
 
-.review{
-border-bottom:1px solid #eee;
-padding:10px 0;
-}
-
-input, textarea{
-width:100%;
-padding:8px;
-margin:5px 0;
-border:1px solid #ccc;
-border-radius:4px;
+.recommendations .product{
+display:inline-block;
+width:200px;
+margin-right:15px;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<div class="container">
+<h1 id="product-name"></h1>
 
-<div class="product">
+<div class="product-page">
+
+<img id="product-image">
 
 <div>
-<img id="image">
-</div>
 
-<div class="details">
+<p id="product-description"></p>
 
-<h1 id="name"></h1>
+<h2 id="product-price"></h2>
 
-<p id="description"></p>
+<button id="add-cart">Add to Cart</button>
 
-<h2 id="price"></h2>
-
-<button id="addCart">Add to Cart</button>
+<button id="wishlist-btn">❤️ Wishlist</button>
 
 </div>
 
 </div>
 
-<div class="review-box">
+<div class="recommendations">
 
-<h2>Customer Reviews</h2>
+<h2>Recommended Products</h2>
 
-<div id="reviews"></div>
-
-<h3>Add Review</h3>
-
-<input id="reviewName" placeholder="Your Name">
-
-<input id="rating" type="number" min="1" max="5" placeholder="Rating (1-5)">
-
-<textarea id="comment" placeholder="Write review"></textarea>
-
-<button onclick="submitReview()">Submit Review</button>
-
-</div>
+<div id="recommendations"></div>
 
 </div>
 
 <script>
 
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
 
-const params=new URLSearchParams(window.location.search)
+const params = new URLSearchParams(window.location.search)
 
-const slug=params.get("slug")
+const slug = params.get("slug")
 
-let productData=null
-
-/* ======================
-   LOAD PRODUCT
-====================== */
+let productData = null
 
 async function loadProduct(){
 
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
+const res = await fetch(`${BACKEND_URL}/api/products/${slug}`)
 
-const product=await res.json()
+const product = await res.json()
 
-productData=product
+productData = product
 
-document.getElementById("name").innerText=product.name
-
-document.getElementById("description").innerText=product.description
-
-document.getElementById("price").innerText="₦"+product.price
-
-if(product.image){
-document.getElementById("image").src=product.image
-}
-
-loadReviews()
+document.getElementById("product-name").textContent = product.name
+document.getElementById("product-image").src = product.image
+document.getElementById("product-description").textContent = product.description
+document.getElementById("product-price").textContent = "₦" + product.price
 
 }
 
-loadProduct()
+async function loadRecommendations(){
 
-/* ======================
-   ADD TO CART
-====================== */
+const res = await fetch(`${BACKEND_URL}/api/products/${slug}/recommendations`)
 
-document.getElementById("addCart").onclick=function(){
+const products = await res.json()
 
-let cart=JSON.parse(localStorage.getItem("cart"))||[]
+const container = document.getElementById("recommendations")
 
-const existing=cart.find(i=>i._id===productData._id)
+products.forEach(p=>{
+
+container.innerHTML += `
+
+<div class="product">
+
+<a href="product.html?slug=${p.slug}">
+<img src="${p.image}" style="width:100%">
+</a>
+
+<p>${p.name}</p>
+
+<p>₦${p.price}</p>
+
+</div>
+
+`
+
+})
+
+}
+
+document.getElementById("add-cart").onclick = function(){
+
+let cart = JSON.parse(localStorage.getItem("cart")) || []
+
+const existing = cart.find(i => i.id === productData._id)
 
 if(existing){
+
 existing.quantity++
+
 }else{
+
 cart.push({
-_id:productData._id,
+id:productData._id,
 name:productData.name,
 price:productData.price,
+image:productData.image,
 quantity:1
 })
+
 }
 
 localStorage.setItem("cart",JSON.stringify(cart))
@@ -173,68 +159,35 @@ alert("Added to cart")
 
 }
 
-/* ======================
-   LOAD REVIEWS
-====================== */
+document.getElementById("wishlist-btn").onclick = function(){
 
-async function loadReviews(){
+let wishlist = JSON.parse(localStorage.getItem("wishlist")) || []
 
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`)
+const existing = wishlist.find(i => i.id === productData._id)
 
-const reviews=await res.json()
+if(existing){
 
-const container=document.getElementById("reviews")
+alert("Already in wishlist")
 
-container.innerHTML=""
-
-reviews.forEach(r=>{
-
-container.innerHTML+=`
-<div class="review">
-<b>${r.name}</b> ⭐ ${r.rating}/5
-<p>${r.comment}</p>
-</div>
-`
-
-})
+return
 
 }
 
-/* ======================
-   SUBMIT REVIEW
-====================== */
-
-async function submitReview(){
-
-const name=document.getElementById("reviewName").value
-
-const rating=document.getElementById("rating").value
-
-const comment=document.getElementById("comment").value
-
-await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`,{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-name,
-rating,
-comment
+wishlist.push({
+id:productData._id,
+name:productData.name,
+price:productData.price,
+image:productData.image
 })
 
-})
+localStorage.setItem("wishlist",JSON.stringify(wishlist))
 
-document.getElementById("reviewName").value=""
-document.getElementById("rating").value=""
-document.getElementById("comment").value=""
-
-loadReviews()
+alert("Added to wishlist")
 
 }
+
+loadProduct()
+loadRecommendations()
 
 </script>
 
