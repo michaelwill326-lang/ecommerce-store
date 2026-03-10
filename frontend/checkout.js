@@ -12,12 +12,13 @@ if (cart.length === 0) {
 }
 
 /* ===========================
-   Render Order Summary
+   RENDER ORDER SUMMARY
 =========================== */
 
 function renderSummary() {
 
   summaryDiv.innerHTML = "";
+
   let total = 0;
 
   cart.forEach(item => {
@@ -40,12 +41,13 @@ function renderSummary() {
   });
 
   totalEl.textContent = `Total: ₦${total.toFixed(2)}`;
+
 }
 
 renderSummary();
 
 /* ===========================
-   Handle Checkout Submit
+   HANDLE CHECKOUT
 =========================== */
 
 form.addEventListener("submit", async (e) => {
@@ -70,34 +72,25 @@ form.addEventListener("submit", async (e) => {
   try {
 
     /* ===========================
-       STEP 1: Initialize Payment
+       INITIALIZE PAYMENT
     ============================ */
 
     const initResponse = await fetch(`${BACKEND_URL}/initialize-payment`, {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
         email,
-        amount: amountInKobo
+        amount: totalAmount
       })
-
     });
 
     if (!initResponse.ok) {
-
       const errorText = await initResponse.text();
-
       console.error("Initialize payment error:", errorText);
-
       alert("Payment initialization failed.");
-
       return;
-
     }
 
     const initData = await initResponse.json();
@@ -115,7 +108,13 @@ form.addEventListener("submit", async (e) => {
     }
 
     /* ===========================
-       STEP 2: Open Paystack Popup
+       GENERATE UNIQUE REFERENCE
+    ============================ */
+
+    const reference = "tm_" + Date.now();
+
+    /* ===========================
+       OPEN PAYSTACK POPUP
     ============================ */
 
     const handler = PaystackPop.setup({
@@ -128,37 +127,49 @@ form.addEventListener("submit", async (e) => {
 
       currency: "NGN",
 
-      ref: initData.data.reference,
+      ref: reference,
 
-      callback: function(response) {
+      callback: async function (response) {
 
         console.log("Payment successful:", response);
 
-        fetch(`${BACKEND_URL}/verify-payment`, {
+        try {
 
-          method: "POST",
+          const verifyResponse = await fetch(`${BACKEND_URL}/verify-payment`, {
 
-          headers: {
-            "Content-Type": "application/json"
-          },
+            method: "POST",
 
-          body: JSON.stringify({
+            headers: {
+              "Content-Type": "application/json"
+            },
 
-            reference: response.reference,
+            body: JSON.stringify({
 
-            orderData: {
-              customerName,
-              email,
-              address,
-              items: cart,
-              totalAmount
-            }
+              reference: response.reference,
 
-          })
+              orderData: {
+                customerName,
+                email,
+                address,
+                items: cart,
+                totalAmount
+              }
 
-        })
-        .then(res => res.json())
-        .then(data => {
+            })
+
+          });
+
+          if (!verifyResponse.ok) {
+
+            const errorText = await verifyResponse.text();
+            console.error("Verify payment error:", errorText);
+
+            alert("Payment verification failed.");
+            return;
+
+          }
+
+          const data = await verifyResponse.json();
 
           console.log("Verify response:", data);
 
@@ -175,18 +186,17 @@ form.addEventListener("submit", async (e) => {
 
           }
 
-        })
-        .catch(err => {
+        } catch (err) {
 
           console.error("Verification error:", err);
 
           alert("Verification request failed.");
 
-        });
+        }
 
       },
 
-      onClose: function() {
+      onClose: function () {
 
         console.log("Payment popup closed.");
 
