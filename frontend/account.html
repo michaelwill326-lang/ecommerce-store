@@ -15,16 +15,24 @@
 body{
 font-family:Arial;
 background:#f4f6f9;
-padding:40px;
+margin:0;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
 }
 
-.container{
-max-width:420px;
-margin:auto;
+.account-container{
 background:white;
 padding:30px;
 border-radius:10px;
-box-shadow:0 3px 8px rgba(0,0,0,0.08);
+width:350px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+}
+
+h2{
+margin-top:0;
+text-align:center;
 }
 
 input{
@@ -38,26 +46,29 @@ border-radius:6px;
 button{
 width:100%;
 padding:10px;
-margin-top:10px;
 background:#2563eb;
-color:white;
 border:none;
+color:white;
 border-radius:6px;
 cursor:pointer;
+margin-top:10px;
 }
 
 button:hover{
 background:#1d4ed8;
 }
 
-.error{
-color:red;
-font-size:14px;
-margin-top:5px;
+.divider{
+margin:20px 0;
+text-align:center;
+font-weight:bold;
+color:#888;
 }
 
-hr{
-margin:25px 0;
+.message{
+margin-top:10px;
+text-align:center;
+font-size:14px;
 }
 
 </style>
@@ -66,71 +77,58 @@ margin:25px 0;
 
 <body>
 
-<div class="container">
+<div class="account-container">
 
-<h2>Customer Account</h2>
+<h2>Create Account</h2>
 
-<div id="auth-section">
+<input type="text" id="register-name" placeholder="Full Name">
 
-<h3>Create Account</h3>
+<input type="email" id="register-email" placeholder="Email">
 
-<input id="reg-name" placeholder="Full Name">
-
-<input id="reg-email" placeholder="Email">
-
-<input id="reg-password" type="password" placeholder="Password">
+<input type="password" id="register-password" placeholder="Password">
 
 <button onclick="register()">Create Account</button>
 
-<p class="error" id="register-error"></p>
+<div class="divider">OR</div>
 
-<hr>
+<h2>Login</h2>
 
-<h3>Login</h3>
+<input type="email" id="login-email" placeholder="Email">
 
-<input id="login-email" placeholder="Email">
-
-<input id="login-password" type="password" placeholder="Password">
+<input type="password" id="login-password" placeholder="Password">
 
 <button onclick="login()">Login</button>
 
-<p class="error" id="login-error"></p>
-
-</div>
-
-<div id="dashboard" style="display:none">
-
-<h3>Welcome</h3>
-
-<p id="user-email"></p>
-
-<button onclick="goOrders()">My Orders</button>
-
-<button onclick="goWishlist()">Wishlist</button>
-
-<button onclick="logout()">Logout</button>
-
-</div>
+<p id="message" class="message"></p>
 
 </div>
 
 <script>
 
-const API="https://techmart-backend-ecbi.onrender.com"
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
 
-/* REGISTER */
+const message = document.getElementById("message")
+
+/* ===========================
+   REGISTER
+=========================== */
 
 async function register(){
 
-const name=document.getElementById("reg-name").value
-const email=document.getElementById("reg-email").value
-const password=document.getElementById("reg-password").value
+const name = document.getElementById("register-name").value.trim()
+const email = document.getElementById("register-email").value.trim()
+const password = document.getElementById("register-password").value.trim()
 
-document.getElementById("register-error").innerText=""
+if(!name || !email || !password){
+
+message.textContent = "Please fill all fields"
+return
+
+}
 
 try{
 
-const res=await fetch(API+"/api/users/register",{
+const res = await fetch(`${BACKEND_URL}/api/users/register`,{
 
 method:"POST",
 
@@ -138,44 +136,54 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({name,email,password})
+body:JSON.stringify({
+name,
+email,
+password
+})
 
 })
 
-const data=await res.json()
+const data = await res.json()
 
-if(res.ok){
+if(data.error){
 
-alert("Account created successfully")
-
-loginAfterRegister(email,password)
+message.textContent = data.error
 
 }else{
 
-document.getElementById("register-error").innerText=data.error
+message.style.color="green"
+message.textContent="Account created! Please login."
 
 }
 
 }catch(err){
 
-document.getElementById("register-error").innerText="Server error"
+message.textContent="Server error"
 
 }
 
 }
 
-/* LOGIN */
+/* ===========================
+   LOGIN
+=========================== */
 
 async function login(){
 
-const email=document.getElementById("login-email").value
-const password=document.getElementById("login-password").value
+const email = document.getElementById("login-email").value.trim()
+const password = document.getElementById("login-password").value.trim()
 
-document.getElementById("login-error").innerText=""
+if(!email || !password){
+
+message.textContent="Enter email and password"
+return
+
+}
 
 try{
 
-const res=await fetch(API+"/api/users/login",{
+const res = await fetch(`${BACKEND_URL}/api/users/login`,{
 
 method:"POST",
 
@@ -183,84 +191,34 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({email,password})
+body:JSON.stringify({
+email,
+password
+})
 
 })
 
-const data=await res.json()
+const data = await res.json()
 
-if(data.token){
+if(data.error){
 
-localStorage.setItem("token",data.token)
-localStorage.setItem("userEmail",data.user.email)
-
-loadAccount()
+message.textContent = data.error
 
 }else{
 
-document.getElementById("login-error").innerText=data.error
+localStorage.setItem("token",data.token)
+
+localStorage.setItem("user",JSON.stringify(data.user))
+
+window.location.href="dashboard.html"
 
 }
 
 }catch(err){
 
-document.getElementById("login-error").innerText="Server error"
+message.textContent="Server error"
 
 }
-
-}
-
-/* AUTO LOGIN AFTER REGISTER */
-
-function loginAfterRegister(email,password){
-
-document.getElementById("login-email").value=email
-document.getElementById("login-password").value=password
-
-login()
-
-}
-
-/* LOAD ACCOUNT */
-
-function loadAccount(){
-
-const email=localStorage.getItem("userEmail")
-
-if(!email) return
-
-document.getElementById("auth-section").style.display="none"
-
-document.getElementById("dashboard").style.display="block"
-
-document.getElementById("user-email").innerText=email
-
-}
-
-loadAccount()
-
-/* LOGOUT */
-
-function logout(){
-
-localStorage.removeItem("token")
-localStorage.removeItem("userEmail")
-
-location.reload()
-
-}
-
-/* NAVIGATION */
-
-function goOrders(){
-
-window.location.href="orders.html"
-
-}
-
-function goWishlist(){
-
-window.location.href="wishlist.html"
 
 }
 
