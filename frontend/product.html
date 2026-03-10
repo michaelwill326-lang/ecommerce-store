@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
+<meta charset="UTF-8">
 <title>Product</title>
 
 <style>
@@ -10,32 +9,29 @@
 body{
 font-family:Arial;
 background:#f4f6f9;
-padding:40px
+padding:40px;
 }
 
 .container{
-max-width:900px;
+max-width:800px;
 margin:auto;
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:40px;
 background:white;
 padding:30px;
-border-radius:10px
+border-radius:10px;
 }
 
 img{
-width:100%;
-border-radius:10px
+max-width:300px;
+margin-bottom:20px;
 }
 
 button{
-background:#3b82f6;
+padding:10px 20px;
+background:#2563eb;
 color:white;
 border:none;
-padding:12px 20px;
 border-radius:6px;
-cursor:pointer
+cursor:pointer;
 }
 
 </style>
@@ -44,52 +40,82 @@ cursor:pointer
 
 <body>
 
-<div id="productContainer"></div>
+<div class="container">
+
+<h1 id="name"></h1>
+
+<img id="image">
+
+<p id="description"></p>
+
+<h3 id="price"></h3>
+
+<button id="addCart">Add to Cart</button>
+
+</div>
 
 <script>
 
-const API="https://techmart-backend-ecbi.onrender.com"
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
 
-const slug = window.location.pathname.split("/").pop()
+const params = new URLSearchParams(window.location.search)
+
+const slug = params.get("slug")
+
+let productData = null
 
 async function loadProduct(){
 
-const res = await fetch(API+"/api/products/"+slug)
+const res = await fetch(`${BACKEND_URL}/api/products/${slug}`)
 
 const product = await res.json()
 
-const container=document.getElementById("productContainer")
+productData = product
 
-container.innerHTML = `
+document.getElementById("name").innerText = product.name
 
-<div class="container">
+document.getElementById("description").innerText = product.description
 
-<img src="${product.image}">
+document.getElementById("price").innerText = "₦"+product.price
 
-<div>
+if(product.image){
 
-<h1>${product.name}</h1>
+document.getElementById("image").src = product.image
 
-<p>${product.description}</p>
-
-<h2>$${product.price}</h2>
-
-<p>Stock: ${product.stock}</p>
-
-<button>Add to Cart</button>
-
-</div>
-
-</div>
-
-`
+}
 
 }
 
 loadProduct()
 
+document.getElementById("addCart").onclick = function(){
+
+let cart = JSON.parse(localStorage.getItem("cart")) || []
+
+const existing = cart.find(i=>i._id===productData._id)
+
+if(existing){
+
+existing.quantity++
+
+}else{
+
+cart.push({
+_id:productData._id,
+name:productData.name,
+price:productData.price,
+quantity:1
+})
+
+}
+
+localStorage.setItem("cart",JSON.stringify(cart))
+
+alert("Added to cart")
+
+}
+
 </script>
 
 </body>
-
 </html>

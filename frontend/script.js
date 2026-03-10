@@ -85,13 +85,16 @@ async function loadProducts() {
       div.classList.add("product");
 
       div.innerHTML = `
+      <a href="product.html?slug=${product.slug}">
         <h3>${product.name}</h3>
-        <p>${product.description || ""}</p>
-        <p><strong>₦${product.price}</strong></p>
-        <button onclick="addToCart('${product._id}')">
-          Add to Cart
-        </button>
-      `;
+      </a>
+      <p>${product.description || ""}</p>
+      <p><strong>₦${product.price}</strong></p>
+    
+      <button onclick="addToCart('${product._id}')">
+        Add to Cart
+      </button>
+    `;
 
       productsContainer.appendChild(div);
 
