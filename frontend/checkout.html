@@ -1,39 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Checkout</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout - TechMart</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+.checkout-container{
+max-width:600px;
+margin:40px auto;
+padding:20px;
+background:#fff;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.checkout-container h2{
+margin-bottom:20px;
+}
+
+.checkout-container input,
+.checkout-container textarea{
+width:100%;
+padding:10px;
+margin-bottom:10px;
+border:1px solid #ddd;
+border-radius:5px;
+}
+
+.checkout-btn{
+width:100%;
+padding:12px;
+background:#0a7cff;
+color:white;
+border:none;
+border-radius:6px;
+font-size:16px;
+cursor:pointer;
+}
+
+.checkout-btn:hover{
+background:#085ec4;
+}
+
+</style>
+
 </head>
+
 <body>
 
-  <div class="checkout-container">
-    <h2>💳 Checkout</h2>
+<div class="checkout-container">
 
-    <form id="checkout-form">
-      <input type="text" id="name" placeholder="Full Name" required />
-      <input type="email" id="email" placeholder="Email Address" required />
-      <textarea id="address" placeholder="Shipping Address" required></textarea>
+<h2>💳 Checkout</h2>
 
-      <h3>🧾 Order Summary</h3>
-      <div id="order-summary"></div>
+<form id="checkout-form">
 
-      <p id="checkout-total" style="font-weight:bold; margin-top:10px;">
-        Total: $0.00
-      </p>
+<input
+type="text"
+id="name"
+placeholder="Full Name"
+required
+/>
 
-      <button type="submit" class="checkout-btn">
-        Pay with Card
-      </button>
-    </form>
-  </div>
+<input
+type="email"
+id="email"
+placeholder="Email Address"
+required
+/>
 
-  <!-- Paystack Script MUST come first -->
-  <script src="https://js.paystack.co/v1/inline.js"></script>
+<textarea
+id="address"
+placeholder="Shipping Address"
+required
+></textarea>
 
-  <!-- Your Checkout Logic -->
-  <script src="checkout.js"></script>
+<h3>🧾 Order Summary</h3>
+
+<div id="order-summary"></div>
+
+<p
+id="checkout-total"
+style="font-weight:bold;margin-top:10px;"
+>
+Total: ₦0.00
+</p>
+
+<button
+type="submit"
+class="checkout-btn"
+>
+Pay with Card
+</button>
+
+</form>
+
+</div>
+
+<!-- Paystack Script (must load first) -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+
+<!-- Checkout Logic -->
+<script src="checkout.js"></script>
 
 </body>
 </html>

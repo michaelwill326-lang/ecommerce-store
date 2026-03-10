@@ -18,7 +18,6 @@ if (cart.length === 0) {
 function renderSummary() {
 
   summaryDiv.innerHTML = "";
-
   let total = 0;
 
   cart.forEach(item => {
@@ -41,7 +40,6 @@ function renderSummary() {
   });
 
   totalEl.textContent = `Total: ₦${total.toFixed(2)}`;
-
 }
 
 renderSummary();
@@ -76,21 +74,30 @@ form.addEventListener("submit", async (e) => {
     ============================ */
 
     const initResponse = await fetch(`${BACKEND_URL}/initialize-payment`, {
+
       method: "POST",
+
       headers: {
         "Content-Type": "application/json"
       },
+
       body: JSON.stringify({
         email,
-        amount: totalAmount
+        amount: amountInKobo
       })
+
     });
 
     if (!initResponse.ok) {
+
       const errorText = await initResponse.text();
+
       console.error("Initialize payment error:", errorText);
+
       alert("Payment initialization failed.");
+
       return;
+
     }
 
     const initData = await initResponse.json();
@@ -123,47 +130,35 @@ form.addEventListener("submit", async (e) => {
 
       ref: initData.data.reference,
 
-      callback: async function (response) {
+      callback: function(response) {
 
         console.log("Payment successful:", response);
 
-        try {
+        fetch(`${BACKEND_URL}/verify-payment`, {
 
-          const verifyResponse = await fetch(`${BACKEND_URL}/verify-payment`, {
+          method: "POST",
 
-            method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
 
-            headers: {
-              "Content-Type": "application/json"
-            },
+          body: JSON.stringify({
 
-            body: JSON.stringify({
+            reference: response.reference,
 
-              reference: response.reference,
+            orderData: {
+              customerName,
+              email,
+              address,
+              items: cart,
+              totalAmount
+            }
 
-              orderData: {
-                customerName,
-                email,
-                address,
-                items: cart,
-                totalAmount
-              }
+          })
 
-            })
-
-          });
-
-          if (!verifyResponse.ok) {
-
-            const errorText = await verifyResponse.text();
-            console.error("Verify payment error:", errorText);
-
-            alert("Payment verification failed.");
-            return;
-
-          }
-
-          const data = await verifyResponse.json();
+        })
+        .then(res => res.json())
+        .then(data => {
 
           console.log("Verify response:", data);
 
@@ -180,17 +175,18 @@ form.addEventListener("submit", async (e) => {
 
           }
 
-        } catch (err) {
+        })
+        .catch(err => {
 
           console.error("Verification error:", err);
 
           alert("Verification request failed.");
 
-        }
+        });
 
       },
 
-      onClose: function () {
+      onClose: function() {
 
         console.log("Payment popup closed.");
 
