@@ -41,7 +41,6 @@ function renderSummary() {
   });
 
   totalEl.textContent = `Total: ₦${total.toFixed(2)}`;
-
 }
 
 renderSummary();
@@ -108,12 +107,6 @@ form.addEventListener("submit", async (e) => {
     }
 
     /* ===========================
-       GENERATE UNIQUE REFERENCE
-    ============================ */
-
-    const reference = "tm_" + Date.now();
-
-    /* ===========================
        OPEN PAYSTACK POPUP
     ============================ */
 
@@ -127,49 +120,37 @@ form.addEventListener("submit", async (e) => {
 
       currency: "NGN",
 
-      ref: reference,
+      ref: initData.data.reference,
 
-      callback: async function (response) {
+      callback: function (response) {
 
         console.log("Payment successful:", response);
 
-        try {
+        fetch(`${BACKEND_URL}/verify-payment`, {
 
-          const verifyResponse = await fetch(`${BACKEND_URL}/verify-payment`, {
+          method: "POST",
 
-            method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
 
-            headers: {
-              "Content-Type": "application/json"
-            },
+          body: JSON.stringify({
 
-            body: JSON.stringify({
+            reference: response.reference,
 
-              reference: response.reference,
+            orderData: {
+              customerName,
+              email,
+              address,
+              items: cart,
+              totalAmount
+            }
 
-              orderData: {
-                customerName,
-                email,
-                address,
-                items: cart,
-                totalAmount
-              }
+          })
 
-            })
-
-          });
-
-          if (!verifyResponse.ok) {
-
-            const errorText = await verifyResponse.text();
-            console.error("Verify payment error:", errorText);
-
-            alert("Payment verification failed.");
-            return;
-
-          }
-
-          const data = await verifyResponse.json();
+        })
+        .then(res => res.json())
+        .then(data => {
 
           console.log("Verify response:", data);
 
@@ -186,13 +167,13 @@ form.addEventListener("submit", async (e) => {
 
           }
 
-        } catch (err) {
+        })
+        .catch(err => {
 
           console.error("Verification error:", err);
-
           alert("Verification request failed.");
 
-        }
+        });
 
       },
 
@@ -209,7 +190,6 @@ form.addEventListener("submit", async (e) => {
   } catch (error) {
 
     console.error("Checkout error:", error);
-
     alert("Something went wrong.");
 
   }
