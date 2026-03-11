@@ -32,6 +32,28 @@ width:100%;
 border-radius:10px;
 }
 
+button{
+padding:10px 14px;
+margin-right:10px;
+border:none;
+background:#2563eb;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+.reviews{
+margin-top:40px;
+}
+
+.review{
+background:white;
+padding:10px;
+margin-bottom:10px;
+border-radius:6px;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
 .recommendations{
 margin-top:40px;
 }
@@ -68,6 +90,36 @@ margin-right:15px;
 
 </div>
 
+<!-- REVIEWS -->
+
+<div class="reviews">
+
+<h2>Customer Reviews</h2>
+
+<div id="reviews-list"></div>
+
+<h3>Leave a Review</h3>
+
+<input id="review-name" placeholder="Your Name">
+
+<select id="review-rating">
+<option value="5">⭐⭐⭐⭐⭐</option>
+<option value="4">⭐⭐⭐⭐</option>
+<option value="3">⭐⭐⭐</option>
+<option value="2">⭐⭐</option>
+<option value="1">⭐</option>
+</select>
+
+<textarea id="review-comment" placeholder="Write your review"></textarea>
+
+<br><br>
+
+<button onclick="submitReview()">Submit Review</button>
+
+</div>
+
+<!-- RECOMMENDATIONS -->
+
 <div class="recommendations">
 
 <h2>Recommended Products</h2>
@@ -81,15 +133,15 @@ margin-right:15px;
 const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
 
 const params = new URLSearchParams(window.location.search)
-
 const slug = params.get("slug")
 
 let productData = null
 
+/* LOAD PRODUCT */
+
 async function loadProduct(){
 
 const res = await fetch(`${BACKEND_URL}/api/products/${slug}`)
-
 const product = await res.json()
 
 productData = product
@@ -99,7 +151,137 @@ document.getElementById("product-image").src = product.image
 document.getElementById("product-description").textContent = product.description
 document.getElementById("product-price").textContent = "₦" + product.price
 
+loadReviews()
+
 }
+
+
+/* ADD TO CART */
+
+document.getElementById("add-cart").onclick = function(){
+
+let cart = JSON.parse(localStorage.getItem("cart")) || []
+
+const existing = cart.find(i => i.id === productData._id)
+
+if(existing){
+existing.quantity++
+}else{
+cart.push({
+id:productData._id,
+name:productData.name,
+price:productData.price,
+image:productData.image,
+quantity:1
+})
+}
+
+localStorage.setItem("cart",JSON.stringify(cart))
+
+alert("Added to cart")
+
+}
+
+
+/* WISHLIST */
+
+document.getElementById("wishlist-btn").onclick = function(){
+
+let wishlist = JSON.parse(localStorage.getItem("wishlist")) || []
+
+const existing = wishlist.find(i => i.id === productData._id)
+
+if(existing){
+alert("Already in wishlist")
+return
+}
+
+wishlist.push({
+id:productData._id,
+name:productData.name,
+price:productData.price,
+image:productData.image
+})
+
+localStorage.setItem("wishlist",JSON.stringify(wishlist))
+
+alert("Added to wishlist")
+
+}
+
+
+/* LOAD REVIEWS */
+
+async function loadReviews(){
+
+const res = await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`)
+
+const reviews = await res.json()
+
+const container = document.getElementById("reviews-list")
+
+container.innerHTML = ""
+
+if(!reviews.length){
+
+container.innerHTML = "<p>No reviews yet.</p>"
+return
+
+}
+
+reviews.forEach(r=>{
+
+container.innerHTML += `
+
+<div class="review">
+
+<strong>${r.name}</strong>
+
+<p>${"⭐".repeat(r.rating)}</p>
+
+<p>${r.comment}</p>
+
+</div>
+
+`
+
+})
+
+}
+
+
+/* SUBMIT REVIEW */
+
+async function submitReview(){
+
+const name = document.getElementById("review-name").value
+const rating = document.getElementById("review-rating").value
+const comment = document.getElementById("review-comment").value
+
+await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+name,
+rating,
+comment
+})
+
+})
+
+document.getElementById("review-comment").value=""
+
+loadReviews()
+
+}
+
+
+/* LOAD RECOMMENDATIONS */
 
 async function loadRecommendations(){
 
@@ -128,61 +310,6 @@ container.innerHTML += `
 `
 
 })
-
-}
-
-document.getElementById("add-cart").onclick = function(){
-
-let cart = JSON.parse(localStorage.getItem("cart")) || []
-
-const existing = cart.find(i => i.id === productData._id)
-
-if(existing){
-
-existing.quantity++
-
-}else{
-
-cart.push({
-id:productData._id,
-name:productData.name,
-price:productData.price,
-image:productData.image,
-quantity:1
-})
-
-}
-
-localStorage.setItem("cart",JSON.stringify(cart))
-
-alert("Added to cart")
-
-}
-
-document.getElementById("wishlist-btn").onclick = function(){
-
-let wishlist = JSON.parse(localStorage.getItem("wishlist")) || []
-
-const existing = wishlist.find(i => i.id === productData._id)
-
-if(existing){
-
-alert("Already in wishlist")
-
-return
-
-}
-
-wishlist.push({
-id:productData._id,
-name:productData.name,
-price:productData.price,
-image:productData.image
-})
-
-localStorage.setItem("wishlist",JSON.stringify(wishlist))
-
-alert("Added to wishlist")
 
 }
 
