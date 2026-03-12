@@ -1,181 +1,213 @@
-const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
+const API="https://techmart-backend-ecbi.onrender.com"
 
-const productsContainer = document.getElementById("products");
-const spinner = document.getElementById("loading-spinner");
-const searchInput = document.getElementById("searchInput");
+const productsContainer=document.getElementById("products")
+const featuredContainer=document.getElementById("featuredProducts")
+const recommendedContainer=document.getElementById("recommendedProducts")
 
-let allProducts = [];
+let allProducts=[]
 
-/* ===========================
-   LOAD PRODUCTS
-=========================== */
+async function loadProducts(){
 
-async function loadProducts() {
+const res=await fetch(API+"/api/products")
+const products=await res.json()
 
-spinner.style.display = "block";
+allProducts=products
 
-try {
-
-const res = await fetch(`${BACKEND_URL}/api/products`);
-const products = await res.json();
-
-allProducts = products;
-
-renderProducts(products);
-
-} catch (err) {
-
-productsContainer.innerHTML = "<p>Failed to load products.</p>";
+displayProducts(products)
+displayFeatured(products.slice(0,4))
+loadRecommendations()
 
 }
 
-spinner.style.display = "none";
+function displayProducts(products){
+
+productsContainer.innerHTML=""
+
+products.forEach(product=>{
+productsContainer.innerHTML+=productCard(product)
+})
 
 }
 
-loadProducts();
+function displayFeatured(products){
 
-/* ===========================
-   RENDER PRODUCTS
-=========================== */
+featuredContainer.innerHTML=""
 
-productsContainer.innerHTML += `
+products.forEach(product=>{
+featuredContainer.innerHTML+=productCard(product)
+})
 
-<div class="product">
+}
 
-<a href="product.html?slug=${product.slug}">
-<img src="${product.image}" alt="${product.name}" style="width:100%;height:180px;object-fit:cover;border-radius:6px;">
-</a>
+function productCard(product){
 
-<h3>
-<a href="product.html?slug=${product.slug}">
-${product.name}
-</a>
-</h3>
+return`
 
-<p>${product.description || ""}</p>
+<div class="product-card">
 
-<p><strong>₦${product.price}</strong></p>
+<div class="product-image">
 
-<button onclick="addToCart(
-'${product._id}',
-'${product.name}',
-${product.price},
-'${product.image}'
-)">Add to Cart</button>
-
-<button onclick="addToWishlist(
-'${product._id}',
-'${product.name}',
-${product.price},
-'${product.image}'
-)">❤️ Wishlist</button>
+<img src="${product.image}">
+<span class="badge">New</span>
 
 </div>
 
-`;
+<div class="product-info">
 
-/* ===========================
-   SEARCH PRODUCTS
-=========================== */
+<h3>${product.name}</h3>
 
-if (searchInput) {
+<div>${getRating(product)}</div>
 
-searchInput.addEventListener("input", () => {
+<p class="price">₦${product.price}</p>
 
-const keyword = searchInput.value.toLowerCase();
+<div class="actions">
 
-const filtered = allProducts.filter(product =>
-product.name.toLowerCase().includes(keyword)
-);
+<button onclick="addToCart('${product._id}','${product.name}',${product.price},'${product.image}')">🛒</button>
 
-renderProducts(filtered);
+<button onclick="addToWishlist('${product._id}','${product.name}',${product.price},'${product.image}')">❤️</button>
 
-});
+<button onclick='quickView(${JSON.stringify(product)})'>👁</button>
 
-}
+</div>
 
-/* ===========================
-   CART SYSTEM
-=========================== */
+</div>
 
-function addToCart(id, name, price, image) {
+</div>
 
-let cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-const existing = cart.find(item => item.id === id);
-
-if (existing) {
-
-existing.quantity++;
-
-} else {
-
-cart.push({
-id,
-name,
-price,
-image,
-quantity: 1
-});
+`
 
 }
 
-localStorage.setItem("cart", JSON.stringify(cart));
+function getRating(product){
 
-updateCartCount();
+if(!product.reviews||product.reviews.length===0) return "☆☆☆☆☆"
 
-alert("Added to cart 🛒");
+let total=0
+product.reviews.forEach(r=>total+=r.rating)
 
-}
+let avg=Math.round(total/product.reviews.length)
 
-/* ===========================
-   UPDATE CART BADGE
-=========================== */
-
-function updateCartCount() {
-
-const badge = document.getElementById("cart-count");
-
-if (!badge) return;
-
-const cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-badge.textContent = totalItems;
+return "★★★★★".slice(0,avg)+"☆☆☆☆☆".slice(avg)
 
 }
 
-updateCartCount();
+function addToCart(id,name,price,image){
 
-/* ===========================
-   WISHLIST SYSTEM
-=========================== */
+let cart=JSON.parse(localStorage.getItem("cart"))||[]
 
-function addToWishlist(id, name, price, image) {
+const existing=cart.find(i=>i.id===id)
 
-let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+if(existing){existing.quantity++}
+else{cart.push({id,name,price,image,quantity:1})}
 
-const existing = wishlist.find(item => item.id === id);
+localStorage.setItem("cart",JSON.stringify(cart))
 
-if (existing) {
-
-alert("Already in wishlist ❤️");
-
-return;
+alert("Added to cart")
 
 }
 
-wishlist.push({
-id,
-name,
-price,
-image
-});
+function addToWishlist(id,name,price,image){
 
-localStorage.setItem("wishlist", JSON.stringify(wishlist));
+let wishlist=JSON.parse(localStorage.getItem("wishlist"))||[]
 
-alert("Added to wishlist ❤️");
+wishlist.push({id,name,price,image})
+
+localStorage.setItem("wishlist",JSON.stringify(wishlist))
+
+alert("Added to wishlist")
 
 }
+
+function quickView(product){
+
+document.getElementById("quickViewModal").style.display="block"
+
+document.getElementById("modalImage").src=product.image
+document.getElementById("modalName").innerText=product.name
+document.getElementById("modalPrice").innerText="₦"+product.price
+document.getElementById("modalDescription").innerText=product.description||""
+
+document.getElementById("modalAddCart").onclick=function(){
+addToCart(product._id,product.name,product.price,product.image)
+}
+
+let viewed=JSON.parse(localStorage.getItem("viewed"))||[]
+
+viewed.unshift(product)
+viewed=viewed.slice(0,5)
+
+localStorage.setItem("viewed",JSON.stringify(viewed))
+
+loadRecommendations()
+
+}
+
+function closeQuickView(){
+document.getElementById("quickViewModal").style.display="none"
+}
+
+function loadRecommendations(){
+
+const viewed=JSON.parse(localStorage.getItem("viewed"))||[]
+recommendedContainer.innerHTML=""
+
+viewed.forEach(product=>{
+recommendedContainer.innerHTML+=productCard(product)
+})
+
+}
+
+function applyFilters(){
+
+let filtered=[...allProducts]
+
+const category=document.getElementById("categoryFilter").value
+const price=document.getElementById("priceFilter").value
+const sort=document.getElementById("sortFilter").value
+
+if(category){
+filtered=filtered.filter(p=>p.category===category)
+}
+
+if(price){
+filtered=filtered.filter(p=>p.price<=price)
+}
+
+if(sort==="low"){
+filtered.sort((a,b)=>a.price-b.price)
+}
+
+if(sort==="high"){
+filtered.sort((a,b)=>b.price-a.price)
+}
+
+displayProducts(filtered)
+
+}
+
+document.getElementById("categoryFilter").addEventListener("change",applyFilters)
+document.getElementById("priceFilter").addEventListener("change",applyFilters)
+document.getElementById("sortFilter").addEventListener("change",applyFilters)
+
+document.getElementById("searchInput").addEventListener("keyup",function(){
+
+const query=this.value.toLowerCase()
+
+const filtered=allProducts.filter(p=>p.name.toLowerCase().includes(query))
+
+displayProducts(filtered)
+
+})
+
+function scrollToProducts(){
+window.scrollTo({top:600,behavior:"smooth"})
+}
+
+function toggleMenu(){
+
+const nav=document.querySelector(".nav-links")
+nav.classList.toggle("show")
+
+}
+
+loadProducts()

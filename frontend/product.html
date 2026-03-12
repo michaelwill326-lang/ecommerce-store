@@ -1,14 +1,26 @@
 <!DOCTYPE html>
-
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Product</title>
+<title id="pageTitle">Product - TechMart</title>
 
-<link rel="stylesheet" href="style.css">
+<!-- SEO META -->
+
+<meta name="description" content="Buy high quality electronics at TechMart. Best deals on headphones, gaming keyboards, and monitors.">
+
+<meta name="keywords" content="electronics store, headphones, gaming keyboard, monitors">
+
+<meta name="author" content="TechMart">
+
+<meta property="og:title" content="TechMart Electronics Store">
+
+<meta property="og:description" content="Best electronics deals online">
+
+<meta property="og:type" content="website">
 
 <style>
 
@@ -62,6 +74,10 @@ margin-top:40px;
 display:inline-block;
 width:200px;
 margin-right:15px;
+background:white;
+padding:10px;
+border-radius:6px;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 </style>
@@ -74,7 +90,7 @@ margin-right:15px;
 
 <div class="product-page">
 
-<img id="product-image">
+<img id="product-image" loading="lazy">
 
 <div>
 
@@ -103,11 +119,13 @@ margin-right:15px;
 <input id="review-name" placeholder="Your Name">
 
 <select id="review-rating">
+
 <option value="5">⭐⭐⭐⭐⭐</option>
 <option value="4">⭐⭐⭐⭐</option>
 <option value="3">⭐⭐⭐</option>
 <option value="2">⭐⭐</option>
 <option value="1">⭐</option>
+
 </select>
 
 <textarea id="review-comment" placeholder="Write your review"></textarea>
@@ -146,15 +164,18 @@ const product = await res.json()
 
 productData = product
 
+document.getElementById("pageTitle").textContent = product.name + " - TechMart"
+
 document.getElementById("product-name").textContent = product.name
 document.getElementById("product-image").src = product.image
 document.getElementById("product-description").textContent = product.description
 document.getElementById("product-price").textContent = "₦" + product.price
 
+createStructuredData(product)
+
 loadReviews()
 
 }
-
 
 /* ADD TO CART */
 
@@ -182,19 +203,11 @@ alert("Added to cart")
 
 }
 
-
 /* WISHLIST */
 
 document.getElementById("wishlist-btn").onclick = function(){
 
 let wishlist = JSON.parse(localStorage.getItem("wishlist")) || []
-
-const existing = wishlist.find(i => i.id === productData._id)
-
-if(existing){
-alert("Already in wishlist")
-return
-}
 
 wishlist.push({
 id:productData._id,
@@ -209,27 +222,25 @@ alert("Added to wishlist")
 
 }
 
-
 /* LOAD REVIEWS */
 
 async function loadReviews(){
 
-const res = await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`)
-
-const reviews = await res.json()
+const res = await fetch(`${BACKEND_URL}/api/products/${slug}`)
+const product = await res.json()
 
 const container = document.getElementById("reviews-list")
 
 container.innerHTML = ""
 
-if(!reviews.length){
+if(!product.reviews || product.reviews.length === 0){
 
 container.innerHTML = "<p>No reviews yet.</p>"
 return
 
 }
 
-reviews.forEach(r=>{
+product.reviews.forEach(r=>{
 
 container.innerHTML += `
 
@@ -248,7 +259,6 @@ container.innerHTML += `
 })
 
 }
-
 
 /* SUBMIT REVIEW */
 
@@ -280,7 +290,6 @@ loadReviews()
 
 }
 
-
 /* LOAD RECOMMENDATIONS */
 
 async function loadRecommendations(){
@@ -298,7 +307,7 @@ container.innerHTML += `
 <div class="product">
 
 <a href="product.html?slug=${p.slug}">
-<img src="${p.image}" style="width:100%">
+<img src="${p.image}" style="width:100%" loading="lazy">
 </a>
 
 <p>${p.name}</p>
@@ -310,6 +319,37 @@ container.innerHTML += `
 `
 
 })
+
+}
+
+/* STRUCTURED DATA FOR GOOGLE */
+
+function createStructuredData(product){
+
+const data = {
+
+"@context": "https://schema.org/",
+"@type": "Product",
+"name": product.name,
+"image": product.image,
+"description": product.description,
+
+"offers": {
+"@type": "Offer",
+"priceCurrency": "NGN",
+"price": product.price,
+"availability": "https://schema.org/InStock"
+}
+
+}
+
+const script = document.createElement("script")
+
+script.type = "application/ld+json"
+
+script.text = JSON.stringify(data)
+
+document.body.appendChild(script)
 
 }
 

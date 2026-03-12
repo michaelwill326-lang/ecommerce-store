@@ -1,59 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
 
-<title>Track Your Order</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Track Order - TechMart</title>
 
 <style>
 
 body{
-font-family:Arial;
+font-family:Arial, sans-serif;
 background:#f4f6f9;
+margin:0;
 padding:40px;
-text-align:center;
 }
 
+/* HEADER */
+
+header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px 30px;
+background:#111827;
+color:white;
+margin:-40px -40px 40px -40px;
+}
+
+header a{
+color:white;
+text-decoration:none;
+margin-left:20px;
+}
+
+/* CONTAINER */
+
 .container{
+max-width:700px;
+margin:auto;
 background:white;
 padding:30px;
 border-radius:10px;
-max-width:600px;
-margin:auto;
-box-shadow:0 4px 10px rgba(0,0,0,0.1);
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
 }
 
+/* INPUT */
+
 input{
-padding:10px;
-width:60%;
-margin:10px;
+width:100%;
+padding:12px;
 border:1px solid #ccc;
-border-radius:5px;
+border-radius:6px;
+margin-top:10px;
 }
 
 button{
-padding:10px 20px;
-background:#007bff;
+margin-top:10px;
+padding:12px 18px;
+background:#2563eb;
 color:white;
 border:none;
-border-radius:5px;
+border-radius:6px;
 cursor:pointer;
 }
 
-.progress{
+button:hover{
+background:#1d4ed8;
+}
+
+/* TIMELINE */
+
+.timeline{
 margin-top:30px;
-display:flex;
-justify-content:space-between;
 }
 
 .step{
-flex:1;
-padding:10px;
-font-size:14px;
+padding:14px;
+border-left:4px solid #d1d5db;
+margin-bottom:12px;
+background:#f9fafb;
+border-radius:4px;
 }
 
-.active{
-color:green;
+.step.active{
+border-color:#10b981;
+background:#ecfdf5;
 font-weight:bold;
+}
+
+/* ORDER INFO */
+
+.order-info{
+margin-top:25px;
+padding:15px;
+background:#f9fafb;
+border-radius:8px;
+}
+
+.items{
+margin-top:10px;
+}
+
+.item{
+border-bottom:1px solid #e5e7eb;
+padding:8px 0;
+}
+
+.error{
+color:red;
+margin-top:15px;
 }
 
 </style>
@@ -62,110 +119,139 @@ font-weight:bold;
 
 <body>
 
+<header>
+
+<h2>🛒 TechMart</h2>
+
+<div>
+
+<a href="index.html">Home</a>
+<a href="account.html">Account</a>
+<a href="cart.html">Cart</a>
+
+</div>
+
+</header>
+
 <div class="container">
 
 <h2>📦 Track Your Order</h2>
 
-<input id="trackingInput" placeholder="Enter Tracking Number">
+<p>Enter your tracking number below.</p>
 
-<br>
+<input id="trackingNumber" placeholder="Tracking Number (example: DHL123456)">
 
-<button onclick="trackOrder()">Track</button>
+<button onclick="track()">Track Order</button>
 
 <div id="result"></div>
-
-<div class="progress">
-
-<div id="step1" class="step">Order Placed</div>
-<div id="step2" class="step">Processing</div>
-<div id="step3" class="step">Shipped</div>
-<div id="step4" class="step">Out for Delivery</div>
-<div id="step5" class="step">Delivered</div>
-
-</div>
 
 </div>
 
 <script>
 
-const API_URL = "https://techmart-backend-ecbi.onrender.com"
+const API="https://techmart-backend-ecbi.onrender.com"
 
-async function trackOrder(trackingNumber){
+async function track(){
 
-let tracking = trackingNumber || document.getElementById("trackingInput").value
+const tracking=document.getElementById("trackingNumber").value.trim()
 
-if(!tracking){
-document.getElementById("result").innerHTML="⚠️ Please enter a tracking number"
-return
-}
+const result=document.getElementById("result")
+
+result.innerHTML="Loading..."
 
 try{
 
-const res = await fetch(`${API_URL}/api/track/${tracking}`)
+const res=await fetch(API+"/api/track/"+tracking)
 
-const data = await res.json()
-
-if(data.error){
-document.getElementById("result").innerHTML="❌ Tracking not found"
-return
+if(!res.ok){
+throw new Error("Tracking number not found")
 }
 
-document.getElementById("trackingInput").value = tracking
+const order=await res.json()
 
-document.getElementById("result").innerHTML = `
-<p><b>Status:</b> ${data.status}</p>
-<p><b>Carrier:</b> ${data.carrier}</p>
-<p><b>Tracking Number:</b> ${data.trackingNumber}</p>
+const steps=[
+"Processing",
+"Shipped",
+"Delivered"
+]
+
+let timeline="<div class='timeline'>"
+
+steps.forEach(step=>{
+
+const active=steps.indexOf(step)<=steps.indexOf(order.status)
+
+timeline+=`
+
+<div class="step ${active?"active":""}">
+${step}
+</div>
+
 `
 
-updateProgress(data.status)
+})
+
+timeline+="</div>"
+
+/* ORDER ITEMS */
+
+let itemsHTML=""
+
+if(order.items){
+
+order.items.forEach(item=>{
+
+itemsHTML+=`
+
+<div class="item">
+
+<strong>${item.name}</strong>
+x${item.quantity}
+
+</div>
+
+`
+
+})
+
+}
+
+result.innerHTML=`
+
+${timeline}
+
+<div class="order-info">
+
+<p><strong>Status:</strong> ${order.status}</p>
+
+<p><strong>Carrier:</strong> ${order.carrier || "-"}</p>
+
+<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>
+
+<p><strong>Total:</strong> ₦${order.totalAmount}</p>
+
+<div class="items">
+
+<h4>Items</h4>
+
+${itemsHTML || "No items listed"}
+
+</div>
+
+</div>
+
+`
 
 }catch(err){
 
-document.getElementById("result").innerHTML="❌ Error contacting server"
+result.innerHTML=`<p class="error">Tracking number not found.</p>`
 
 }
 
-}
-
-function updateProgress(status){
-
-document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"))
-
-document.getElementById("step1").classList.add("active")
-
-if(status==="Processing"){
-document.getElementById("step2").classList.add("active")
-}
-
-if(status==="Shipped"){
-document.getElementById("step2").classList.add("active")
-document.getElementById("step3").classList.add("active")
-}
-
-if(status==="Out for Delivery"){
-document.getElementById("step2").classList.add("active")
-document.getElementById("step3").classList.add("active")
-document.getElementById("step4").classList.add("active")
-}
-
-if(status==="Delivered"){
-document.querySelectorAll(".step").forEach(s=>s.classList.add("active"))
-}
-
-}
-
-/* AUTO LOAD TRACKING FROM URL */
-
-const params = new URLSearchParams(window.location.search)
-
-const trackingFromURL = params.get("tracking")
-
-if(trackingFromURL){
-trackOrder(trackingFromURL)
 }
 
 </script>
 
 </body>
+
 </html>

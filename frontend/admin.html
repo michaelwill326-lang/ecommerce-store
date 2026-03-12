@@ -1,173 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
 
 <title>TechMart Admin</title>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css">
-
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 
-body{background:#f6f6f7}
-
-.sidebar{background:#111827}
-
-.sidebar a:hover{background:#1f2937}
+body{
+font-family:Arial;
+background:#f4f6f9;
+padding:30px;
+}
 
 .card{
 background:white;
-border-radius:12px;
-box-shadow:0 1px 3px rgba(0,0,0,0.08)
+padding:20px;
+border-radius:8px;
+margin-bottom:20px;
 }
 
-.badge{
-padding:4px 8px;
-border-radius:6px;
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+td,th{
+padding:10px;
+border-bottom:1px solid #ddd;
+}
+
+button{
+padding:6px 10px;
+background:#2563eb;
 color:white;
-font-size:12px;
-cursor:pointer
+border:none;
+border-radius:6px;
+cursor:pointer;
 }
-
-.Processing{background:#3b82f6}
-.Shipped{background:#6366f1}
-.Delivered{background:#10b981}
-.Cancelled{background:#ef4444}
 
 </style>
 
 </head>
 
-<body class="flex h-screen overflow-hidden">
+<body>
 
-<!-- LOGIN -->
+<h1>TechMart Admin</h1>
 
-<div id="loginScreen" class="flex items-center justify-center h-screen w-full bg-gray-100">
+<div class="card">
 
-<div class="bg-white p-8 rounded-xl shadow w-96">
+<h2>Orders</h2>
 
-<h2 class="text-2xl font-bold mb-6 text-center">
-TechMart Admin Login
-</h2>
-
-<input id="email" type="email" placeholder="Admin Email"
-class="w-full border p-2 mb-3 rounded">
-
-<input id="password" type="password" placeholder="Password"
-class="w-full border p-2 mb-4 rounded">
-
-<button onclick="login()"
-class="w-full bg-black text-white p-2 rounded">
-Login
-</button>
-
-<p id="loginError" class="text-red-600 text-sm mt-3 text-center"></p>
-
-</div>
-</div>
-
-<!-- DASHBOARD -->
-
-<div id="dashboard" class="hidden w-full flex">
-
-<!-- SIDEBAR -->
-
-<div class="sidebar text-white w-64 flex flex-col p-5">
-
-<h1 class="text-2xl font-bold mb-8">TechMart</h1>
-
-<a href="#" class="p-3 rounded">Dashboard</a>
-<a href="#orders" class="p-3 rounded">Orders</a>
-<a href="#inventory" class="p-3 rounded">Inventory</a>
-
-<button onclick="logout()"
-class="mt-auto bg-red-600 p-2 rounded">
-Logout
-</button>
-
-</div>
-
-<!-- MAIN -->
-
-<div class="flex-1 p-8 overflow-y-auto">
-
-<h2 class="text-3xl font-bold mb-6">
-Admin Dashboard
-</h2>
-
-<!-- KPI CARDS -->
-
-<div class="grid grid-cols-4 gap-6 mb-8">
-
-<div class="card p-5">
-<p class="text-gray-500 text-sm">Total Orders</p>
-<h3 id="totalOrders" class="text-2xl font-bold">0</h3>
-</div>
-
-<div class="card p-5">
-<p class="text-gray-500 text-sm">Total Revenue</p>
-<h3 id="totalRevenue" class="text-2xl font-bold">$0</h3>
-</div>
-
-<div class="card p-5">
-<p class="text-gray-500 text-sm">This Month</p>
-<h3 id="thisMonth" class="text-2xl font-bold">$0</h3>
-</div>
-
-<div class="card p-5">
-<p class="text-gray-500 text-sm">Low Stock</p>
-<h3 id="lowStock" class="text-2xl font-bold text-red-600">0</h3>
-</div>
-
-</div>
-
-<!-- CHARTS -->
-
-<div class="grid grid-cols-2 gap-6 mb-8">
-
-<div class="card p-6">
-<h3 class="text-xl font-bold mb-4">Revenue</h3>
-<canvas id="revenueChart"></canvas>
-</div>
-
-<div class="card p-6">
-<h3 class="text-xl font-bold mb-4">Top Products</h3>
-<canvas id="topProductsChart"></canvas>
-</div>
-
-</div>
-
-<!-- ORDERS -->
-
-<div id="orders" class="card p-6 mb-8">
-
-<div class="flex justify-between mb-4">
-
-<h3 class="text-xl font-bold">Orders</h3>
-
-<button onclick="exportCSV()"
-class="bg-blue-600 text-white px-4 py-2 rounded">
-Export CSV
-</button>
-
-</div>
-
-<table class="w-full">
+<table>
 
 <thead>
 
-<tr class="border-b">
+<tr>
 
 <th>Customer</th>
 <th>Email</th>
 <th>Total</th>
 <th>Status</th>
-<th>Date</th>
 
 </tr>
 
@@ -179,225 +72,30 @@ Export CSV
 
 </div>
 
-<!-- INVENTORY -->
-
-<div id="inventory" class="card p-6">
-
-<h3 class="text-xl font-bold mb-4">
-Inventory
-</h3>
-
-<div class="flex flex-col gap-3 mb-4">
-
-<input id="productName"
-placeholder="Product Name"
-class="border p-2 rounded">
-
-<input id="productPrice"
-placeholder="Price"
-type="number"
-class="border p-2 rounded">
-
-<input id="productStock"
-placeholder="Stock"
-type="number"
-class="border p-2 rounded">
-
-<textarea id="productDescription"
-placeholder="Product Description"
-class="border p-2 rounded"></textarea>
-
-<div id="dropZone"
-class="border-2 border-dashed p-6 text-center rounded cursor-pointer">
-
-<p>Drag & Drop Product Image</p>
-<p class="text-sm text-gray-500">or click to upload</p>
-
-<input type="file" id="productImage" hidden>
-
-</div>
-
-<img id="imagePreview"
-class="w-32 mt-3 rounded hidden">
-
-<button onclick="addProduct()"
-class="bg-green-600 text-white px-4 py-2 rounded">
-Add Product
-</button>
-
-</div>
-
-<table class="w-full">
-
-<thead>
-
-<tr class="border-b">
-
-<th>Name</th>
-<th>Price</th>
-<th>Stock</th>
-<th>Actions</th>
-
-</tr>
-
-</thead>
-
-<tbody id="inventoryTable"></tbody>
-
-</table>
-
-</div>
-
-</div>
-</div>
-
 <script>
 
 const API="https://techmart-backend-ecbi.onrender.com"
 
-const socket=io(API)
-
-let token=localStorage.getItem("token")
-
-/* LOGIN */
-
-async function login(){
-
-const email=document.getElementById("email").value
-const password=document.getElementById("password").value
-
-const res=await fetch(API+"/api/admin/login",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({email,password})
-})
-
-const data=await res.json()
-
-if(!res.ok){
-document.getElementById("loginError").innerText=data.message
-return
-}
-
-token=data.token
-localStorage.setItem("token",token)
-
-startDashboard()
-
-}
-
-function logout(){
-localStorage.removeItem("token")
-location.reload()
-}
-
-function authFetch(url,options={}){
-
-return fetch(url,{
-...options,
-headers:{
-Authorization:"Bearer "+token
-}
-})
-
-}
-
-function startDashboard(){
-
-document.getElementById("loginScreen").classList.add("hidden")
-document.getElementById("dashboard").classList.remove("hidden")
-
-loadDashboard()
-
-}
-
-if(token) startDashboard()
-
-/* DASHBOARD */
-
-async function loadDashboard(){
-
-loadOrders()
-loadInventory()
-loadRevenue()
-loadCharts()
-
-}
-
-/* ORDERS */
-
 async function loadOrders(){
 
-const res=await authFetch(API+"/api/orders?page=1&limit=50")
-const data=await res.json()
+const res=await fetch(API+"/api/orders")
 
-document.getElementById("totalOrders").innerText=data.total
+const orders=await res.json()
 
 const table=document.getElementById("ordersTable")
 
 table.innerHTML=""
 
-let revenue=0
-
-data.orders.forEach(o=>{
-
-revenue+=o.totalAmount
+orders.forEach(o=>{
 
 table.innerHTML+=`
 
-<tr class="border-b">
+<tr>
 
 <td>${o.customerName}</td>
 <td>${o.email}</td>
-<td>$${o.totalAmount}</td>
-
-<td>
-<span class="badge ${o.status}">
-${o.status}
-</span>
-</td>
-
-<td>${new Date(o.createdAt).toLocaleDateString()}</td>
-
-</tr>
-
-`
-
-})
-
-document.getElementById("totalRevenue").innerText="$"+revenue
-
-}
-
-/* INVENTORY */
-
-async function loadInventory(){
-
-const res=await fetch(API+"/api/products")
-const products=await res.json()
-
-const table=document.getElementById("inventoryTable")
-
-table.innerHTML=""
-
-products.forEach(p=>{
-
-table.innerHTML+=`
-
-<tr class="border-b">
-
-<td>${p.name}</td>
-<td>$${p.price}</td>
-<td>${p.stock}</td>
-
-<td>
-
-<button onclick="deleteProduct('${p._id}')"
-class="bg-red-500 text-white px-2 rounded">
-Delete
-</button>
-
-</td>
+<td>₦${o.totalAmount}</td>
+<td>${o.status}</td>
 
 </tr>
 
@@ -407,94 +105,10 @@ Delete
 
 }
 
-/* ADD PRODUCT */
-
-async function addProduct(){
-
-const name=document.getElementById("productName").value
-const price=document.getElementById("productPrice").value
-const stock=document.getElementById("productStock").value
-const description=document.getElementById("productDescription").value
-const image=document.getElementById("productImage").files[0]
-
-const formData=new FormData()
-
-formData.append("name",name)
-formData.append("price",price)
-formData.append("stock",stock)
-formData.append("description",description)
-
-if(image){
-formData.append("image",image)
-}
-
-await fetch(API+"/api/products",{
-method:"POST",
-body:formData
-})
-
-loadInventory()
-
-}
-
-/* DELETE PRODUCT */
-
-async function deleteProduct(id){
-
-await authFetch(API+"/api/products/"+id,{
-method:"DELETE"
-})
-
-loadInventory()
-
-}
-
-/* IMAGE DRAG DROP */
-
-const dropZone=document.getElementById("dropZone")
-const fileInput=document.getElementById("productImage")
-const preview=document.getElementById("imagePreview")
-
-dropZone.onclick=()=>fileInput.click()
-
-dropZone.addEventListener("dragover",e=>{
-e.preventDefault()
-})
-
-dropZone.addEventListener("drop",e=>{
-e.preventDefault()
-
-fileInput.files=e.dataTransfer.files
-
-showPreview(fileInput.files[0])
-})
-
-fileInput.addEventListener("change",()=>{
-showPreview(fileInput.files[0])
-})
-
-function showPreview(file){
-
-const reader=new FileReader()
-
-reader.onload=function(e){
-
-preview.src=e.target.result
-preview.classList.remove("hidden")
-
-}
-
-reader.readAsDataURL(file)
-
-}
-
-/* REALTIME */
-
-socket.on("new-order",()=>{
-loadDashboard()
-})
+loadOrders()
 
 </script>
 
 </body>
+
 </html>
