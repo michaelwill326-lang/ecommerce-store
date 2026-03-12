@@ -13,6 +13,9 @@ const jwt = require("jsonwebtoken")
 const http = require("http")
 const { Server } = require("socket.io")
 
+app.get("/test",(req,res)=>{
+   res.send("Server update works")
+   })
 const app = express()
 const PORT = process.env.PORT || 10000
 
