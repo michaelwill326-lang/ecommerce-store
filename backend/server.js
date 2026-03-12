@@ -465,50 +465,51 @@ revenue
    DYNAMIC SITEMAP
 =========================== */
 
-app.get("/sitemap.xml", async (req,res)=>{
+app.get("/sitemap.xml", async (req, res) => {
 
-try{
-
-const products = await Product.find()
-
-let urls = ""
-
-products.forEach(p=>{
-
-urls += `
-<url>
-<loc>https://techmart.vercel.app/product.html?slug=${p.slug}</loc>
-<changefreq>weekly</changefreq>
-<priority>0.9</priority>
-</url>
-`
-
-})
-
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-<url>
-<loc>https://techmart.vercel.app</loc>
-<changefreq>daily</changefreq>
-<priority>1.0</priority>
-</url>
-
-${urls}
-
-</urlset>`
-
-res.header("Content-Type","application/xml")
-res.send(sitemap)
-
-}catch(err){
-
-res.status(500).send("Error generating sitemap")
-
-}
-
-})
+   try {
+   
+   const products = await Product.find()
+   
+   let productUrls = ""
+   
+   products.forEach(p => {
+   
+   productUrls += `
+   <url>
+   <loc>https://techmart.vercel.app/product.html?slug=${p.slug}</loc>
+   <changefreq>weekly</changefreq>
+   <priority>0.9</priority>
+   </url>
+   `
+   
+   })
+   
+   const xml = `<?xml version="1.0" encoding="UTF-8"?>
+   
+   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   
+   <url>
+   <loc>https://techmart.vercel.app</loc>
+   <changefreq>daily</changefreq>
+   <priority>1.0</priority>
+   </url>
+   
+   ${productUrls}
+   
+   </urlset>`
+   
+   res.type("application/xml")
+   res.send(xml)
+   
+   } catch (error) {
+   
+   console.error("Sitemap error:", error)
+   res.status(500).send("Error generating sitemap")
+   
+   }
+   
+   })
 
 /* ===========================
    SOCKET.IO
