@@ -13,20 +13,23 @@ const jwt = require("jsonwebtoken")
 const http = require("http")
 const { Server } = require("socket.io")
 
-app.get("/debug", (req,res)=>{
-   res.send("Server updated successfully")
-   })
-app.get("/test",(req,res)=>{
-   res.send("Server update works")
-   })
 const app = express()
 const PORT = process.env.PORT || 10000
 
-app.use(cors())
+/* ===========================
+   CORS
+=========================== */
+
+app.use(cors({
+origin:"*",
+methods:["GET","POST","PUT","DELETE"],
+allowedHeaders:["Content-Type","Authorization"]
+}))
+
 app.use(express.json())
 
 /* ===========================
-   DATABASE
+   MONGODB
 =========================== */
 
 mongoose.connect(process.env.MONGO_URI)
@@ -54,7 +57,7 @@ allowed_formats:["jpg","png","jpeg"]
 const upload = multer({storage})
 
 /* ===========================
-   USER MODEL
+   USER SCHEMA
 =========================== */
 
 const userSchema = new mongoose.Schema({
@@ -68,15 +71,6 @@ unique:true
 
 password:String,
 
-role:{
-type:String,
-default:"customer"
-},
-
-storeName:String,
-
-subaccountCode:String,
-
 createdAt:{
 type:Date,
 default:Date.now
@@ -87,7 +81,7 @@ default:Date.now
 const User = mongoose.model("User",userSchema)
 
 /* ===========================
-   PRODUCT MODEL
+   PRODUCT SCHEMA
 =========================== */
 
 const productSchema = new mongoose.Schema({
@@ -98,14 +92,6 @@ price:Number,
 description:String,
 stock:Number,
 image:String,
-category:String,
-
-sellerId:{
-type:mongoose.Schema.Types.ObjectId,
-ref:"User"
-},
-
-storeName:String,
 
 reviews:[{
 
@@ -130,7 +116,7 @@ default:Date.now
 const Product = mongoose.model("Product",productSchema)
 
 /* ===========================
-   ORDER MODEL
+   ORDER SCHEMA
 =========================== */
 
 const orderSchema = new mongoose.Schema({
@@ -138,11 +124,6 @@ const orderSchema = new mongoose.Schema({
 customerName:String,
 email:String,
 address:String,
-
-sellerId:{
-type:mongoose.Schema.Types.ObjectId,
-ref:"User"
-},
 
 items:Array,
 
@@ -155,8 +136,15 @@ type:String,
 default:"Processing"
 },
 
-trackingNumber:String,
-carrier:String,
+trackingNumber:{
+type:String,
+default:""
+},
+
+carrier:{
+type:String,
+default:""
+},
 
 createdAt:{
 type:Date,
@@ -171,32 +159,39 @@ const Order = mongoose.model("Order",orderSchema)
    REGISTER USER
 =========================== */
 
-app.post("/api/users/register",async(req,res)=>{
+app.post("/api/users/register", async(req,res)=>{
 
 try{
 
-const {name,email,password}=req.body
+const {name,email,password} = req.body
 
-const existing = await User.findOne({email})
+if(!name || !email || !password){
+return res.status(400).json({error:"All fields required"})
+}
 
-if(existing){
+const existingUser = await User.findOne({email})
+
+if(existingUser){
 return res.status(400).json({error:"User already exists"})
 }
 
-const hashed = await bcrypt.hash(password,10)
+const hashedPassword = await bcrypt.hash(password,10)
 
-const user = new User({
+const newUser = new User({
 name,
 email,
-password:hashed
+password:hashedPassword
 })
 
-await user.save()
+await newUser.save()
 
-res.json({message:"Account created successfully"})
+res.json({
+message:"Account created successfully"
+})
 
 }catch(err){
 
+console.error(err)
 res.status(500).json({error:"Server error"})
 
 }
@@ -207,22 +202,28 @@ res.status(500).json({error:"Server error"})
    LOGIN USER
 =========================== */
 
-app.post("/api/users/login",async(req,res)=>{
+app.post("/api/users/login", async(req,res)=>{
 
-const {email,password}=req.body
+try{
+
+const {email,password} = req.body
 
 const user = await User.findOne({email})
 
-if(!user) return res.status(400).json({error:"Invalid email"})
+if(!user){
+return res.status(400).json({error:"Invalid email"})
+}
 
-const valid = await bcrypt.compare(password,user.password)
+const validPassword = await bcrypt.compare(password,user.password)
 
-if(!valid) return res.status(400).json({error:"Invalid password"})
+if(!validPassword){
+return res.status(400).json({error:"Invalid password"})
+}
 
 const token = jwt.sign(
-{id:user._id},
+{ id:user._id },
 process.env.JWT_SECRET || "techmartsecret",
-{expiresIn:"7d"}
+{ expiresIn:"7d" }
 )
 
 res.json({
@@ -230,18 +231,24 @@ token,
 user:{
 id:user._id,
 name:user.name,
-email:user.email,
-role:user.role
+email:user.email
 }
 })
+
+}catch(err){
+
+console.error(err)
+res.status(500).json({error:"Server error"})
+
+}
 
 })
 
 /* ===========================
-   PRODUCTS
+   GET PRODUCTS
 =========================== */
 
-app.get("/api/products",async(req,res)=>{
+app.get("/api/products", async(req,res)=>{
 
 const products = await Product.find()
 
@@ -249,9 +256,15 @@ res.json(products)
 
 })
 
-app.get("/api/products/:slug",async(req,res)=>{
+/* ===========================
+   GET PRODUCT BY SLUG
+=========================== */
 
-const product = await Product.findOne({slug:req.params.slug})
+app.get("/api/products/:slug", async(req,res)=>{
+
+const product = await Product.findOne({
+slug:req.params.slug
+})
 
 if(!product){
 return res.status(404).json({error:"Product not found"})
@@ -261,13 +274,18 @@ res.json(product)
 
 })
 
-/* ADD PRODUCT */
+/* ===========================
+   ADD PRODUCT
+=========================== */
 
-app.post("/api/products",upload.single("image"),async(req,res)=>{
+app.post("/api/products", upload.single("image"), async(req,res)=>{
 
-const {name,price,description,stock,category,sellerId,storeName}=req.body
+const {name,price,description,stock} = req.body
 
-const slug = name.toLowerCase().replace(/[^a-z0-9]+/g,"-")
+const slug = name
+.toLowerCase()
+.replace(/[^a-z0-9]+/g,"-")
+.replace(/(^-|-$)/g,"")
 
 const image = req.file ? req.file.path : ""
 
@@ -277,10 +295,7 @@ slug,
 price,
 description,
 stock,
-image,
-category,
-sellerId,
-storeName
+image
 })
 
 const saved = await product.save()
@@ -289,9 +304,11 @@ res.json(saved)
 
 })
 
-/* DELETE PRODUCT */
+/* ===========================
+   DELETE PRODUCT
+=========================== */
 
-app.delete("/api/products/:id",async(req,res)=>{
+app.delete("/api/products/:id", async(req,res)=>{
 
 await Product.findByIdAndDelete(req.params.id)
 
@@ -300,14 +317,20 @@ res.json({success:true})
 })
 
 /* ===========================
-   REVIEWS
+   ADD REVIEW
 =========================== */
 
-app.post("/api/products/:slug/reviews",async(req,res)=>{
+app.post("/api/products/:slug/reviews", async(req,res)=>{
 
-const {name,rating,comment}=req.body
+const {name,rating,comment} = req.body
 
-const product = await Product.findOne({slug:req.params.slug})
+const product = await Product.findOne({
+slug:req.params.slug
+})
+
+if(!product){
+return res.status(404).json({error:"Product not found"})
+}
 
 product.reviews.push({
 name,
@@ -322,50 +345,34 @@ res.json(product)
 })
 
 /* ===========================
-   ORDERS
+   PRODUCT RECOMMENDATIONS
 =========================== */
 
-app.get("/api/user-orders/:email",async(req,res)=>{
+app.get("/api/products/:slug/recommendations", async(req,res)=>{
 
-const orders = await Order.find({
-email:req.params.email
-}).sort({createdAt:-1})
+try{
 
-res.json(orders)
+const recommendations = await Product.find({
+slug:{ $ne:req.params.slug }
+}).limit(4)
 
-})
+res.json(recommendations)
 
-app.get("/api/orders",async(req,res)=>{
+}catch(err){
 
-const orders = await Order.find().sort({createdAt:-1})
+res.status(500).json({error:"Server error"})
 
-res.json(orders)
-
-})
-
-/* TRACK ORDER */
-
-app.get("/api/track/:trackingNumber",async(req,res)=>{
-
-const order = await Order.findOne({
-trackingNumber:req.params.trackingNumber
-})
-
-if(!order){
-return res.status(404).json({error:"Tracking not found"})
 }
-
-res.json(order)
 
 })
 
 /* ===========================
-   PAYSTACK PAYMENT
+   PAYSTACK INITIALIZE
 =========================== */
 
-app.post("/initialize-payment", async (req,res)=>{
+app.post("/initialize-payment", async(req,res)=>{
 
-const {email,amount,subaccount} = req.body
+const {email,amount} = req.body
 
 try{
 
@@ -375,9 +382,7 @@ const response = await axios.post(
 
 {
 email,
-amount:Math.round(amount*100),
-subaccount:subaccount,
-bearer:"subaccount"
+amount:Math.round(amount*100)
 },
 
 {
@@ -393,17 +398,23 @@ res.json(response.data)
 
 }catch(err){
 
-res.status(500).json({error:"Payment initialization failed"})
+console.error(err.response?.data||err.message)
+
+res.status(500).json({
+error:"Payment initialization failed"
+})
 
 }
 
 })
 
-/* VERIFY PAYMENT */
+/* ===========================
+   VERIFY PAYMENT
+=========================== */
 
-app.post("/verify-payment",async(req,res)=>{
+app.post("/verify-payment", async(req,res)=>{
 
-const {reference,orderData}=req.body
+const {reference,orderData} = req.body
 
 try{
 
@@ -419,100 +430,150 @@ Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
 
 )
 
-if(response.data.data.status==="success"){
+const paymentData = response.data.data
 
-const order = new Order(orderData)
+if(paymentData.status==="success"){
 
-const saved = await order.save()
+const newOrder = new Order({
 
-io.emit("new-order",saved)
+customerName:orderData.customerName,
+email:orderData.email,
+address:orderData.address,
+items:orderData.items,
+totalAmount:orderData.totalAmount,
+paymentReference:reference,
+status:"Paid"
 
-res.json({success:true})
+})
 
-}else{
+const savedOrder = await newOrder.save()
 
-res.json({success:false})
+io.emit("new-order",savedOrder)
+
+return res.json({
+success:true,
+orderId:savedOrder._id
+})
 
 }
+
+return res.json({success:false})
 
 }catch(err){
 
-res.status(500).json({success:false})
+console.error(err)
+
+res.status(500).json({
+success:false
+})
 
 }
 
 })
 
 /* ===========================
-   ADMIN ANALYTICS
+   GET ALL ORDERS
 =========================== */
 
-app.get("/api/admin/analytics",async(req,res)=>{
+app.get("/api/orders", async(req,res)=>{
 
-const orders = await Order.find()
+const orders = await Order.find().sort({createdAt:-1})
 
-let revenue = 0
-
-orders.forEach(o=>{
-revenue += o.totalAmount
-})
-
-res.json({
-totalOrders:orders.length,
-revenue
-})
+res.json(orders)
 
 })
 
 /* ===========================
-   DYNAMIC SITEMAP
+   GET SINGLE ORDER
 =========================== */
 
-app.get("/sitemap.xml", async (req, res) => {
+app.get("/api/orders/:id", async(req,res)=>{
 
-   try {
-   
-   const products = await Product.find()
-   
-   let productUrls = ""
-   
-   products.forEach(p => {
-   
-   productUrls += `
-   <url>
-   <loc>https://techmart.vercel.app/product.html?slug=${p.slug}</loc>
-   <changefreq>weekly</changefreq>
-   <priority>0.9</priority>
-   </url>
-   `
-   
-   })
-   
-   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-   
-   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-   
-   <url>
-   <loc>https://techmart.vercel.app</loc>
-   <changefreq>daily</changefreq>
-   <priority>1.0</priority>
-   </url>
-   
-   ${productUrls}
-   
-   </urlset>`
-   
-   res.type("application/xml")
-   res.send(xml)
-   
-   } catch (error) {
-   
-   console.error("Sitemap error:", error)
-   res.status(500).send("Error generating sitemap")
-   
-   }
-   
-   })
+try{
+
+const order = await Order.findById(req.params.id)
+
+if(!order){
+return res.status(404).json({error:"Order not found"})
+}
+
+res.json(order)
+
+}catch(err){
+
+res.status(500).json({error:"Server error"})
+
+}
+
+})
+
+/* ===========================
+   TRACK ORDER
+=========================== */
+
+app.get("/api/track/:trackingNumber", async(req,res)=>{
+
+const order = await Order.findOne({
+trackingNumber:req.params.trackingNumber
+})
+
+if(!order){
+return res.status(404).json({error:"Tracking not found"})
+}
+
+res.json(order)
+
+})
+
+/* ===========================
+   SEO SITEMAP
+=========================== */
+
+app.get("/sitemap.xml", async(req,res)=>{
+
+try{
+
+const products = await Product.find()
+
+let productUrls = ""
+
+products.forEach(p=>{
+
+productUrls += `
+<url>
+<loc>https://techmart.vercel.app/product.html?slug=${p.slug}</loc>
+<changefreq>weekly</changefreq>
+<priority>0.9</priority>
+</url>
+`
+
+})
+
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+<url>
+<loc>https://techmart.vercel.app</loc>
+<changefreq>daily</changefreq>
+<priority>1.0</priority>
+</url>
+
+${productUrls}
+
+</urlset>`
+
+res.header("Content-Type","application/xml")
+res.send(sitemap)
+
+}catch(err){
+
+console.error(err)
+res.status(500).send("Error generating sitemap")
+
+}
+
+})
 
 /* ===========================
    SOCKET.IO
@@ -527,6 +588,10 @@ cors:{origin:"*"}
 io.on("connection",(socket)=>{
 console.log("Admin connected:",socket.id)
 })
+
+/* ===========================
+   START SERVER
+=========================== */
 
 server.listen(PORT,()=>{
 
