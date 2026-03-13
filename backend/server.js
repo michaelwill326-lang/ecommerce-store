@@ -13,6 +13,10 @@ const jwt = require("jsonwebtoken")
 const http = require("http")
 const { Server } = require("socket.io")
 
+app.get("/ping",(req,res)=>{
+   res.send("Server is updated")
+   })
+
 const app = express()
 const PORT = process.env.PORT || 10000
 
