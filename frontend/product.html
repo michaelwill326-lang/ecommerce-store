@@ -149,7 +149,8 @@ const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
 
 /* GET PRODUCT SLUG FROM URL */
 
-const slug=window.location.pathname.split("/").pop()
+const params = new URLSearchParams(window.location.search)
+const slug = params.get("slug")
 
 let productData=null
 
