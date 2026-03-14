@@ -171,13 +171,40 @@ document.getElementById("product-price").textContent="₦"+product.price
 
 /* GOOGLE PRODUCT SCHEMA */
 
+let ratingValue = 5
+let reviewCount = product.reviews.length || 1
+
+if(product.reviews.length > 0){
+
+let total=0
+
+product.reviews.forEach(r=>{
+total += r.rating
+})
+
+ratingValue = (total / product.reviews.length).toFixed(1)
+
+}
+
 const schema={
 "@context":"https://schema.org/",
 "@type":"Product",
 "name":product.name,
-"image":product.image,
-"description":product.description || "",
+"image":[product.image],
+"description":product.description || "TechMart electronic product",
 "sku":product._id,
+
+"brand":{
+"@type":"Brand",
+"name":"TechMart"
+},
+
+"aggregateRating":{
+"@type":"AggregateRating",
+"ratingValue":ratingValue,
+"reviewCount":reviewCount
+},
+
 "offers":{
 "@type":"Offer",
 "url":window.location.href,
@@ -185,9 +212,10 @@ const schema={
 "price":product.price,
 "availability":"https://schema.org/InStock"
 }
+
 }
 
-document.getElementById("product-schema").textContent=JSON.stringify(schema)
+document.getElementById("product-schema").textContent = JSON.stringify(schema)
 
 loadReviews()
 
