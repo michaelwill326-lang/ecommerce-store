@@ -150,8 +150,7 @@ box-shadow:0 2px 6px rgba(0,0,0,0.1);
 
 const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
 
-const params = new URLSearchParams(window.location.search)
-const slug = params.get("slug")
+const slug = window.location.pathname.split("/").pop()
 
 let productData = null
 
