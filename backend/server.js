@@ -496,7 +496,7 @@ products.forEach(p=>{
 
 urls += `
 <url>
-<loc>${FRONTEND_URL}/product/${slug}</loc>
+<loc>${FRONTEND_URL}/product.html?slug=${slug}</loc>
 <changefreq>weekly</changefreq>
 <priority>0.9</priority>
 </url>
