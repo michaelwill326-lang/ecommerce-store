@@ -8,11 +8,11 @@
 
 <title>Product - TechMart</title>
 
-<meta name="description" content="View product details, reviews and buy online from TechMart.">
+<meta name="description" content="Buy electronics and gadgets from TechMart">
 
 <link rel="stylesheet" href="style.css">
 
-<!-- GOOGLE PRODUCT SCHEMA -->
+<!-- GOOGLE PRODUCT STRUCTURED DATA -->
 <script type="application/ld+json" id="product-schema">
 {}
 </script>
@@ -147,13 +147,12 @@ text-align:center;
 
 const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
 
-/* GET PRODUCT SLUG FROM URL */
+/* GET SLUG FROM URL */
 
 const params = new URLSearchParams(window.location.search)
 const slug = params.get("slug")
 
 let productData=null
-
 
 /* LOAD PRODUCT */
 
@@ -166,7 +165,7 @@ productData=product
 
 document.getElementById("product-name").textContent=product.name
 document.getElementById("product-image").src=product.image
-document.getElementById("product-description").textContent=product.description
+document.getElementById("product-description").textContent=product.description || ""
 document.getElementById("product-price").textContent="₦"+product.price
 
 
@@ -177,7 +176,7 @@ const schema={
 "@type":"Product",
 "name":product.name,
 "image":product.image,
-"description":product.description,
+"description":product.description || "",
 "sku":product._id,
 "offers":{
 "@type":"Offer",
@@ -188,14 +187,11 @@ const schema={
 }
 }
 
-document.getElementById("product-schema").textContent=
-JSON.stringify(schema)
-
+document.getElementById("product-schema").textContent=JSON.stringify(schema)
 
 loadReviews()
 
 }
-
 
 /* ADD TO CART */
 
@@ -223,7 +219,6 @@ alert("Added to cart")
 
 }
 
-
 /* WISHLIST */
 
 document.getElementById("wishlist-btn").onclick=function(){
@@ -249,7 +244,6 @@ localStorage.setItem("wishlist",JSON.stringify(wishlist))
 alert("Added to wishlist")
 
 }
-
 
 /* LOAD REVIEWS */
 
@@ -289,7 +283,6 @@ container.innerHTML+=`
 
 }
 
-
 /* SUBMIT REVIEW */
 
 async function submitReview(){
@@ -320,13 +313,11 @@ loadReviews()
 
 }
 
-
 /* LOAD RECOMMENDATIONS */
 
 async function loadRecommendations(){
 
 const res=await fetch(`${BACKEND_URL}/api/products/${slug}/recommendations`)
-
 const products=await res.json()
 
 const container=document.getElementById("recommendations")
@@ -337,7 +328,7 @@ container.innerHTML+=`
 
 <div class="product">
 
-<a href="/product/${p.slug}">
+<a href="product.html?slug=${p.slug}">
 <img src="${p.image}" style="width:100%">
 </a>
 
@@ -352,7 +343,6 @@ container.innerHTML+=`
 })
 
 }
-
 
 loadProduct()
 loadRecommendations()
