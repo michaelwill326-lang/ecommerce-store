@@ -4,16 +4,23 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name=<meta name="google-site-verification" content="abc123xyz" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>🛒 TechMart</title>
+<!-- Google Search Console Verification -->
+<meta name="google-site-verification" content="AVAuHLmZct4Gv7rvkAz3eThz2Jf--lQxXMRB-KnZAkg" />
+
+<title>🛒 TechMart - Online Tech Store</title>
+
+<meta name="description" content="TechMart - Buy electronics, gadgets, laptops, keyboards and monitors online.">
+
+<link rel="stylesheet" href="style.css">
 
 <style>
 
 body{
-font-family:Arial;
-margin:0;
+font-family:Arial, sans-serif;
 background:#f4f6f9;
+margin:0;
 }
 
 /* HEADER */
@@ -25,125 +32,66 @@ align-items:center;
 padding:15px 30px;
 background:#111827;
 color:white;
-position:relative;
 }
 
-.nav-links{
+header h1{
+margin:0;
+}
+
+header nav{
 display:flex;
-gap:20px;
 align-items:center;
+gap:20px;
 }
 
-.nav-links a{
+header a{
 color:white;
 text-decoration:none;
+font-weight:500;
 }
 
-.dropdown{
+header a:hover{
+text-decoration:underline;
+}
+
+/* CART BADGE */
+
+.cart-icon-wrapper{
 position:relative;
 }
 
-.dropbtn{
-background:none;
-border:none;
-color:white;
-cursor:pointer;
-}
-
-.dropdown-content{
-display:none;
+.badge{
 position:absolute;
-background:white;
-min-width:150px;
-border-radius:6px;
-box-shadow:0 2px 8px rgba(0,0,0,0.2);
-}
-
-.dropdown-content a{
-display:block;
-padding:10px;
-color:black;
-text-decoration:none;
-}
-
-.dropdown:hover .dropdown-content{
-display:block;
-}
-
-.menu-icon{
-display:none;
-font-size:24px;
-cursor:pointer;
-}
-
-@media(max-width:768px){
-
-.nav-links{
-display:none;
-flex-direction:column;
-background:#111827;
-position:absolute;
-top:60px;
-right:0;
-width:200px;
-padding:10px;
-}
-
-.nav-links.show{
-display:flex;
-}
-
-.menu-icon{
-display:block;
-}
-
-}
-
-/* HERO */
-
-.hero{
-background:linear-gradient(90deg,#2563eb,#1e3a8a);
+top:-8px;
+right:-10px;
+background:red;
 color:white;
-text-align:center;
-padding:60px 20px;
+border-radius:50%;
+padding:3px 7px;
+font-size:12px;
 }
 
-/* SEARCH */
+/* MAIN */
+
+main{
+max-width:1100px;
+margin:auto;
+padding:30px;
+}
 
 .search-box{
-text-align:center;
-margin:30px;
-}
-
-.search-box input{
-width:350px;
-padding:10px;
-border-radius:6px;
-border:1px solid #ccc;
-}
-
-/* FILTERS */
-
-.filters{
-display:flex;
-justify-content:center;
-gap:10px;
 margin-bottom:20px;
 }
 
-.filters select{
-padding:8px;
-border-radius:6px;
+.search-box input{
+width:100%;
+max-width:400px;
+padding:10px;
 border:1px solid #ccc;
+border-radius:6px;
 }
 
-/* PRODUCTS */
-
-.section{
-max-width:1100px;
-margin:auto;
-padding:20px;
-}
+/* PRODUCT GRID */
 
 .product-list{
 display:grid;
@@ -151,97 +99,50 @@ grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
 gap:20px;
 }
 
-.product-card{
+.product{
 background:white;
-padding:15px;
-border-radius:10px;
-box-shadow:0 3px 10px rgba(0,0,0,0.08);
-transition:0.2s;
-}
-
-.product-card:hover{
-transform:translateY(-4px);
-}
-
-.product-image{
+padding:20px;
+border-radius:8px;
+box-shadow:0 3px 8px rgba(0,0,0,0.08);
 text-align:center;
-position:relative;
 }
 
-.product-image img{
-width:160px;
-height:160px;
-object-fit:contain;
+.product img{
+width:150px;
+height:150px;
+object-fit:cover;
+margin-bottom:10px;
 }
 
-.badge{
-position:absolute;
-top:10px;
-left:10px;
-background:red;
-color:white;
-padding:4px 8px;
-border-radius:6px;
-font-size:12px;
-}
-
-.product-info{
-text-align:center;
+.product h3{
+margin:10px 0;
 }
 
 .price{
 font-weight:bold;
-margin:6px 0;
 }
 
-.actions{
-display:flex;
-justify-content:center;
-gap:10px;
-}
-
-.actions button{
-border:none;
+.product button{
+margin-top:10px;
+padding:8px 14px;
 background:#2563eb;
 color:white;
-padding:6px 10px;
+border:none;
 border-radius:6px;
 cursor:pointer;
 }
 
-/* MODAL */
+.product button:hover{
+background:#1d4ed8;
+}
 
-.modal{
+/* LOADING */
+
+.spinner{
 display:none;
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.6);
-}
-
-.modal-content{
-background:white;
-margin:10% auto;
-padding:20px;
-width:600px;
-border-radius:10px;
-}
-
-.modal-body{
-display:flex;
-gap:20px;
-}
-
-.modal-body img{
-width:200px;
-}
-
-.close{
-float:right;
-font-size:28px;
-cursor:pointer;
+text-align:center;
+margin-top:40px;
+font-size:20px;
 }
 
 </style>
@@ -252,123 +153,172 @@ cursor:pointer;
 
 <header>
 
-<h2>🛒 TechMart</h2>
+<h1>🛒 TechMart</h1>
 
-<nav class="nav-links">
+<nav>
 
 <a href="index.html">Home</a>
 
-<div class="dropdown">
-
-<button class="dropbtn">Categories ▾</button>
-
-<div class="dropdown-content">
-
-<a href="#">Electronics</a>
-<a href="#">Gaming</a>
-<a href="#">Accessories</a>
-
-</div>
-
-</div>
-
 <a href="account.html">Account</a>
-<a href="tracking.html">📦 Track Order</a>
-<a href="cart.html">Cart</a>
+
+<div class="cart-icon-wrapper">
+
+<a href="cart.html">🛒 Cart</a>
+
+<span id="cart-count" class="badge">0</span>
+
+</div>
+
+<a href="tracking.html">Track Order</a>
 
 </nav>
 
-<div class="menu-icon" onclick="toggleMenu()">☰</div>
-
 </header>
 
-<section class="hero">
+<main>
 
-<h1>TechMart Mega Sale</h1>
-
-<p>Up to 50% Off Electronics</p>
-
-<button onclick="scrollToProducts()">Shop Now</button>
-
-</section>
+<h2>Products</h2>
 
 <div class="search-box">
 
-<input id="searchInput" placeholder="Search products...">
+<input
+type="text"
+id="searchInput"
+placeholder="🔎 Search products..."
+>
 
 </div>
 
-<div class="filters">
-
-<select id="categoryFilter">
-<option value="">All Categories</option>
-<option value="electronics">Electronics</option>
-<option value="gaming">Gaming</option>
-<option value="accessories">Accessories</option>
-</select>
-
-<select id="priceFilter">
-<option value="">All Prices</option>
-<option value="100">Under ₦100</option>
-<option value="500">Under ₦500</option>
-</select>
-
-<select id="sortFilter">
-<option value="">Sort</option>
-<option value="low">Price Low → High</option>
-<option value="high">Price High → Low</option>
-</select>
-
+<div id="loading-spinner" class="spinner">
+Loading products...
 </div>
 
-<section class="section">
-
-<h2>Featured Products</h2>
-<div id="featuredProducts" class="product-list"></div>
-
-</section>
-
-<section class="section">
-
-<h2>Recommended For You</h2>
-<div id="recommendedProducts" class="product-list"></div>
-
-</section>
-
-<section class="section">
-
-<h2>All Products</h2>
 <div id="products" class="product-list"></div>
 
-</section>
+</main>
 
-<div id="quickViewModal" class="modal">
+<script>
 
-<div class="modal-content">
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
 
-<span class="close" onclick="closeQuickView()">×</span>
+const productsContainer=document.getElementById("products")
+const spinner=document.getElementById("loading-spinner")
+const searchInput=document.getElementById("searchInput")
 
-<div class="modal-body">
+let allProducts=[]
 
-<img id="modalImage">
+/* LOAD PRODUCTS */
 
-<div>
+async function loadProducts(){
 
-<h2 id="modalName"></h2>
-<p id="modalPrice"></p>
-<p id="modalDescription"></p>
+spinner.style.display="block"
 
-<button id="modalAddCart">Add to Cart</button>
+try{
+
+const res=await fetch(`${BACKEND_URL}/api/products`)
+const products=await res.json()
+
+allProducts=products
+
+displayProducts(products)
+
+}catch(err){
+
+productsContainer.innerHTML="Failed to load products"
+
+}
+
+spinner.style.display="none"
+
+}
+
+/* DISPLAY PRODUCTS */
+
+function displayProducts(products){
+
+productsContainer.innerHTML=""
+
+products.forEach(product=>{
+
+productsContainer.innerHTML+=`
+
+<div class="product">
+
+<a href="product.html?slug=${product.slug}">
+<img src="${product.image}" alt="${product.name}">
+</a>
+
+<h3>${product.name}</h3>
+
+<p class="price">₦${product.price}</p>
+
+<button onclick="addToCart('${product._id}','${product.name}',${product.price},'${product.image}')">
+Add to Cart
+</button>
 
 </div>
 
-</div>
+`
 
-</div>
+})
 
-</div>
+}
 
-<script src="script.js"></script>
+/* SEARCH */
+
+searchInput.addEventListener("input",function(){
+
+const term=this.value.toLowerCase()
+
+const filtered=allProducts.filter(p=>
+p.name.toLowerCase().includes(term)
+)
+
+displayProducts(filtered)
+
+})
+
+/* CART */
+
+function addToCart(id,name,price,image){
+
+let cart=JSON.parse(localStorage.getItem("cart"))||[]
+
+const existing=cart.find(i=>i.id===id)
+
+if(existing){
+existing.quantity++
+}else{
+cart.push({id,name,price,image,quantity:1})
+}
+
+localStorage.setItem("cart",JSON.stringify(cart))
+
+updateCartCount()
+
+alert("Added to cart")
+
+}
+
+/* CART BADGE */
+
+function updateCartCount(){
+
+let cart=JSON.parse(localStorage.getItem("cart"))||[]
+
+let total=0
+
+cart.forEach(i=>total+=i.quantity)
+
+document.getElementById("cart-count").textContent=total
+
+}
+
+updateCartCount()
+
+loadProducts()
+
+</script>
 
 </body>
 </html>
