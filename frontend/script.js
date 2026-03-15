@@ -6,6 +6,36 @@ const cartCount=document.getElementById("cart-count")
 
 updateCartCount()
 
+/* GENERATE STAR RATING */
+
+function generateStars(reviews){
+
+    if(!reviews || reviews.length === 0){
+    
+    return "No ratings"
+    
+    }
+    
+    let total = 0
+    
+    reviews.forEach(r=>{
+    total += r.rating
+    })
+    
+    let avg = total / reviews.length
+    
+    let stars = ""
+    
+    for(let i=1;i<=5;i++){
+    
+    stars += i <= Math.round(avg) ? "⭐" : "☆"
+    
+    }
+    
+    return `${stars} (${reviews.length})`
+    
+    }
+
 /* LOAD PRODUCTS */
 
 async function loadProducts(){
@@ -132,7 +162,7 @@ async function loadTrending(){
     
     <h3>${product.name}</h3>
     
-    <div class="rating">⭐⭐⭐⭐⭐</div>
+    <div class="rating">${generateStars(product.reviews)}</div>
     
     <p class="price">₦${product.price}</p>
     
