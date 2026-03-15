@@ -26,9 +26,38 @@ grid-template-columns:1fr 1fr;
 gap:40px;
 }
 
-.product-page img{
+.image-gallery{
+position:relative;
+}
+
+#main-image{
 width:100%;
 border-radius:10px;
+transition:transform .3s;
+cursor:zoom-in;
+}
+
+#main-image:hover{
+transform:scale(1.2);
+}
+
+.thumbnail-row{
+display:flex;
+margin-top:10px;
+gap:10px;
+}
+
+.thumbnail-row img{
+width:60px;
+height:60px;
+object-fit:cover;
+cursor:pointer;
+border-radius:6px;
+border:2px solid transparent;
+}
+
+.thumbnail-row img:hover{
+border:2px solid #2563eb;
 }
 
 .price{
@@ -89,7 +118,13 @@ margin-right:15px;
 
 <div class="product-page">
 
-<img id="product-image">
+<div class="image-gallery">
+
+<img id="main-image">
+
+<div class="thumbnail-row" id="thumbnail-row"></div>
+
+</div>
 
 <div>
 
@@ -176,16 +211,38 @@ const product=await res.json()
 productData=product
 
 document.getElementById("product-name").textContent=product.name
-document.getElementById("product-image").src=product.image
-document.getElementById("product-description").textContent=product.description || ""
 
-document.getElementById("product-price").textContent="₦"+product.price
+document.getElementById("product-description").textContent=
+product.description || ""
+
+document.getElementById("product-price").textContent=
+"₦"+product.price
+
+/* Image gallery */
+
+const mainImage=document.getElementById("main-image")
+const thumbnails=document.getElementById("thumbnail-row")
+
+mainImage.src=product.image
+
+thumbnails.innerHTML=""
+
+const images=[product.image]
+
+images.forEach(img=>{
+
+thumbnails.innerHTML+=`
+<img src="${img}" onclick="changeImage('${img}')">
+`
+
+})
 
 /* Rating */
 
 if(product.reviews.length){
 
 let total=0
+
 product.reviews.forEach(r=>total+=r.rating)
 
 let avg=(total/product.reviews.length).toFixed(1)
@@ -215,6 +272,14 @@ addProductSchema(product)
 loadReviews()
 loadRecommendations()
 loadAlsoBought()
+
+}
+
+/* IMAGE SWITCH */
+
+function changeImage(src){
+
+document.getElementById("main-image").src=src
 
 }
 
@@ -278,8 +343,10 @@ alert("Added to wishlist")
 
 async function loadReviews(){
 
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`)
-const reviews=await res.json()
+const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
+const product=await res.json()
+
+const reviews=product.reviews
 
 const container=document.getElementById("reviews-list")
 
