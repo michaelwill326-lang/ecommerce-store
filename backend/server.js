@@ -596,51 +596,53 @@ res.json(order)
    SEO SITEMAP
 =========================== */
 
-app.get("/sitemap.xml", async(req,res)=>{
+app.get("/sitemap.xml", async (req,res)=>{
 
-try{
-
-const products = await Product.find()
-
-let urls = ""
-
-products.forEach(p=>{
-
-urls += `
-<url>
-<loc>${FRONTEND_URL}/product.html?slug=${slug}</loc>
-<changefreq>weekly</changefreq>
-<priority>0.9</priority>
-</url>
-`
-
-})
-
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-<url>
-<loc>${FRONTEND_URL}</loc>
-<changefreq>daily</changefreq>
-<priority>1.0</priority>
-</url>
-
-${urls}
-
-</urlset>`
-
-res.header("Content-Type","application/xml")
-res.send(sitemap)
-
-}catch(err){
-
-console.error(err)
-res.status(500).send("Error generating sitemap")
-
-}
-
-})
+   try{
+   
+   const products = await Product.find()
+   
+   let urls=""
+   
+   products.forEach(p=>{
+   
+   if(!p.slug) return
+   
+   urls += `
+   <url>
+   <loc>${FRONTEND_URL}/product.html?slug=${p.slug}</loc>
+   <changefreq>weekly</changefreq>
+   <priority>0.9</priority>
+   </url>
+   `
+   
+   })
+   
+   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+   
+   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   
+   <url>
+   <loc>${FRONTEND_URL}</loc>
+   <changefreq>daily</changefreq>
+   <priority>1.0</priority>
+   </url>
+   
+   ${urls}
+   
+   </urlset>`
+   
+   res.header("Content-Type","application/xml")
+   res.send(sitemap)
+   
+   }catch(err){
+   
+   console.error(err)
+   res.status(500).send("Error generating sitemap")
+   
+   }
+   
+   })
 
 /* ===========================
    SOCKET.IO
