@@ -18,6 +18,8 @@ margin:0;
 padding:30px;
 }
 
+/* PRODUCT LAYOUT */
+
 .product-page{
 max-width:1000px;
 margin:auto;
@@ -25,6 +27,8 @@ display:grid;
 grid-template-columns:1fr 1fr;
 gap:40px;
 }
+
+/* IMAGE GALLERY */
 
 .image-gallery{
 position:relative;
@@ -60,11 +64,15 @@ border:2px solid transparent;
 border:2px solid #2563eb;
 }
 
+/* PRICE */
+
 .price{
 font-size:26px;
 font-weight:bold;
 margin:10px 0;
 }
+
+/* BUTTONS */
 
 button{
 padding:10px 14px;
@@ -80,11 +88,15 @@ button:hover{
 background:#1d4ed8;
 }
 
+/* STOCK WARNING */
+
 #stock-warning{
 margin:10px 0;
 font-weight:bold;
 color:#b91c1c;
 }
+
+/* REVIEWS */
 
 .reviews{
 margin-top:40px;
@@ -97,6 +109,8 @@ margin-bottom:10px;
 border-radius:6px;
 box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
+
+/* RECOMMENDATIONS */
 
 .recommendations{
 margin-top:40px;
@@ -215,19 +229,20 @@ document.getElementById("product-name").textContent=product.name
 document.getElementById("product-description").textContent=
 product.description || ""
 
-document.getElementById("product-price").textContent=
-"₦"+product.price
+document.getElementById("product-price").textContent="₦"+product.price
 
-/* Image gallery */
+/* IMAGE GALLERY */
 
 const mainImage=document.getElementById("main-image")
 const thumbnails=document.getElementById("thumbnail-row")
 
-mainImage.src=product.image
+const images = product.images && product.images.length
+? product.images
+: (product.image ? [product.image] : [])
+
+mainImage.src = images[0]
 
 thumbnails.innerHTML=""
-
-const images=[product.image]
 
 images.forEach(img=>{
 
@@ -237,12 +252,11 @@ thumbnails.innerHTML+=`
 
 })
 
-/* Rating */
+/* RATING */
 
 if(product.reviews.length){
 
 let total=0
-
 product.reviews.forEach(r=>total+=r.rating)
 
 let avg=(total/product.reviews.length).toFixed(1)
@@ -256,7 +270,7 @@ document.getElementById("product-rating").textContent="No ratings yet"
 
 }
 
-/* Stock warning */
+/* LOW STOCK */
 
 if(product.stock<=5){
 
@@ -265,7 +279,7 @@ document.getElementById("stock-warning").textContent=
 
 }
 
-/* SEO schema */
+/* SEO SCHEMA */
 
 addProductSchema(product)
 
@@ -301,7 +315,7 @@ cart.push({
 id:productData._id,
 name:productData.name,
 price:productData.price,
-image:productData.image,
+image:productData.images?.[0] || "",
 quantity:1
 })
 
@@ -330,7 +344,7 @@ wishlist.push({
 id:productData._id,
 name:productData.name,
 price:productData.price,
-image:productData.image
+image:productData.images?.[0] || ""
 })
 
 localStorage.setItem("wishlist",JSON.stringify(wishlist))
@@ -346,20 +360,18 @@ async function loadReviews(){
 const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
 const product=await res.json()
 
-const reviews=product.reviews
-
 const container=document.getElementById("reviews-list")
 
 container.innerHTML=""
 
-if(!reviews.length){
+if(!product.reviews.length){
 
 container.innerHTML="<p>No reviews yet.</p>"
 return
 
 }
 
-reviews.forEach(r=>{
+product.reviews.forEach(r=>{
 
 container.innerHTML+=`
 
@@ -427,7 +439,7 @@ container.innerHTML+=`
 <div class="product">
 
 <a href="product.html?slug=${p.slug}">
-<img src="${p.image}" style="width:100%">
+<img src="${p.images?.[0] || ""}" style="width:100%">
 </a>
 
 <p>${p.name}</p>
@@ -459,7 +471,7 @@ container.innerHTML+=`
 <div class="product">
 
 <a href="product.html?slug=${p.slug}">
-<img src="${p.image}" style="width:100%">
+<img src="${p.images?.[0] || ""}" style="width:100%">
 </a>
 
 <p>${p.name}</p>
@@ -473,7 +485,7 @@ container.innerHTML+=`
 
 }
 
-/* SEO PRODUCT SCHEMA */
+/* GOOGLE SEO SCHEMA */
 
 function addProductSchema(product){
 
@@ -481,7 +493,7 @@ const schema={
 "@context":"https://schema.org/",
 "@type":"Product",
 "name":product.name,
-"image":[product.image],
+"image":product.images || [],
 "description":product.description || product.name,
 "sku":product._id,
 
