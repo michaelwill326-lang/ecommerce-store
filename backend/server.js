@@ -18,16 +18,7 @@ const PORT = process.env.PORT || 10000
 
 const FRONTEND_URL = "https://techmart-jb9k.onrender.com"
 
-/* ===========================
-   CORS
-=========================== */
-
-app.use(cors({
-origin:"*",
-methods:["GET","POST","PUT","DELETE"],
-allowedHeaders:["Content-Type","Authorization"]
-}))
-
+app.use(cors())
 app.use(express.json())
 
 /* ===========================
@@ -94,19 +85,18 @@ price:Number,
 description:String,
 stock:Number,
 
+category:String,
+
 images:[String],
 
 reviews:[{
-
 name:String,
 rating:Number,
 comment:String,
-
 createdAt:{
 type:Date,
 default:Date.now
 }
-
 }],
 
 createdAt:{
@@ -167,10 +157,6 @@ app.post("/api/users/register", async(req,res)=>{
 try{
 
 const {name,email,password} = req.body
-
-if(!name || !email || !password){
-return res.status(400).json({error:"All fields required"})
-}
 
 const existingUser = await User.findOne({email})
 
@@ -272,12 +258,12 @@ res.json(product)
 })
 
 /* ===========================
-   ADD PRODUCT (MULTIPLE IMAGES)
+   ADD PRODUCT
 =========================== */
 
 app.post("/api/products", upload.array("images",4), async(req,res)=>{
 
-const {name,price,description,stock} = req.body
+const {name,price,description,stock,category} = req.body
 
 const slug = name
 .toLowerCase()
@@ -292,6 +278,7 @@ slug,
 price,
 description,
 stock,
+category,
 images
 })
 
@@ -323,10 +310,6 @@ const {name,rating,comment} = req.body
 
 const product = await Product.findOne({slug:req.params.slug})
 
-if(!product){
-return res.status(404).json({error:"Product not found"})
-}
-
 product.reviews.push({name,rating,comment})
 
 await product.save()
@@ -354,6 +337,22 @@ res.json(products)
 })
 
 /* ===========================
+   TRENDING PRODUCTS
+=========================== */
+
+app.get("/api/products/trending", async(req,res)=>{
+
+const products = await Product.find()
+
+const trending = products
+.sort((a,b)=> (b.reviews.length + b.stock) - (a.reviews.length + a.stock))
+.slice(0,4)
+
+res.json(trending)
+
+})
+
+/* ===========================
    RECOMMENDATIONS
 =========================== */
 
@@ -368,14 +367,48 @@ res.json(recommendations)
 })
 
 /* ===========================
-   PAYSTACK INITIALIZE
+   ALSO BOUGHT
+=========================== */
+
+app.get("/api/products/:slug/also-bought", async(req,res)=>{
+
+const product = await Product.findOne({slug:req.params.slug})
+
+const orders = await Order.find({
+"items.id":product._id
+})
+
+let related={}
+
+orders.forEach(order=>{
+order.items.forEach(item=>{
+if(item.id!=product._id){
+related[item.id]=(related[item.id]||0)+1
+}
+})
+})
+
+const sorted = Object.entries(related)
+.sort((a,b)=>b[1]-a[1])
+.slice(0,4)
+
+const ids = sorted.map(p=>p[0])
+
+const recommendations = await Product.find({
+_id:{ $in:ids }
+})
+
+res.json(recommendations)
+
+})
+
+/* ===========================
+   PAYSTACK PAYMENT
 =========================== */
 
 app.post("/initialize-payment", async(req,res)=>{
 
 const {email,amount} = req.body
-
-try{
 
 const response = await axios.post(
 "https://api.paystack.co/transaction/initialize",
@@ -385,30 +418,17 @@ amount:Math.round(amount*100)
 },
 {
 headers:{
-Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-"Content-Type":"application/json"
+Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
 }
 })
 
 res.json(response.data)
 
-}catch(err){
-
-res.status(500).json({error:"Payment initialization failed"})
-
-}
-
 })
-
-/* ===========================
-   VERIFY PAYMENT
-=========================== */
 
 app.post("/verify-payment", async(req,res)=>{
 
 const {reference,orderData} = req.body
-
-try{
 
 const response = await axios.get(
 `https://api.paystack.co/transaction/verify/${reference}`,
@@ -420,24 +440,16 @@ Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
 
 if(response.data.data.status==="success"){
 
-const newOrder = new Order(orderData)
+const order = new Order(orderData)
+const saved = await order.save()
 
-const savedOrder = await newOrder.save()
+io.emit("new-order",saved)
 
-io.emit("new-order",savedOrder)
+res.json({success:true})
 
-return res.json({
-success:true,
-orderId:savedOrder._id
-})
+}else{
 
-}
-
-return res.json({success:false})
-
-}catch(err){
-
-res.status(500).json({success:false})
+res.json({success:false})
 
 }
 
@@ -484,20 +496,18 @@ const products = await Product.find()
 let urls=""
 
 products.forEach(p=>{
-
 if(!p.slug) return
 
-urls += `
+urls+=`
 <url>
 <loc>${FRONTEND_URL}/product.html?slug=${p.slug}</loc>
 <changefreq>weekly</changefreq>
 <priority>0.9</priority>
 </url>
 `
-
 })
 
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+const sitemap=`<?xml version="1.0" encoding="UTF-8"?>
 
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
@@ -529,10 +539,6 @@ cors:{origin:"*"}
 io.on("connection",(socket)=>{
 console.log("Admin connected:",socket.id)
 })
-
-/* ===========================
-   START SERVER
-=========================== */
 
 server.listen(PORT,()=>{
 
