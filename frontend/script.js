@@ -98,6 +98,65 @@ alert("Added to cart")
 
 }
 
+/* LOAD TRENDING PRODUCTS */
+
+async function loadTrending(){
+
+    const res = await fetch(`${BACKEND_URL}/api/products/trending`)
+    
+    const products = await res.json()
+    
+    const container = document.getElementById("trending")
+    
+    if(!container) return
+    
+    container.innerHTML=""
+    
+    products.forEach(product=>{
+    
+    container.innerHTML += `
+    
+    <div class="product-card">
+    
+    <div class="product-image">
+    
+    <a href="product.html?slug=${product.slug}">
+    <img src="${product.image}">
+    </a>
+    
+    <span class="badge-new">🔥 Trending</span>
+    
+    </div>
+    
+    <div class="product-info">
+    
+    <h3>${product.name}</h3>
+    
+    <div class="rating">⭐⭐⭐⭐⭐</div>
+    
+    <p class="price">₦${product.price}</p>
+    
+    <div class="actions">
+    
+    <button onclick="addToCart('${product._id}','${product.name}',${product.price},'${product.image}')">
+    🛒 Add
+    </button>
+    
+    <button onclick="addToWishlist('${product._id}','${product.name}',${product.price},'${product.image}')">
+    ❤️
+    </button>
+    
+    </div>
+    
+    </div>
+    
+    </div>
+    
+    `
+    
+    })
+    
+    }
 /* WISHLIST */
 
 function addToWishlist(id,name,price,image){
@@ -144,4 +203,5 @@ cartCount.textContent=total
 
 }
 
+loadTrending()
 loadProducts()
