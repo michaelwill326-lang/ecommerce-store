@@ -395,6 +395,86 @@ res.status(500).json({error:"Server error"})
 })
 
 /* ===========================
+   PRODUCT SEARCH
+=========================== */
+
+app.get("/api/products/search", async (req,res)=>{
+
+   try{
+   
+   const query = req.query.q
+   
+   if(!query){
+   return res.json([])
+   }
+   
+   const products = await Product.find({
+   name: { $regex: query, $options: "i" }
+   }).limit(5)
+   
+   res.json(products)
+   
+   }catch(err){
+   
+   res.status(500).json({error:"Search error"})
+   
+   }
+   
+   })
+/* ===========================
+   CUSTOMERS ALSO BOUGHT
+=========================== */
+
+app.get("/api/products/:slug/also-bought", async (req,res)=>{
+
+   try{
+   
+   const product = await Product.findOne({slug:req.params.slug})
+   
+   if(!product){
+   return res.status(404).json({error:"Product not found"})
+   }
+   
+   const orders = await Order.find({
+   "items.id":product._id
+   })
+   
+   let relatedProducts = {}
+   
+   orders.forEach(order=>{
+   
+   order.items.forEach(item=>{
+   
+   if(item.id != product._id){
+   
+   relatedProducts[item.id] = (relatedProducts[item.id] || 0) + 1
+   
+   }
+   
+   })
+   
+   })
+   
+   const sorted = Object.entries(relatedProducts)
+   .sort((a,b)=>b[1]-a[1])
+   .slice(0,4)
+   
+   const productIds = sorted.map(p=>p[0])
+   
+   const recommendations = await Product.find({
+   _id:{$in:productIds}
+   })
+   
+   res.json(recommendations)
+   
+   }catch(err){
+   
+   res.status(500).json({error:"Server error"})
+   
+   }
+   
+   })
+/* ===========================
    PAYSTACK INITIALIZE
 =========================== */
 
