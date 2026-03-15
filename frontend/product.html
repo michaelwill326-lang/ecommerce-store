@@ -1,16 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Product | TechMart</title>
+<title>Product - TechMart</title>
 
 <link rel="stylesheet" href="style.css">
-
-<script type="application/ld+json" id="product-schema"></script>
 
 <style>
 
@@ -21,13 +18,8 @@ margin:0;
 padding:30px;
 }
 
-#stock-warning{
-margin:10px 0;
-font-weight:bold;
-}
-
 .product-page{
-max-width:1100px;
+max-width:1000px;
 margin:auto;
 display:grid;
 grid-template-columns:1fr 1fr;
@@ -42,54 +34,49 @@ border-radius:10px;
 .price{
 font-size:26px;
 font-weight:bold;
-margin:15px 0;
+margin:10px 0;
 }
 
 button{
-padding:10px 16px;
+padding:10px 14px;
+margin-right:10px;
 border:none;
 background:#2563eb;
 color:white;
 border-radius:6px;
 cursor:pointer;
-margin-right:10px;
 }
 
 button:hover{
 background:#1d4ed8;
 }
 
+#stock-warning{
+margin:10px 0;
+font-weight:bold;
+color:#b91c1c;
+}
+
 .reviews{
-margin-top:50px;
+margin-top:40px;
 }
 
 .review{
 background:white;
-padding:12px;
+padding:10px;
 margin-bottom:10px;
 border-radius:6px;
 box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 .recommendations{
-margin-top:50px;
-display:flex;
-gap:20px;
-flex-wrap:wrap;
+margin-top:40px;
 }
 
-.product-card{
-background:white;
-padding:10px;
-border-radius:8px;
+.recommendations .product{
+display:inline-block;
 width:200px;
-text-align:center;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
-.product-card img{
-width:100%;
-border-radius:6px;
+margin-right:15px;
 }
 
 </style>
@@ -115,6 +102,7 @@ border-radius:6px;
 <div id="stock-warning"></div>
 
 <button id="add-cart">Add to Cart</button>
+
 <button id="wishlist-btn">❤️ Wishlist</button>
 
 </div>
@@ -141,8 +129,6 @@ border-radius:6px;
 <option value="1">⭐</option>
 </select>
 
-<br><br>
-
 <textarea id="review-comment" placeholder="Write your review"></textarea>
 
 <br><br>
@@ -151,18 +137,25 @@ border-radius:6px;
 
 </div>
 
-<!-- RECOMMENDED PRODUCTS -->
+<!-- RECOMMENDATIONS -->
+
+<div class="recommendations">
 
 <h2>Recommended Products</h2>
 
-<div id="recommendations" class="recommendations"></div>
+<div id="recommendations"></div>
 
-<!-- CUSTOMERS ALSO BOUGHT -->
+</div>
+
+<!-- ALSO BOUGHT -->
+
+<div class="recommendations">
 
 <h2>Customers Also Bought</h2>
 
-<div id="also-bought" class="recommendations"></div>
+<div id="also-bought"></div>
 
+</div>
 
 <script>
 
@@ -185,82 +178,43 @@ productData=product
 document.getElementById("product-name").textContent=product.name
 document.getElementById("product-image").src=product.image
 document.getElementById("product-description").textContent=product.description || ""
+
 document.getElementById("product-price").textContent="₦"+product.price
 
-const stockWarning=document.getElementById("stock-warning")
+/* Rating */
 
-if(product.stock <= 5){
-
-stockWarning.innerHTML = `⚠ Only ${product.stock} left in stock!`
-
-stockWarning.style.color = "red"
-
-}
-else{
-
-stockWarning.innerHTML = `In Stock (${product.stock})`
-
-stockWarning.style.color = "green"
-
-}
-generateSchema(product)
-
-loadReviews()
-
-}
-
-/* PRODUCT SEO SCHEMA */
-
-function generateSchema(product){
-
-let ratingValue=5
-let reviewCount=product.reviews.length || 1
-
-if(product.reviews.length>0){
+if(product.reviews.length){
 
 let total=0
-
 product.reviews.forEach(r=>total+=r.rating)
 
-ratingValue=(total/product.reviews.length).toFixed(1)
+let avg=(total/product.reviews.length).toFixed(1)
+
+document.getElementById("product-rating").textContent=
+"⭐".repeat(Math.round(avg))+" ("+product.reviews.length+" reviews)"
+
+}else{
+
+document.getElementById("product-rating").textContent="No ratings yet"
 
 }
 
-const schema={
+/* Stock warning */
 
-"@context":"https://schema.org/",
-"@type":"Product",
+if(product.stock<=5){
 
-"name":product.name,
-"image":[product.image],
-"description":product.description || "Electronic product from TechMart",
-
-"sku":product._id,
-
-"brand":{
-"@type":"Brand",
-"name":"TechMart"
-},
-
-"aggregateRating":{
-"@type":"AggregateRating",
-"ratingValue":ratingValue,
-"reviewCount":reviewCount
-},
-
-"offers":{
-"@type":"Offer",
-"url":window.location.href,
-"priceCurrency":"NGN",
-"price":product.price,
-"priceValidUntil":"2027-12-31",
-"itemCondition":"https://schema.org/NewCondition",
-"availability":"https://schema.org/InStock"
-}
+document.getElementById("stock-warning").textContent=
+"⚠ Only "+product.stock+" left in stock!"
 
 }
 
-document.getElementById("product-schema").textContent=JSON.stringify(schema)
+/* SEO schema */
+
+addProductSchema(product)
+
+loadReviews()
+loadRecommendations()
+loadAlsoBought()
 
 }
 
@@ -324,21 +278,21 @@ alert("Added to wishlist")
 
 async function loadReviews(){
 
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
-const product=await res.json()
+const res=await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`)
+const reviews=await res.json()
 
 const container=document.getElementById("reviews-list")
 
 container.innerHTML=""
 
-if(!product.reviews.length){
+if(!reviews.length){
 
 container.innerHTML="<p>No reviews yet.</p>"
 return
 
 }
 
-product.reviews.forEach(r=>{
+reviews.forEach(r=>{
 
 container.innerHTML+=`
 
@@ -397,14 +351,16 @@ const products=await res.json()
 
 const container=document.getElementById("recommendations")
 
+container.innerHTML=""
+
 products.forEach(p=>{
 
 container.innerHTML+=`
 
-<div class="product-card">
+<div class="product">
 
 <a href="product.html?slug=${p.slug}">
-<img src="${p.image}">
+<img src="${p.image}" style="width:100%">
 </a>
 
 <p>${p.name}</p>
@@ -418,11 +374,9 @@ container.innerHTML+=`
 
 }
 
-/* CUSTOMERS ALSO BOUGHT */
+/* ALSO BOUGHT */
 
 async function loadAlsoBought(){
-
-try{
 
 const res=await fetch(`${BACKEND_URL}/api/products/${slug}/also-bought`)
 const products=await res.json()
@@ -435,10 +389,10 @@ products.forEach(p=>{
 
 container.innerHTML+=`
 
-<div class="product-card">
+<div class="product">
 
 <a href="product.html?slug=${p.slug}">
-<img src="${p.image}">
+<img src="${p.image}" style="width:100%">
 </a>
 
 <p>${p.name}</p>
@@ -450,17 +404,47 @@ container.innerHTML+=`
 
 })
 
-}catch(err){
+}
 
-console.log("Also bought error")
+/* SEO PRODUCT SCHEMA */
+
+function addProductSchema(product){
+
+const schema={
+"@context":"https://schema.org/",
+"@type":"Product",
+"name":product.name,
+"image":[product.image],
+"description":product.description || product.name,
+"sku":product._id,
+
+"offers":{
+"@type":"Offer",
+"url":window.location.href,
+"priceCurrency":"USD",
+"price":product.price,
+"availability":"https://schema.org/InStock"
+},
+
+"aggregateRating":{
+"@type":"AggregateRating",
+"ratingValue": product.reviews.length
+? (product.reviews.reduce((a,b)=>a+b.rating,0)/product.reviews.length).toFixed(1)
+: 5,
+"reviewCount":product.reviews.length || 1
+}
 
 }
+
+const script=document.createElement("script")
+script.type="application/ld+json"
+script.text=JSON.stringify(schema)
+
+document.head.appendChild(script)
 
 }
 
 loadProduct()
-loadRecommendations()
-loadAlsoBought()
 
 </script>
 
