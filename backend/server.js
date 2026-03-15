@@ -261,6 +261,38 @@ res.json(products)
 })
 
 /* ===========================
+   TRENDING PRODUCTS
+=========================== */
+
+app.get("/api/products/trending", async (req,res)=>{
+
+   try{
+   
+   const products = await Product.find()
+   
+   /* Simple trending algorithm */
+   
+   const trending = products
+   .sort((a,b)=>{
+   
+   const scoreA = (a.reviews?.length || 0) + a.stock
+   const scoreB = (b.reviews?.length || 0) + b.stock
+   
+   return scoreB - scoreA
+   
+   })
+   .slice(0,4)
+   
+   res.json(trending)
+   
+   }catch(err){
+   
+   res.status(500).json({error:"Server error"})
+   
+   }
+   
+   })
+/* ===========================
    GET PRODUCT BY SLUG
 =========================== */
 
