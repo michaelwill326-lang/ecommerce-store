@@ -16,10 +16,6 @@ const { Server } = require("socket.io")
 const app = express()
 const PORT = process.env.PORT || 10000
 
-/* ===========================
-   FRONTEND URL
-=========================== */
-
 const FRONTEND_URL = "https://techmart-jb9k.onrender.com"
 
 /* ===========================
@@ -97,7 +93,8 @@ slug:String,
 price:Number,
 description:String,
 stock:Number,
-image:String,
+
+images:[String],
 
 reviews:[{
 
@@ -195,7 +192,6 @@ res.json({message:"Account created successfully"})
 
 }catch(err){
 
-console.error(err)
 res.status(500).json({error:"Server error"})
 
 }
@@ -241,7 +237,6 @@ email:user.email
 
 }catch(err){
 
-console.error(err)
 res.status(500).json({error:"Server error"})
 
 }
@@ -261,38 +256,6 @@ res.json(products)
 })
 
 /* ===========================
-   TRENDING PRODUCTS
-=========================== */
-
-app.get("/api/products/trending", async (req,res)=>{
-
-   try{
-   
-   const products = await Product.find()
-   
-   /* Simple trending algorithm */
-   
-   const trending = products
-   .sort((a,b)=>{
-   
-   const scoreA = (a.reviews?.length || 0) + a.stock
-   const scoreB = (b.reviews?.length || 0) + b.stock
-   
-   return scoreB - scoreA
-   
-   })
-   .slice(0,4)
-   
-   res.json(trending)
-   
-   }catch(err){
-   
-   res.status(500).json({error:"Server error"})
-   
-   }
-   
-   })
-/* ===========================
    GET PRODUCT BY SLUG
 =========================== */
 
@@ -309,10 +272,10 @@ res.json(product)
 })
 
 /* ===========================
-   ADD PRODUCT
+   ADD PRODUCT (MULTIPLE IMAGES)
 =========================== */
 
-app.post("/api/products", upload.single("image"), async(req,res)=>{
+app.post("/api/products", upload.array("images",4), async(req,res)=>{
 
 const {name,price,description,stock} = req.body
 
@@ -321,7 +284,7 @@ const slug = name
 .replace(/[^a-z0-9]+/g,"-")
 .replace(/(^-|-$)/g,"")
 
-const image = req.file ? req.file.path : ""
+const images = req.files ? req.files.map(file=>file.path) : []
 
 const product = new Product({
 name,
@@ -329,7 +292,7 @@ slug,
 price,
 description,
 stock,
-image
+images
 })
 
 const saved = await product.save()
@@ -373,12 +336,28 @@ res.json(product)
 })
 
 /* ===========================
-   PRODUCT RECOMMENDATIONS
+   SEARCH PRODUCTS
+=========================== */
+
+app.get("/api/products/search", async(req,res)=>{
+
+const query = req.query.q
+
+if(!query) return res.json([])
+
+const products = await Product.find({
+name:{ $regex:query,$options:"i"}
+}).limit(5)
+
+res.json(products)
+
+})
+
+/* ===========================
+   RECOMMENDATIONS
 =========================== */
 
 app.get("/api/products/:slug/recommendations", async(req,res)=>{
-
-try{
 
 const recommendations = await Product.find({
 slug:{ $ne:req.params.slug }
@@ -386,94 +365,8 @@ slug:{ $ne:req.params.slug }
 
 res.json(recommendations)
 
-}catch(err){
-
-res.status(500).json({error:"Server error"})
-
-}
-
 })
 
-/* ===========================
-   PRODUCT SEARCH
-=========================== */
-
-app.get("/api/products/search", async (req,res)=>{
-
-   try{
-   
-   const query = req.query.q
-   
-   if(!query){
-   return res.json([])
-   }
-   
-   const products = await Product.find({
-   name: { $regex: query, $options: "i" }
-   }).limit(5)
-   
-   res.json(products)
-   
-   }catch(err){
-   
-   res.status(500).json({error:"Search error"})
-   
-   }
-   
-   })
-/* ===========================
-   CUSTOMERS ALSO BOUGHT
-=========================== */
-
-app.get("/api/products/:slug/also-bought", async (req,res)=>{
-
-   try{
-   
-   const product = await Product.findOne({slug:req.params.slug})
-   
-   if(!product){
-   return res.status(404).json({error:"Product not found"})
-   }
-   
-   const orders = await Order.find({
-   "items.id":product._id
-   })
-   
-   let relatedProducts = {}
-   
-   orders.forEach(order=>{
-   
-   order.items.forEach(item=>{
-   
-   if(item.id != product._id){
-   
-   relatedProducts[item.id] = (relatedProducts[item.id] || 0) + 1
-   
-   }
-   
-   })
-   
-   })
-   
-   const sorted = Object.entries(relatedProducts)
-   .sort((a,b)=>b[1]-a[1])
-   .slice(0,4)
-   
-   const productIds = sorted.map(p=>p[0])
-   
-   const recommendations = await Product.find({
-   _id:{$in:productIds}
-   })
-   
-   res.json(recommendations)
-   
-   }catch(err){
-   
-   res.status(500).json({error:"Server error"})
-   
-   }
-   
-   })
 /* ===========================
    PAYSTACK INITIALIZE
 =========================== */
@@ -485,28 +378,21 @@ const {email,amount} = req.body
 try{
 
 const response = await axios.post(
-
 "https://api.paystack.co/transaction/initialize",
-
 {
 email,
 amount:Math.round(amount*100)
 },
-
 {
 headers:{
 Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
 "Content-Type":"application/json"
 }
-}
-
-)
+})
 
 res.json(response.data)
 
 }catch(err){
-
-console.error(err.response?.data||err.message)
 
 res.status(500).json({error:"Payment initialization failed"})
 
@@ -525,16 +411,12 @@ const {reference,orderData} = req.body
 try{
 
 const response = await axios.get(
-
 `https://api.paystack.co/transaction/verify/${reference}`,
-
 {
 headers:{
 Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
 }
-}
-
-)
+})
 
 if(response.data.data.status==="success"){
 
@@ -555,7 +437,6 @@ return res.json({success:false})
 
 }catch(err){
 
-console.error(err)
 res.status(500).json({success:false})
 
 }
@@ -593,56 +474,47 @@ res.json(order)
 })
 
 /* ===========================
-   SEO SITEMAP
+   SITEMAP
 =========================== */
 
-app.get("/sitemap.xml", async (req,res)=>{
+app.get("/sitemap.xml", async(req,res)=>{
 
-   try{
-   
-   const products = await Product.find()
-   
-   let urls=""
-   
-   products.forEach(p=>{
-   
-   if(!p.slug) return
-   
-   urls += `
-   <url>
-   <loc>${FRONTEND_URL}/product.html?slug=${p.slug}</loc>
-   <changefreq>weekly</changefreq>
-   <priority>0.9</priority>
-   </url>
-   `
-   
-   })
-   
-   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-   
-   <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-   
-   <url>
-   <loc>${FRONTEND_URL}</loc>
-   <changefreq>daily</changefreq>
-   <priority>1.0</priority>
-   </url>
-   
-   ${urls}
-   
-   </urlset>`
-   
-   res.header("Content-Type","application/xml")
-   res.send(sitemap)
-   
-   }catch(err){
-   
-   console.error(err)
-   res.status(500).send("Error generating sitemap")
-   
-   }
-   
-   })
+const products = await Product.find()
+
+let urls=""
+
+products.forEach(p=>{
+
+if(!p.slug) return
+
+urls += `
+<url>
+<loc>${FRONTEND_URL}/product.html?slug=${p.slug}</loc>
+<changefreq>weekly</changefreq>
+<priority>0.9</priority>
+</url>
+`
+
+})
+
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+<url>
+<loc>${FRONTEND_URL}</loc>
+<changefreq>daily</changefreq>
+<priority>1.0</priority>
+</url>
+
+${urls}
+
+</urlset>`
+
+res.header("Content-Type","application/xml")
+res.send(sitemap)
+
+})
 
 /* ===========================
    SOCKET.IO
