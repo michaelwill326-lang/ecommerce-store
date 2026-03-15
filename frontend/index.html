@@ -6,12 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Google Search Console Verification -->
-<meta name="google-site-verification" content="AVAuHLmZct4Gv7rvkAz3eThz2Jf--lQxXMRB-KnZAkg" />
-
-<title>🛒 TechMart - Online Tech Store</title>
-
-<meta name="description" content="TechMart - Buy electronics, gadgets, laptops, keyboards and monitors online.">
+<title>🛒 TechMart</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -34,24 +29,15 @@ background:#111827;
 color:white;
 }
 
-header h1{
-margin:0;
-}
-
 header nav{
 display:flex;
-align-items:center;
 gap:20px;
+align-items:center;
 }
 
 header a{
 color:white;
 text-decoration:none;
-font-weight:500;
-}
-
-header a:hover{
-text-decoration:underline;
 }
 
 /* CART BADGE */
@@ -74,75 +60,91 @@ font-size:12px;
 /* MAIN */
 
 main{
-max-width:1100px;
+max-width:1200px;
 margin:auto;
 padding:30px;
-}
-
-.search-box{
-margin-bottom:20px;
-}
-
-.search-box input{
-width:100%;
-max-width:400px;
-padding:10px;
-border:1px solid #ccc;
-border-radius:6px;
 }
 
 /* PRODUCT GRID */
 
 .product-list{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-gap:20px;
+grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+gap:25px;
 }
 
-.product{
+/* PRODUCT CARD */
+
+.product-card{
 background:white;
-padding:20px;
-border-radius:8px;
-box-shadow:0 3px 8px rgba(0,0,0,0.08);
-text-align:center;
+border-radius:10px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+overflow:hidden;
+transition:0.2s;
 }
 
-.product img{
-width:150px;
-height:150px;
+.product-card:hover{
+transform:translateY(-4px);
+}
+
+.product-image{
+position:relative;
+}
+
+.product-image img{
+width:100%;
+height:200px;
 object-fit:cover;
-margin-bottom:10px;
 }
 
-.product h3{
-margin:10px 0;
+.badge-new{
+position:absolute;
+top:10px;
+left:10px;
+background:#22c55e;
+color:white;
+padding:4px 8px;
+font-size:12px;
+border-radius:4px;
+}
+
+.product-info{
+padding:15px;
+}
+
+.product-info h3{
+margin:5px 0;
+font-size:18px;
+}
+
+.rating{
+color:#fbbf24;
+margin:5px 0;
 }
 
 .price{
 font-weight:bold;
+font-size:18px;
+margin:8px 0;
 }
 
-.product button{
-margin-top:10px;
-padding:8px 14px;
+.actions{
+display:flex;
+gap:8px;
+}
+
+.actions button{
+flex:1;
+padding:8px;
+border:none;
 background:#2563eb;
 color:white;
-border:none;
 border-radius:6px;
 cursor:pointer;
 }
 
-.product button:hover{
+.actions button:hover{
 background:#1d4ed8;
-}
-
-/* LOADING */
-
-.spinner{
-display:none;
-text-align:center;
-margin-top:40px;
-font-size:20px;
 }
 
 </style>
@@ -158,7 +160,6 @@ font-size:20px;
 <nav>
 
 <a href="index.html">Home</a>
-
 <a href="account.html">Account</a>
 
 <div class="cart-icon-wrapper">
@@ -169,8 +170,6 @@ font-size:20px;
 
 </div>
 
-<a href="tracking.html">Track Order</a>
-
 </nav>
 
 </header>
@@ -179,146 +178,11 @@ font-size:20px;
 
 <h2>Products</h2>
 
-<div class="search-box">
-
-<input
-type="text"
-id="searchInput"
-placeholder="🔎 Search products..."
->
-
-</div>
-
-<div id="loading-spinner" class="spinner">
-Loading products...
-</div>
-
 <div id="products" class="product-list"></div>
 
 </main>
 
-<script>
-
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
-
-const productsContainer=document.getElementById("products")
-const spinner=document.getElementById("loading-spinner")
-const searchInput=document.getElementById("searchInput")
-
-let allProducts=[]
-
-/* LOAD PRODUCTS */
-
-async function loadProducts(){
-
-spinner.style.display="block"
-
-try{
-
-const res=await fetch(`${BACKEND_URL}/api/products`)
-const products=await res.json()
-
-allProducts=products
-
-displayProducts(products)
-
-}catch(err){
-
-productsContainer.innerHTML="Failed to load products"
-
-}
-
-spinner.style.display="none"
-
-}
-
-/* DISPLAY PRODUCTS */
-
-function displayProducts(products){
-
-productsContainer.innerHTML=""
-
-products.forEach(product=>{
-
-productsContainer.innerHTML+=`
-
-<div class="product">
-
-<a href="product.html?slug=${product.slug}">
-<img src="${product.image}" alt="${product.name}">
-</a>
-
-<h3>${product.name}</h3>
-
-<p class="price">₦${product.price}</p>
-
-<button onclick="addToCart('${product._id}','${product.name}',${product.price},'${product.image}')">
-Add to Cart
-</button>
-
-</div>
-
-`
-
-})
-
-}
-
-/* SEARCH */
-
-searchInput.addEventListener("input",function(){
-
-const term=this.value.toLowerCase()
-
-const filtered=allProducts.filter(p=>
-p.name.toLowerCase().includes(term)
-)
-
-displayProducts(filtered)
-
-})
-
-/* CART */
-
-function addToCart(id,name,price,image){
-
-let cart=JSON.parse(localStorage.getItem("cart"))||[]
-
-const existing=cart.find(i=>i.id===id)
-
-if(existing){
-existing.quantity++
-}else{
-cart.push({id,name,price,image,quantity:1})
-}
-
-localStorage.setItem("cart",JSON.stringify(cart))
-
-updateCartCount()
-
-alert("Added to cart")
-
-}
-
-/* CART BADGE */
-
-function updateCartCount(){
-
-let cart=JSON.parse(localStorage.getItem("cart"))||[]
-
-let total=0
-
-cart.forEach(i=>total+=i.quantity)
-
-document.getElementById("cart-count").textContent=total
-
-}
-
-updateCartCount()
-
-loadProducts()
-
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>

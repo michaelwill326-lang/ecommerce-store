@@ -1,54 +1,36 @@
-const API="https://techmart-backend-ecbi.onrender.com"
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
 
 const productsContainer=document.getElementById("products")
-const featuredContainer=document.getElementById("featuredProducts")
-const recommendedContainer=document.getElementById("recommendedProducts")
 
-let allProducts=[]
+const cartCount=document.getElementById("cart-count")
+
+updateCartCount()
+
+/* LOAD PRODUCTS */
 
 async function loadProducts(){
 
-const res=await fetch(API+"/api/products")
+const res=await fetch(`${BACKEND_URL}/api/products`)
+
 const products=await res.json()
-
-allProducts=products
-
-displayProducts(products)
-displayFeatured(products.slice(0,4))
-loadRecommendations()
-
-}
-
-function displayProducts(products){
 
 productsContainer.innerHTML=""
 
 products.forEach(product=>{
-productsContainer.innerHTML+=productCard(product)
-})
 
-}
-
-function displayFeatured(products){
-
-featuredContainer.innerHTML=""
-
-products.forEach(product=>{
-featuredContainer.innerHTML+=productCard(product)
-})
-
-}
-
-function productCard(product){
-
-return`
+productsContainer.innerHTML+=`
 
 <div class="product-card">
 
 <div class="product-image">
 
+<a href="product.html?slug=${product.slug}">
+
 <img src="${product.image}">
-<span class="badge">New</span>
+
+</a>
+
+<span class="badge-new">NEW</span>
 
 </div>
 
@@ -56,17 +38,19 @@ return`
 
 <h3>${product.name}</h3>
 
-<div>${getRating(product)}</div>
+<div class="rating">⭐⭐⭐⭐⭐</div>
 
 <p class="price">₦${product.price}</p>
 
 <div class="actions">
 
-<button onclick="addToCart('${product._id}','${product.name}',${product.price},'${product.image}')">🛒</button>
+<button onclick="addToCart('${product._id}','${product.name}',${product.price},'${product.image}')">
+🛒 Add
+</button>
 
-<button onclick="addToWishlist('${product._id}','${product.name}',${product.price},'${product.image}')">❤️</button>
-
-<button onclick='quickView(${JSON.stringify(product)})'>👁</button>
+<button onclick="addToWishlist('${product._id}','${product.name}',${product.price},'${product.image}')">
+❤️
+</button>
 
 </div>
 
@@ -76,39 +60,59 @@ return`
 
 `
 
-}
-
-function getRating(product){
-
-if(!product.reviews||product.reviews.length===0) return "☆☆☆☆☆"
-
-let total=0
-product.reviews.forEach(r=>total+=r.rating)
-
-let avg=Math.round(total/product.reviews.length)
-
-return "★★★★★".slice(0,avg)+"☆☆☆☆☆".slice(avg)
+})
 
 }
+
+/* ADD TO CART */
 
 function addToCart(id,name,price,image){
 
-let cart=JSON.parse(localStorage.getItem("cart"))||[]
+let cart=JSON.parse(localStorage.getItem("cart")) || []
 
-const existing=cart.find(i=>i.id===id)
+const existing=cart.find(item=>item.id===id)
 
-if(existing){existing.quantity++}
-else{cart.push({id,name,price,image,quantity:1})}
+if(existing){
+
+existing.quantity++
+
+}else{
+
+cart.push({
+
+id,
+name,
+price,
+image,
+quantity:1
+
+})
+
+}
 
 localStorage.setItem("cart",JSON.stringify(cart))
+
+updateCartCount()
 
 alert("Added to cart")
 
 }
 
+/* WISHLIST */
+
 function addToWishlist(id,name,price,image){
 
-let wishlist=JSON.parse(localStorage.getItem("wishlist"))||[]
+let wishlist=JSON.parse(localStorage.getItem("wishlist")) || []
+
+const existing=wishlist.find(item=>item.id===id)
+
+if(existing){
+
+alert("Already in wishlist")
+
+return
+
+}
 
 wishlist.push({id,name,price,image})
 
@@ -118,95 +122,25 @@ alert("Added to wishlist")
 
 }
 
-function quickView(product){
+/* CART BADGE */
 
-document.getElementById("quickViewModal").style.display="block"
+function updateCartCount(){
 
-document.getElementById("modalImage").src=product.image
-document.getElementById("modalName").innerText=product.name
-document.getElementById("modalPrice").innerText="₦"+product.price
-document.getElementById("modalDescription").innerText=product.description||""
+let cart=JSON.parse(localStorage.getItem("cart")) || []
 
-document.getElementById("modalAddCart").onclick=function(){
-addToCart(product._id,product.name,product.price,product.image)
-}
+let total=0
 
-let viewed=JSON.parse(localStorage.getItem("viewed"))||[]
+cart.forEach(i=>{
 
-viewed.unshift(product)
-viewed=viewed.slice(0,5)
-
-localStorage.setItem("viewed",JSON.stringify(viewed))
-
-loadRecommendations()
-
-}
-
-function closeQuickView(){
-document.getElementById("quickViewModal").style.display="none"
-}
-
-function loadRecommendations(){
-
-const viewed=JSON.parse(localStorage.getItem("viewed"))||[]
-recommendedContainer.innerHTML=""
-
-viewed.forEach(product=>{
-recommendedContainer.innerHTML+=productCard(product)
-})
-
-}
-
-function applyFilters(){
-
-let filtered=[...allProducts]
-
-const category=document.getElementById("categoryFilter").value
-const price=document.getElementById("priceFilter").value
-const sort=document.getElementById("sortFilter").value
-
-if(category){
-filtered=filtered.filter(p=>p.category===category)
-}
-
-if(price){
-filtered=filtered.filter(p=>p.price<=price)
-}
-
-if(sort==="low"){
-filtered.sort((a,b)=>a.price-b.price)
-}
-
-if(sort==="high"){
-filtered.sort((a,b)=>b.price-a.price)
-}
-
-displayProducts(filtered)
-
-}
-
-document.getElementById("categoryFilter").addEventListener("change",applyFilters)
-document.getElementById("priceFilter").addEventListener("change",applyFilters)
-document.getElementById("sortFilter").addEventListener("change",applyFilters)
-
-document.getElementById("searchInput").addEventListener("keyup",function(){
-
-const query=this.value.toLowerCase()
-
-const filtered=allProducts.filter(p=>p.name.toLowerCase().includes(query))
-
-displayProducts(filtered)
+total+=i.quantity
 
 })
 
-function scrollToProducts(){
-window.scrollTo({top:600,behavior:"smooth"})
+if(cartCount){
+
+cartCount.textContent=total
+
 }
-
-function toggleMenu(){
-
-const nav=document.querySelector(".nav-links")
-nav.classList.toggle("show")
 
 }
 
