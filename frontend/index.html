@@ -29,15 +29,52 @@ background:#111827;
 color:white;
 }
 
-header nav{
+header h1{
+margin:0;
+}
+
+nav{
 display:flex;
-gap:20px;
 align-items:center;
+gap:20px;
 }
 
 header a{
 color:white;
 text-decoration:none;
+}
+
+/* SEARCH */
+
+.search-container{
+position:relative;
+}
+
+#searchBox{
+padding:8px;
+border-radius:6px;
+border:1px solid #ccc;
+width:220px;
+}
+
+#search-results{
+position:absolute;
+background:white;
+width:100%;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+border-radius:6px;
+margin-top:4px;
+z-index:100;
+}
+
+.search-item{
+padding:10px;
+cursor:pointer;
+border-bottom:1px solid #eee;
+}
+
+.search-item:hover{
+background:#f3f4f6;
 }
 
 /* CART BADGE */
@@ -65,7 +102,7 @@ margin:auto;
 padding:30px;
 }
 
-/* PRODUCT GRID */
+/* PRODUCTS GRID */
 
 .product-list{
 display:grid;
@@ -80,15 +117,6 @@ background:white;
 border-radius:10px;
 box-shadow:0 3px 10px rgba(0,0,0,0.1);
 overflow:hidden;
-transition:0.2s;
-}
-
-.product-card:hover{
-transform:translateY(-4px);
-}
-
-.product-image{
-position:relative;
 }
 
 .product-image img{
@@ -97,28 +125,11 @@ height:200px;
 object-fit:cover;
 }
 
-.badge-new{
-position:absolute;
-top:10px;
-left:10px;
-background:#22c55e;
-color:white;
-padding:4px 8px;
-font-size:12px;
-border-radius:4px;
-}
-
 .product-info{
 padding:15px;
 }
 
 .product-info h3{
-margin:5px 0;
-font-size:18px;
-}
-
-.rating{
-color:#fbbf24;
 margin:5px 0;
 }
 
@@ -126,6 +137,11 @@ margin:5px 0;
 font-weight:bold;
 font-size:18px;
 margin:8px 0;
+}
+
+.rating{
+color:#fbbf24;
+margin-bottom:8px;
 }
 
 .actions{
@@ -153,47 +169,47 @@ background:#1d4ed8;
 
 <body>
 
-    <header>
+<header>
 
-        <h1>🛒 TechMart</h1>
-        
-        <nav>
-        
-        <a href="index.html">Home</a>
-        
-        <a href="account.html">Account</a>
-        
-        <div class="search-container">
-        
-        <input 
-        type="text" 
-        id="searchBox"
-        placeholder="Search TechMart products..."
-        >
-        
-        <div id="search-results"></div>
-        
-        </div>
-        
-        <div class="cart-icon-wrapper">
-        
-        <a href="cart.html">🛒 Cart</a>
-        
-        <span id="cart-count" class="badge">0</span>
-        
-        </div>
-        
-        </nav>
-        
-  </header>
+<h1>🛒 TechMart</h1>
+
+<nav>
+
+<a href="index.html">Home</a>
+
+<a href="account.html">Account</a>
+
+<div class="search-container">
+
+<input 
+type="text"
+id="searchBox"
+placeholder="Search TechMart products..."
+>
+
+<div id="search-results"></div>
+
+</div>
+
+<div class="cart-icon-wrapper">
+
+<a href="cart.html">🛒 Cart</a>
+
+<span id="cart-count" class="badge">0</span>
+
+</div>
+
+</nav>
+
+</header>
 
 <main>
 
-    <h2>🔥 Trending Products</h2>
+<h2>🔥 Trending Products</h2>
 
-    <div id="trending" class="product-list"></div>
-    
-    <h2>All Products</h2>
+<div id="trending" class="product-list"></div>
+
+<h2>All Products</h2>
 
 <div id="products" class="product-list"></div>
 
@@ -201,5 +217,61 @@ background:#1d4ed8;
 
 <script src="script.js"></script>
 
+<script>
+
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+
+const searchBox=document.getElementById("searchBox")
+const searchResults=document.getElementById("search-results")
+
+/* SEARCH SUGGESTIONS */
+
+searchBox.addEventListener("input", async function(){
+
+const query=searchBox.value.trim()
+
+if(query.length < 2){
+searchResults.innerHTML=""
+return
+}
+
+const res=await fetch(`${BACKEND_URL}/api/products/search?q=${query}`)
+
+const products=await res.json()
+
+searchResults.innerHTML=""
+
+products.forEach(p=>{
+
+searchResults.innerHTML+=`
+
+<div class="search-item"
+onclick="window.location='product.html?slug=${p.slug}'">
+
+${p.name}
+
+</div>
+
+`
+
+})
+
+})
+
+/* ENTER SEARCH PAGE */
+
+searchBox.addEventListener("keypress",function(e){
+
+if(e.key==="Enter"){
+
+window.location=`search.html?q=${searchBox.value}`
+
+}
+
+})
+
+</script>
+
 </body>
+
 </html>
