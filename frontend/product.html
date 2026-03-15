@@ -21,6 +21,11 @@ margin:0;
 padding:30px;
 }
 
+#stock-warning{
+margin:10px 0;
+font-weight:bold;
+}
+
 .product-page{
 max-width:1100px;
 margin:auto;
@@ -107,7 +112,9 @@ border-radius:6px;
 
 <div id="product-rating"></div>
 
-<button id="add-cart">🛒 Add to Cart</button>
+<div id="stock-warning"></div>
+
+<button id="add-cart">Add to Cart</button>
 <button id="wishlist-btn">❤️ Wishlist</button>
 
 </div>
@@ -180,6 +187,22 @@ document.getElementById("product-image").src=product.image
 document.getElementById("product-description").textContent=product.description || ""
 document.getElementById("product-price").textContent="₦"+product.price
 
+const stockWarning=document.getElementById("stock-warning")
+
+if(product.stock <= 5){
+
+stockWarning.innerHTML = `⚠ Only ${product.stock} left in stock!`
+
+stockWarning.style.color = "red"
+
+}
+else{
+
+stockWarning.innerHTML = `In Stock (${product.stock})`
+
+stockWarning.style.color = "green"
+
+}
 generateSchema(product)
 
 loadReviews()
