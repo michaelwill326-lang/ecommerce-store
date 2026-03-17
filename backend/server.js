@@ -16,9 +16,22 @@ const { Server } = require("socket.io")
 const app = express()
 const PORT = process.env.PORT || 10000
 
+/* ===========================
+   FRONTEND URL
+=========================== */
+
 const FRONTEND_URL = "https://techmart-jb9k.onrender.com"
 
-app.use(cors())
+/* ===========================
+   CORS
+=========================== */
+
+app.use(cors({
+origin:"*",
+methods:["GET","POST","PUT","DELETE"],
+allowedHeaders:["Content-Type","Authorization"]
+}))
+
 app.use(express.json())
 
 /* ===========================
@@ -84,19 +97,19 @@ slug:String,
 price:Number,
 description:String,
 stock:Number,
-
-category:String,
-
-images:[String],
+image:String,
 
 reviews:[{
+
 name:String,
 rating:Number,
 comment:String,
+
 createdAt:{
 type:Date,
 default:Date.now
 }
+
 }],
 
 createdAt:{
@@ -149,81 +162,80 @@ default:Date.now
 const Order = mongoose.model("Order",orderSchema)
 
 /* ===========================
-   REGISTER USER
+   DEMO PRODUCT SEED
 =========================== */
 
-app.post("/api/users/register", async(req,res)=>{
+app.get("/seed-products", async(req,res)=>{
 
 try{
 
-const {name,email,password} = req.body
+await Product.deleteMany()
 
-const existingUser = await User.findOne({email})
+const products=[
 
-if(existingUser){
-return res.status(400).json({error:"User already exists"})
+{
+name:"Gaming Laptop",
+slug:"gaming-laptop",
+price:1200,
+description:"High performance gaming laptop",
+stock:10,
+image:"https://via.placeholder.com/400",
+reviews:[]
+},
+
+{
+name:"Wireless Headphones",
+slug:"wireless-headphones",
+price:150,
+description:"Noise cancelling headphones",
+stock:20,
+image:"https://via.placeholder.com/400",
+reviews:[]
+},
+
+{
+name:"Mechanical Keyboard",
+slug:"mechanical-keyboard",
+price:95,
+description:"RGB mechanical keyboard",
+stock:15,
+image:"https://via.placeholder.com/400",
+reviews:[]
+},
+
+{
+name:"Gaming Mouse",
+slug:"gaming-mouse",
+price:60,
+description:"High precision gaming mouse",
+stock:25,
+image:"https://via.placeholder.com/400",
+reviews:[]
+},
+
+{
+name:"4K Monitor",
+slug:"4k-monitor",
+price:450,
+description:"Ultra HD display monitor",
+stock:8,
+image:"https://via.placeholder.com/400",
+reviews:[]
 }
 
-const hashedPassword = await bcrypt.hash(password,10)
+]
 
-const newUser = new User({
-name,
-email,
-password:hashedPassword
-})
-
-await newUser.save()
-
-res.json({message:"Account created successfully"})
-
-}catch(err){
-
-res.status(500).json({error:"Server error"})
-
-}
-
-})
-
-/* ===========================
-   LOGIN USER
-=========================== */
-
-app.post("/api/users/login", async(req,res)=>{
-
-try{
-
-const {email,password} = req.body
-
-const user = await User.findOne({email})
-
-if(!user){
-return res.status(400).json({error:"Invalid email"})
-}
-
-const validPassword = await bcrypt.compare(password,user.password)
-
-if(!validPassword){
-return res.status(400).json({error:"Invalid password"})
-}
-
-const token = jwt.sign(
-{ id:user._id },
-process.env.JWT_SECRET || "techmartsecret",
-{ expiresIn:"7d" }
-)
+await Product.insertMany(products)
 
 res.json({
-token,
-user:{
-id:user._id,
-name:user.name,
-email:user.email
-}
+message:"Demo products inserted",
+count:products.length
 })
 
 }catch(err){
 
-res.status(500).json({error:"Server error"})
+console.error(err)
+res.status(500).json({error:"Seed failed"})
 
 }
 
@@ -261,16 +273,16 @@ res.json(product)
    ADD PRODUCT
 =========================== */
 
-app.post("/api/products", upload.array("images",4), async(req,res)=>{
+app.post("/api/products", upload.single("image"), async(req,res)=>{
 
-const {name,price,description,stock,category} = req.body
+const {name,price,description,stock} = req.body
 
 const slug = name
 .toLowerCase()
 .replace(/[^a-z0-9]+/g,"-")
 .replace(/(^-|-$)/g,"")
 
-const images = req.files ? req.files.map(file=>file.path) : []
+const image = req.file ? req.file.path : ""
 
 const product = new Product({
 name,
@@ -278,8 +290,7 @@ slug,
 price,
 description,
 stock,
-category,
-images
+image
 })
 
 const saved = await product.save()
@@ -297,161 +308,6 @@ app.delete("/api/products/:id", async(req,res)=>{
 await Product.findByIdAndDelete(req.params.id)
 
 res.json({success:true})
-
-})
-
-/* ===========================
-   ADD REVIEW
-=========================== */
-
-app.post("/api/products/:slug/reviews", async(req,res)=>{
-
-const {name,rating,comment} = req.body
-
-const product = await Product.findOne({slug:req.params.slug})
-
-product.reviews.push({name,rating,comment})
-
-await product.save()
-
-res.json(product)
-
-})
-
-/* ===========================
-   SEARCH PRODUCTS
-=========================== */
-
-app.get("/api/products/search", async(req,res)=>{
-
-const query = req.query.q
-
-if(!query) return res.json([])
-
-const products = await Product.find({
-name:{ $regex:query,$options:"i"}
-}).limit(5)
-
-res.json(products)
-
-})
-
-/* ===========================
-   TRENDING PRODUCTS
-=========================== */
-
-app.get("/api/products/trending", async(req,res)=>{
-
-const products = await Product.find()
-
-const trending = products
-.sort((a,b)=> (b.reviews.length + b.stock) - (a.reviews.length + a.stock))
-.slice(0,4)
-
-res.json(trending)
-
-})
-
-/* ===========================
-   RECOMMENDATIONS
-=========================== */
-
-app.get("/api/products/:slug/recommendations", async(req,res)=>{
-
-const recommendations = await Product.find({
-slug:{ $ne:req.params.slug }
-}).limit(4)
-
-res.json(recommendations)
-
-})
-
-/* ===========================
-   ALSO BOUGHT
-=========================== */
-
-app.get("/api/products/:slug/also-bought", async(req,res)=>{
-
-const product = await Product.findOne({slug:req.params.slug})
-
-const orders = await Order.find({
-"items.id":product._id
-})
-
-let related={}
-
-orders.forEach(order=>{
-order.items.forEach(item=>{
-if(item.id!=product._id){
-related[item.id]=(related[item.id]||0)+1
-}
-})
-})
-
-const sorted = Object.entries(related)
-.sort((a,b)=>b[1]-a[1])
-.slice(0,4)
-
-const ids = sorted.map(p=>p[0])
-
-const recommendations = await Product.find({
-_id:{ $in:ids }
-})
-
-res.json(recommendations)
-
-})
-
-/* ===========================
-   PAYSTACK PAYMENT
-=========================== */
-
-app.post("/initialize-payment", async(req,res)=>{
-
-const {email,amount} = req.body
-
-const response = await axios.post(
-"https://api.paystack.co/transaction/initialize",
-{
-email,
-amount:Math.round(amount*100)
-},
-{
-headers:{
-Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-}
-})
-
-res.json(response.data)
-
-})
-
-app.post("/verify-payment", async(req,res)=>{
-
-const {reference,orderData} = req.body
-
-const response = await axios.get(
-`https://api.paystack.co/transaction/verify/${reference}`,
-{
-headers:{
-Authorization:`Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-}
-})
-
-if(response.data.data.status==="success"){
-
-const order = new Order(orderData)
-const saved = await order.save()
-
-io.emit("new-order",saved)
-
-res.json({success:true})
-
-}else{
-
-res.json({success:false})
-
-}
 
 })
 
@@ -486,25 +342,29 @@ res.json(order)
 })
 
 /* ===========================
-   SITEMAP
+   SEO SITEMAP
 =========================== */
 
 app.get("/sitemap.xml", async(req,res)=>{
+
+try{
 
 const products = await Product.find()
 
 let urls=""
 
 products.forEach(p=>{
-if(!p.slug) return
 
 urls+=`
+
 <url>
 <loc>${FRONTEND_URL}/product.html?slug=${p.slug}</loc>
 <changefreq>weekly</changefreq>
 <priority>0.9</priority>
 </url>
+
 `
+
 })
 
 const sitemap=`<?xml version="1.0" encoding="UTF-8"?>
@@ -524,6 +384,13 @@ ${urls}
 res.header("Content-Type","application/xml")
 res.send(sitemap)
 
+}catch(err){
+
+console.error(err)
+res.status(500).send("Error generating sitemap")
+
+}
+
 })
 
 /* ===========================
@@ -539,6 +406,10 @@ cors:{origin:"*"}
 io.on("connection",(socket)=>{
 console.log("Admin connected:",socket.id)
 })
+
+/* ===========================
+   START SERVER
+=========================== */
 
 server.listen(PORT,()=>{
 
