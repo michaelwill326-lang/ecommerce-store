@@ -7,7 +7,7 @@ const multer = require("multer")
 const { CloudinaryStorage } = require("multer-storage-cloudinary")
 const cloudinary = require("cloudinary").v2
 app.get("/", (req, res) => {
-   res.send("Backend updated ✅")
+   res.send("TechMart Backend Running ✅")
  })
 const http = require("http")
 const { Server } = require("socket.io")
