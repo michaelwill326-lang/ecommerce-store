@@ -3,13 +3,12 @@ require("dotenv").config()
 const express = require("express")
 const cors = require("cors")
 const mongoose = require("mongoose")
-const axios = require("axios")
 const multer = require("multer")
 const { CloudinaryStorage } = require("multer-storage-cloudinary")
 const cloudinary = require("cloudinary").v2
-const bcrypt = require("bcryptjs")
-const jwt = require("jsonwebtoken")
-
+app.get("/", (req, res) => {
+   res.send("Backend updated ✅")
+ })
 const http = require("http")
 const { Server } = require("socket.io")
 
@@ -17,21 +16,10 @@ const app = express()
 const PORT = process.env.PORT || 10000
 
 /* ===========================
-   FRONTEND URL
-=========================== */
-
-const FRONTEND_URL = "https://techmart-jb9k.onrender.com"
-
-/* ===========================
    CORS
 =========================== */
 
-app.use(cors({
-origin:"*",
-methods:["GET","POST","PUT","DELETE"],
-allowedHeaders:["Content-Type","Authorization"]
-}))
-
+app.use(cors())
 app.use(express.json())
 
 /* ===========================
@@ -63,35 +51,10 @@ allowed_formats:["jpg","png","jpeg"]
 const upload = multer({storage})
 
 /* ===========================
-   USER SCHEMA
-=========================== */
-
-const userSchema = new mongoose.Schema({
-
-name:String,
-
-email:{
-type:String,
-unique:true
-},
-
-password:String,
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
-})
-
-const User = mongoose.model("User",userSchema)
-
-/* ===========================
    PRODUCT SCHEMA
 =========================== */
 
 const productSchema = new mongoose.Schema({
-
 name:String,
 slug:String,
 price:Number,
@@ -100,79 +63,33 @@ stock:Number,
 image:String,
 
 reviews:[{
-
 name:String,
 rating:Number,
 comment:String,
-
 createdAt:{
 type:Date,
 default:Date.now
 }
-
 }],
 
 createdAt:{
 type:Date,
 default:Date.now
 }
-
 })
 
 const Product = mongoose.model("Product",productSchema)
 
 /* ===========================
-   ORDER SCHEMA
-=========================== */
-
-const orderSchema = new mongoose.Schema({
-
-customerName:String,
-email:String,
-address:String,
-
-items:Array,
-
-totalAmount:Number,
-
-paymentReference:String,
-
-status:{
-type:String,
-default:"Processing"
-},
-
-trackingNumber:{
-type:String,
-default:""
-},
-
-carrier:{
-type:String,
-default:""
-},
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
-})
-
-const Order = mongoose.model("Order",orderSchema)
-
-/* ===========================
-   DEMO PRODUCT SEED
+   SEED PRODUCTS
 =========================== */
 
 app.get("/seed-products", async(req,res)=>{
-
 try{
 
 await Product.deleteMany()
 
 const products=[
-
 {
 name:"Gaming Laptop",
 slug:"gaming-laptop",
@@ -182,7 +99,6 @@ stock:10,
 image:"https://via.placeholder.com/400",
 reviews:[]
 },
-
 {
 name:"Wireless Headphones",
 slug:"wireless-headphones",
@@ -191,54 +107,16 @@ description:"Noise cancelling headphones",
 stock:20,
 image:"https://via.placeholder.com/400",
 reviews:[]
-},
-
-{
-name:"Mechanical Keyboard",
-slug:"mechanical-keyboard",
-price:95,
-description:"RGB mechanical keyboard",
-stock:15,
-image:"https://via.placeholder.com/400",
-reviews:[]
-},
-
-{
-name:"Gaming Mouse",
-slug:"gaming-mouse",
-price:60,
-description:"High precision gaming mouse",
-stock:25,
-image:"https://via.placeholder.com/400",
-reviews:[]
-},
-
-{
-name:"4K Monitor",
-slug:"4k-monitor",
-price:450,
-description:"Ultra HD display monitor",
-stock:8,
-image:"https://via.placeholder.com/400",
-reviews:[]
 }
-
 ]
 
 await Product.insertMany(products)
 
-res.json({
-message:"Demo products inserted",
-count:products.length
-})
+res.json({message:"Products seeded"})
 
 }catch(err){
-
-console.error(err)
-res.status(500).json({error:"Seed failed"})
-
+res.status(500).json({error:err.message})
 }
-
 })
 
 /* ===========================
@@ -246,11 +124,17 @@ res.status(500).json({error:"Seed failed"})
 =========================== */
 
 app.get("/api/products", async(req,res)=>{
-
 const products = await Product.find()
-
 res.json(products)
+})
 
+/* ===========================
+   TRENDING PRODUCTS
+=========================== */
+
+app.get("/api/products/trending", async(req,res)=>{
+const products = await Product.find().limit(4)
+res.json(products)
 })
 
 /* ===========================
@@ -258,15 +142,13 @@ res.json(products)
 =========================== */
 
 app.get("/api/products/:slug", async(req,res)=>{
-
 const product = await Product.findOne({slug:req.params.slug})
 
 if(!product){
-return res.status(404).json({error:"Product not found"})
+return res.status(404).json({error:"Not found"})
 }
 
 res.json(product)
-
 })
 
 /* ===========================
@@ -277,20 +159,12 @@ app.post("/api/products", upload.single("image"), async(req,res)=>{
 
 const {name,price,description,stock} = req.body
 
-const slug = name
-.toLowerCase()
-.replace(/[^a-z0-9]+/g,"-")
-.replace(/(^-|-$)/g,"")
+const slug = name.toLowerCase().replace(/[^a-z0-9]+/g,"-")
 
 const image = req.file ? req.file.path : ""
 
 const product = new Product({
-name,
-slug,
-price,
-description,
-stock,
-image
+name,slug,price,description,stock,image
 })
 
 const saved = await product.save()
@@ -304,93 +178,26 @@ res.json(saved)
 =========================== */
 
 app.delete("/api/products/:id", async(req,res)=>{
-
 await Product.findByIdAndDelete(req.params.id)
-
 res.json({success:true})
-
 })
 
 /* ===========================
-   GET ORDERS
+   ADD REVIEW
 =========================== */
 
-app.get("/api/orders", async(req,res)=>{
+app.post("/api/products/:slug/reviews", async(req,res)=>{
+const product = await Product.findOne({slug:req.params.slug})
 
-const orders = await Order.find().sort({createdAt:-1})
-
-res.json(orders)
-
-})
-
-/* ===========================
-   TRACK ORDER
-=========================== */
-
-app.get("/api/track/:trackingNumber", async(req,res)=>{
-
-const order = await Order.findOne({
-trackingNumber:req.params.trackingNumber
-})
-
-if(!order){
-return res.status(404).json({error:"Tracking not found"})
+if(!product){
+return res.status(404).json({error:"Product not found"})
 }
 
-res.json(order)
+product.reviews.push(req.body)
 
-})
+await product.save()
 
-/* ===========================
-   SEO SITEMAP
-=========================== */
-
-app.get("/sitemap.xml", async(req,res)=>{
-
-try{
-
-const products = await Product.find()
-
-let urls=""
-
-products.forEach(p=>{
-
-urls+=`
-
-<url>
-<loc>${FRONTEND_URL}/product.html?slug=${p.slug}</loc>
-<changefreq>weekly</changefreq>
-<priority>0.9</priority>
-</url>
-
-`
-
-})
-
-const sitemap=`<?xml version="1.0" encoding="UTF-8"?>
-
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-<url>
-<loc>${FRONTEND_URL}</loc>
-<changefreq>daily</changefreq>
-<priority>1.0</priority>
-</url>
-
-${urls}
-
-</urlset>`
-
-res.header("Content-Type","application/xml")
-res.send(sitemap)
-
-}catch(err){
-
-console.error(err)
-res.status(500).send("Error generating sitemap")
-
-}
-
+res.json({message:"Review added"})
 })
 
 /* ===========================
@@ -412,7 +219,5 @@ console.log("Admin connected:",socket.id)
 =========================== */
 
 server.listen(PORT,()=>{
-
 console.log(`🚀 Server running on port ${PORT}`)
-
 })
