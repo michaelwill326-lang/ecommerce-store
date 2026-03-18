@@ -1,74 +1,55 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html>
+
 <head>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Customer Account</title>
-
-<link rel="stylesheet" href="style.css">
+<title>My Account | TechMart</title>
 
 <style>
 
 body{
 font-family:Arial;
-background:#f4f6f9;
-margin:0;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-.account-container{
-background:white;
+background:#f5f5f5;
 padding:30px;
-border-radius:10px;
-width:350px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
-h2{
-margin-top:0;
-text-align:center;
+.container{
+max-width:900px;
+margin:auto;
 }
 
-input{
-width:100%;
-padding:10px;
-margin:8px 0;
-border:1px solid #ccc;
-border-radius:6px;
+.card{
+background:white;
+padding:20px;
+border-radius:8px;
+margin-bottom:20px;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 button{
-width:100%;
-padding:10px;
+padding:8px 14px;
 background:#2563eb;
-border:none;
 color:white;
+border:none;
 border-radius:6px;
 cursor:pointer;
-margin-top:10px;
 }
 
 button:hover{
 background:#1d4ed8;
 }
 
-.divider{
-margin:20px 0;
-text-align:center;
-font-weight:bold;
-color:#888;
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
 }
 
-.message{
-margin-top:10px;
-text-align:center;
-font-size:14px;
+td,th{
+padding:10px;
+border-bottom:1px solid #ddd;
+text-align:left;
 }
 
 </style>
@@ -77,152 +58,159 @@ font-size:14px;
 
 <body>
 
-<div class="account-container">
+<div class="container">
 
-<h2>Create Account</h2>
+<h1>My TechMart Account</h1>
 
-<input type="text" id="register-name" placeholder="Full Name">
+<!-- PROFILE -->
 
-<input type="email" id="register-email" placeholder="Email">
+<div class="card">
 
-<input type="password" id="register-password" placeholder="Password">
+<h2>Profile</h2>
 
-<button onclick="register()">Create Account</button>
+<p><strong>Name:</strong> <span id="userName"></span></p>
 
-<div class="divider">OR</div>
+<p><strong>Email:</strong> <span id="userEmail"></span></p>
 
-<h2>Login</h2>
+<button onclick="logout()">Logout</button>
 
-<input type="email" id="login-email" placeholder="Email">
+</div>
 
-<input type="password" id="login-password" placeholder="Password">
+<!-- ORDERS -->
 
-<button onclick="login()">Login</button>
+<div class="card">
 
-<p id="message" class="message"></p>
+<h2>My Orders</h2>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Order ID</th>
+<th>Total</th>
+<th>Status</th>
+<th>Date</th>
+</tr>
+
+</thead>
+
+<tbody id="ordersTable"></tbody>
+
+</table>
+
+</div>
+
+<!-- WISHLIST -->
+
+<div class="card">
+
+<h2>Wishlist</h2>
+
+<div id="wishlist"></div>
+
+</div>
 
 </div>
 
 <script>
 
-const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
+const API="https://techmart-backend-ecbi.onrender.com"
 
-const message = document.getElementById("message")
+const user=JSON.parse(localStorage.getItem("user"))
 
-/* ===========================
-   REGISTER
-=========================== */
+if(!user){
 
-async function register(){
+alert("Please login")
 
-const name = document.getElementById("register-name").value.trim()
-const email = document.getElementById("register-email").value.trim()
-const password = document.getElementById("register-password").value.trim()
-
-if(!name || !email || !password){
-
-message.textContent = "Please fill all fields"
-return
+window.location="login.html"
 
 }
 
-try{
+document.getElementById("userName").textContent=user.name
+document.getElementById("userEmail").textContent=user.email
 
-const res = await fetch(`${BACKEND_URL}/api/users/register`,{
+/* LOGOUT */
 
-method:"POST",
+function logout(){
 
-headers:{
-"Content-Type":"application/json"
-},
+localStorage.removeItem("token")
+localStorage.removeItem("user")
 
-body:JSON.stringify({
-name,
-email,
-password
-})
-
-})
-
-const data = await res.json()
-
-if(data.error){
-
-message.textContent = data.error
-
-}else{
-
-message.style.color="green"
-message.textContent="Account created! Please login."
+window.location="index.html"
 
 }
 
-}catch(err){
+/* LOAD ORDERS */
 
-message.textContent="Server error"
+async function loadOrders(){
 
-}
+const res=await fetch(API+"/api/orders")
 
-}
+const orders=await res.json()
 
-/* ===========================
-   LOGIN
-=========================== */
+const table=document.getElementById("ordersTable")
 
-async function login(){
+table.innerHTML=""
 
-const email = document.getElementById("login-email").value.trim()
-const password = document.getElementById("login-password").value.trim()
+orders
+.filter(o=>o.email===user.email)
+.forEach(o=>{
 
-if(!email || !password){
+table.innerHTML+=`
 
-message.textContent="Enter email and password"
-return
+<tr>
 
-}
+<td>${o._id}</td>
 
-try{
+<td>₦${o.totalAmount}</td>
 
-const res = await fetch(`${BACKEND_URL}/api/users/login`,{
+<td>${o.status}</td>
 
-method:"POST",
+<td>${new Date(o.createdAt).toLocaleDateString()}</td>
 
-headers:{
-"Content-Type":"application/json"
-},
+</tr>
 
-body:JSON.stringify({
-email,
-password
-})
+`
 
 })
 
-const data = await res.json()
+}
 
-if(data.error){
+loadOrders()
 
-message.textContent = data.error
+/* WISHLIST */
 
-}else{
+let wishlist=JSON.parse(localStorage.getItem("wishlist")||"[]")
 
-localStorage.setItem("token",data.token)
+const container=document.getElementById("wishlist")
 
-localStorage.setItem("user",JSON.stringify(data.user))
+function renderWishlist(){
 
-window.location.href="dashboard.html"
+container.innerHTML=""
+
+wishlist.forEach(p=>{
+
+container.innerHTML+=`
+
+<div style="margin-bottom:10px">
+
+<a href="product.html?slug=${p.slug}">
+${p.name}
+</a>
+
+</div>
+
+`
+
+})
 
 }
 
-}catch(err){
-
-message.textContent="Server error"
-
-}
-
-}
+renderWishlist()
 
 </script>
 
 </body>
+
 </html>

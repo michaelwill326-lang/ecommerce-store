@@ -1,125 +1,84 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Product - TechMart</title>
-
-<link rel="stylesheet" href="style.css">
+<title>Product | TechMart</title>
 
 <style>
 
 body{
 font-family:Arial;
-background:#f4f6f9;
+background:#f5f5f5;
 margin:0;
 padding:30px;
 }
 
-/* PRODUCT LAYOUT */
-
-.product-page{
-max-width:1000px;
+.container{
+max-width:1100px;
 margin:auto;
+background:white;
+padding:30px;
+border-radius:8px;
+}
+
+.grid{
 display:grid;
 grid-template-columns:1fr 1fr;
 gap:40px;
 }
 
-/* IMAGE GALLERY */
-
-.image-gallery{
-position:relative;
-}
-
-#main-image{
+img{
 width:100%;
-border-radius:10px;
-transition:transform .3s;
-cursor:zoom-in;
+border-radius:8px;
 }
-
-#main-image:hover{
-transform:scale(1.2);
-}
-
-.thumbnail-row{
-display:flex;
-margin-top:10px;
-gap:10px;
-}
-
-.thumbnail-row img{
-width:60px;
-height:60px;
-object-fit:cover;
-cursor:pointer;
-border-radius:6px;
-border:2px solid transparent;
-}
-
-.thumbnail-row img:hover{
-border:2px solid #2563eb;
-}
-
-/* PRICE */
-
-.price{
-font-size:26px;
-font-weight:bold;
-margin:10px 0;
-}
-
-/* BUTTONS */
 
 button{
-padding:10px 14px;
-margin-right:10px;
-border:none;
+padding:10px 18px;
 background:#2563eb;
 color:white;
+border:none;
 border-radius:6px;
 cursor:pointer;
+margin-right:10px;
 }
 
 button:hover{
 background:#1d4ed8;
 }
 
-/* STOCK WARNING */
-
-#stock-warning{
-margin:10px 0;
-font-weight:bold;
-color:#b91c1c;
-}
-
-/* REVIEWS */
-
-.reviews{
+.section{
 margin-top:40px;
 }
 
-.review{
+.products-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:20px;
+}
+
+.product{
 background:white;
 padding:10px;
-margin-bottom:10px;
-border-radius:6px;
+border-radius:8px;
+text-align:center;
 box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
-/* RECOMMENDATIONS */
-
-.recommendations{
-margin-top:40px;
+.review{
+border-bottom:1px solid #ddd;
+padding:10px 0;
 }
 
-.recommendations .product{
-display:inline-block;
-width:200px;
-margin-right:15px;
+textarea,input{
+width:100%;
+padding:8px;
+margin-top:6px;
+margin-bottom:10px;
 }
 
 </style>
@@ -128,31 +87,31 @@ margin-right:15px;
 
 <body>
 
-<h1 id="product-name"></h1>
+<div class="container">
 
-<div class="product-page">
+<div class="grid">
 
-<div class="image-gallery">
+<div>
 
-<img id="main-image">
-
-<div class="thumbnail-row" id="thumbnail-row"></div>
+<img id="product-image">
 
 </div>
 
 <div>
 
+<h1 id="product-name"></h1>
+
+<h2 id="product-price"></h2>
+
 <p id="product-description"></p>
 
-<div class="price" id="product-price"></div>
-
-<div id="product-rating"></div>
-
-<div id="stock-warning"></div>
+<p>
+<a id="seller-store-link">Visit Seller Store</a>
+</p>
 
 <button id="add-cart">Add to Cart</button>
 
-<button id="wishlist-btn">❤️ Wishlist</button>
+<button id="add-wishlist">Wishlist</button>
 
 </div>
 
@@ -160,11 +119,11 @@ margin-right:15px;
 
 <!-- REVIEWS -->
 
-<div class="reviews">
+<div class="section">
 
 <h2>Customer Reviews</h2>
 
-<div id="reviews-list"></div>
+<div id="reviews"></div>
 
 <h3>Leave a Review</h3>
 
@@ -180,29 +139,29 @@ margin-right:15px;
 
 <textarea id="review-comment" placeholder="Write your review"></textarea>
 
-<br><br>
-
 <button onclick="submitReview()">Submit Review</button>
-
-</div>
-
-<!-- RECOMMENDATIONS -->
-
-<div class="recommendations">
-
-<h2>Recommended Products</h2>
-
-<div id="recommendations"></div>
 
 </div>
 
 <!-- ALSO BOUGHT -->
 
-<div class="recommendations">
+<div class="section">
 
 <h2>Customers Also Bought</h2>
 
-<div id="also-bought"></div>
+<div id="also-bought" class="products-grid"></div>
+
+</div>
+
+<!-- AI RECOMMENDATIONS -->
+
+<div class="section">
+
+<h2>Recommended For You</h2>
+
+<div id="ai-recommendations" class="products-grid"></div>
+
+</div>
 
 </div>
 
@@ -211,115 +170,49 @@ margin-right:15px;
 const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
 
 const params=new URLSearchParams(window.location.search)
+
 const slug=params.get("slug")
 
-let productData=null
+let product
 
 /* LOAD PRODUCT */
 
 async function loadProduct(){
 
 const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
-const product=await res.json()
 
-productData=product
+product=await res.json()
 
-document.getElementById("product-name").textContent=product.name
+document.getElementById("product-name").innerText=product.name
+document.getElementById("product-price").innerText="₦"+product.price
+document.getElementById("product-description").innerText=product.description
+document.getElementById("product-image").src=product.image
 
-document.getElementById("product-description").textContent=
-product.description || ""
+document.getElementById("seller-store-link").href=
+`store.html?seller=${product.sellerId}`
 
-document.getElementById("product-price").textContent="₦"+product.price
-
-/* IMAGE GALLERY */
-
-const mainImage=document.getElementById("main-image")
-const thumbnails=document.getElementById("thumbnail-row")
-
-const images = product.images && product.images.length
-? product.images
-: (product.image ? [product.image] : [])
-
-mainImage.src = images[0]
-
-thumbnails.innerHTML=""
-
-images.forEach(img=>{
-
-thumbnails.innerHTML+=`
-<img src="${img}" onclick="changeImage('${img}')">
-`
-
-})
-
-/* RATING */
-
-if(product.reviews.length){
-
-let total=0
-product.reviews.forEach(r=>total+=r.rating)
-
-let avg=(total/product.reviews.length).toFixed(1)
-
-document.getElementById("product-rating").textContent=
-"⭐".repeat(Math.round(avg))+" ("+product.reviews.length+" reviews)"
-
-}else{
-
-document.getElementById("product-rating").textContent="No ratings yet"
-
-}
-
-/* LOW STOCK */
-
-if(product.stock<=5){
-
-document.getElementById("stock-warning").textContent=
-"⚠ Only "+product.stock+" left in stock!"
-
-}
-
-/* SEO SCHEMA */
-
-addProductSchema(product)
+document.getElementById("add-cart").onclick=()=>addToCart()
+document.getElementById("add-wishlist").onclick=()=>addToWishlist()
 
 loadReviews()
-loadRecommendations()
 loadAlsoBought()
+loadAIRecommendations()
 
 }
 
-/* IMAGE SWITCH */
+/* CART */
 
-function changeImage(src){
+function addToCart(){
 
-document.getElementById("main-image").src=src
-
-}
-
-/* ADD TO CART */
-
-document.getElementById("add-cart").onclick=function(){
-
-let cart=JSON.parse(localStorage.getItem("cart")) || []
-
-const existing=cart.find(i=>i.id===productData._id)
-
-if(existing){
-
-existing.quantity++
-
-}else{
+let cart=JSON.parse(localStorage.getItem("cart")||"[]")
 
 cart.push({
-id:productData._id,
-name:productData.name,
-price:productData.price,
-image:productData.images?.[0] || "",
+id:product._id,
+name:product.name,
+price:product.price,
+image:product.image,
 quantity:1
 })
-
-}
 
 localStorage.setItem("cart",JSON.stringify(cart))
 
@@ -329,22 +222,14 @@ alert("Added to cart")
 
 /* WISHLIST */
 
-document.getElementById("wishlist-btn").onclick=function(){
+function addToWishlist(){
 
-let wishlist=JSON.parse(localStorage.getItem("wishlist")) || []
-
-const existing=wishlist.find(i=>i.id===productData._id)
-
-if(existing){
-alert("Already in wishlist")
-return
-}
+let wishlist=JSON.parse(localStorage.getItem("wishlist")||"[]")
 
 wishlist.push({
-id:productData._id,
-name:productData.name,
-price:productData.price,
-image:productData.images?.[0] || ""
+id:product._id,
+name:product.name,
+slug:product.slug
 })
 
 localStorage.setItem("wishlist",JSON.stringify(wishlist))
@@ -358,20 +243,14 @@ alert("Added to wishlist")
 async function loadReviews(){
 
 const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
-const product=await res.json()
 
-const container=document.getElementById("reviews-list")
+const p=await res.json()
+
+const container=document.getElementById("reviews")
 
 container.innerHTML=""
 
-if(!product.reviews.length){
-
-container.innerHTML="<p>No reviews yet.</p>"
-return
-
-}
-
-product.reviews.forEach(r=>{
+p.reviews.forEach(r=>{
 
 container.innerHTML+=`
 
@@ -407,49 +286,13 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({
-name,
-rating,
-comment
-})
+body:JSON.stringify({name,rating,comment})
 
 })
 
-document.getElementById("review-comment").value=""
+alert("Review submitted")
 
 loadReviews()
-
-}
-
-/* RECOMMENDATIONS */
-
-async function loadRecommendations(){
-
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}/recommendations`)
-const products=await res.json()
-
-const container=document.getElementById("recommendations")
-
-container.innerHTML=""
-
-products.forEach(p=>{
-
-container.innerHTML+=`
-
-<div class="product">
-
-<a href="product.html?slug=${p.slug}">
-<img src="${p.images?.[0] || ""}" style="width:100%">
-</a>
-
-<p>${p.name}</p>
-<p>₦${p.price}</p>
-
-</div>
-
-`
-
-})
 
 }
 
@@ -458,6 +301,7 @@ container.innerHTML+=`
 async function loadAlsoBought(){
 
 const res=await fetch(`${BACKEND_URL}/api/products/${slug}/also-bought`)
+
 const products=await res.json()
 
 const container=document.getElementById("also-bought")
@@ -471,7 +315,7 @@ container.innerHTML+=`
 <div class="product">
 
 <a href="product.html?slug=${p.slug}">
-<img src="${p.images?.[0] || ""}" style="width:100%">
+<img src="${p.image}">
 </a>
 
 <p>${p.name}</p>
@@ -485,47 +329,46 @@ container.innerHTML+=`
 
 }
 
-/* GOOGLE SEO SCHEMA */
+/* AI RECOMMENDATIONS */
 
-function addProductSchema(product){
+async function loadAIRecommendations(){
 
-const schema={
-"@context":"https://schema.org/",
-"@type":"Product",
-"name":product.name,
-"image":product.images || [],
-"description":product.description || product.name,
-"sku":product._id,
+const res=await fetch(`${BACKEND_URL}/api/products/${slug}/ai-recommendations`)
 
-"offers":{
-"@type":"Offer",
-"url":window.location.href,
-"priceCurrency":"USD",
-"price":product.price,
-"availability":"https://schema.org/InStock"
-},
+const products=await res.json()
 
-"aggregateRating":{
-"@type":"AggregateRating",
-"ratingValue": product.reviews.length
-? (product.reviews.reduce((a,b)=>a+b.rating,0)/product.reviews.length).toFixed(1)
-: 5,
-"reviewCount":product.reviews.length || 1
-}
+const container=document.getElementById("ai-recommendations")
 
-}
+container.innerHTML=""
 
-const script=document.createElement("script")
-script.type="application/ld+json"
-script.text=JSON.stringify(schema)
+products.forEach(p=>{
 
-document.head.appendChild(script)
+container.innerHTML+=`
+
+<div class="product">
+
+<a href="product.html?slug=${p.slug}">
+<img src="${p.image}">
+</a>
+
+<p>${p.name}</p>
+
+<p>₦${p.price}</p>
+
+</div>
+
+`
+
+})
 
 }
+
+/* INIT */
 
 loadProduct()
 
 </script>
 
 </body>
+
 </html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<title>Seller Dashboard | TechMart</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f5f5f5;
+padding:30px;
+}
+
+.container{
+max-width:1000px;
+margin:auto;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:8px;
+margin-bottom:20px;
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:20px;
+}
+
+.stat{
+font-size:28px;
+font-weight:bold;
+}
+
+input,textarea{
+width:100%;
+padding:8px;
+margin-top:5px;
+margin-bottom:10px;
+}
+
+button{
+padding:8px 14px;
+background:#2563eb;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#1d4ed8;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+td,th{
+padding:10px;
+border-bottom:1px solid #ddd;
+text-align:left;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>TechMart Seller Dashboard</h1>
+
+<!-- SELLER STATS -->
+
+<div class="grid">
+
+<div class="card">
+
+<h3>Total Products</h3>
+
+<div class="stat" id="totalProducts">0</div>
+
+</div>
+
+<div class="card">
+
+<h3>Total Orders</h3>
+
+<div class="stat" id="totalOrders">0</div>
+
+</div>
+
+<div class="card">
+
+<h3>Total Revenue</h3>
+
+<div class="stat" id="totalRevenue">₦0</div>
+
+</div>
+
+</div>
+
+<!-- ADD PRODUCT -->
+
+<div class="card">
+
+<h2>Add Product</h2>
+
+<input id="name" placeholder="Product Name">
+
+<button onclick="generateDescription()">
+Generate AI Description
+</button>
+
+<input id="category" placeholder="Category">
+
+<input id="price" placeholder="Price" type="number">
+
+<input id="stock" placeholder="Stock" type="number">
+
+<textarea id="description" placeholder="Product Description"></textarea>
+
+<input type="file" id="image">
+
+<button onclick="addProduct()">Upload Product</button>
+
+</div>
+
+<!-- PRODUCTS -->
+
+<div class="card">
+
+<h2>My Products</h2>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Name</th>
+<th>Price</th>
+<th>Stock</th>
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody id="productsTable"></tbody>
+
+</table>
+
+</div>
+
+<!-- ORDERS -->
+
+<div class="card">
+
+<h2>My Orders</h2>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Customer</th>
+<th>Total</th>
+<th>Status</th>
+<th>Date</th>
+
+</tr>
+
+</thead>
+
+<tbody id="ordersTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+const API="https://techmart-backend-ecbi.onrender.com"
+
+const user=JSON.parse(localStorage.getItem("user"))
+
+if(!user){
+
+alert("Please login")
+
+window.location="login.html"
+
+}
+
+/* ===========================
+   AI DESCRIPTION
+=========================== */
+
+async function generateDescription(){
+
+const name=document.getElementById("name").value
+const category=document.getElementById("category").value
+
+const res=await fetch(`${API}/api/ai-description`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({name,category})
+
+})
+
+const data=await res.json()
+
+document.getElementById("description").value=data.description
+
+}
+
+/* ===========================
+   LOAD PRODUCTS
+=========================== */
+
+async function loadProducts(){
+
+const res=await fetch(API+"/api/products")
+
+const products=await res.json()
+
+const table=document.getElementById("productsTable")
+
+table.innerHTML=""
+
+let myProducts=products.filter(p=>p.sellerId===user.id)
+
+document.getElementById("totalProducts").textContent=myProducts.length
+
+myProducts.forEach(p=>{
+
+table.innerHTML+=`
+
+<tr>
+
+<td>${p.name}</td>
+<td>₦${p.price}</td>
+<td>${p.stock}</td>
+
+<td>
+
+<button onclick="deleteProduct('${p._id}')">
+Delete
+</button>
+
+</td>
+
+</tr>
+
+`
+
+})
+
+}
+
+/* ===========================
+   LOAD ORDERS
+=========================== */
+
+async function loadOrders(){
+
+const res=await fetch(API+"/api/orders")
+
+const orders=await res.json()
+
+const table=document.getElementById("ordersTable")
+
+table.innerHTML=""
+
+let revenue=0
+let count=0
+
+orders.forEach(o=>{
+
+o.items.forEach(item=>{
+
+if(item.sellerId===user.id){
+
+revenue+=item.price*item.quantity
+count++
+
+table.innerHTML+=`
+
+<tr>
+
+<td>${o.customerName}</td>
+<td>₦${item.price*item.quantity}</td>
+<td>${o.status}</td>
+<td>${new Date(o.createdAt).toLocaleDateString()}</td>
+
+</tr>
+
+`
+
+}
+
+})
+
+})
+
+document.getElementById("totalOrders").textContent=count
+document.getElementById("totalRevenue").textContent="₦"+revenue
+
+}
+
+/* ===========================
+   ADD PRODUCT
+=========================== */
+
+async function addProduct(){
+
+const formData=new FormData()
+
+formData.append("name",document.getElementById("name").value)
+formData.append("category",document.getElementById("category").value)
+formData.append("price",document.getElementById("price").value)
+formData.append("stock",document.getElementById("stock").value)
+formData.append("description",document.getElementById("description").value)
+formData.append("sellerId",user.id)
+
+const image=document.getElementById("image").files[0]
+
+if(image){
+formData.append("image",image)
+}
+
+await fetch(API+"/api/products",{
+
+method:"POST",
+
+body:formData
+
+})
+
+alert("Product uploaded!")
+
+loadProducts()
+
+}
+
+/* ===========================
+   DELETE PRODUCT
+=========================== */
+
+async function deleteProduct(id){
+
+await fetch(API+"/api/products/"+id,{
+method:"DELETE"
+})
+
+loadProducts()
+
+}
+
+/* ===========================
+   INIT
+=========================== */
+
+loadProducts()
+loadOrders()
+
+</script>
+
+</body>
+
+</html>
