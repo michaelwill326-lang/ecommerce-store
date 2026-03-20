@@ -6,14 +6,22 @@ const mongoose = require("mongoose")
 const multer = require("multer")
 const { CloudinaryStorage } = require("multer-storage-cloudinary")
 const cloudinary = require("cloudinary").v2
-app.get("/", (req, res) => {
-   res.send("TechMart Backend Running ✅")
- })
+
 const http = require("http")
 const { Server } = require("socket.io")
 
+// ✅ DEFINE APP FIRST
 const app = express()
+
 const PORT = process.env.PORT || 10000
+
+/* ===========================
+   ROOT ROUTE
+=========================== */
+
+app.get("/", (req, res) => {
+   res.send("TechMart Backend Running ✅")
+})
 
 /* ===========================
    CORS
