@@ -128,6 +128,60 @@ loadReviews(slug)
 }
 
 /* ===========================
+   💳 PAYSTACK CHECKOUT
+=========================== */
+
+async function checkout(){
+
+const email = prompt("Enter your email")
+
+if(!email){
+alert("Email is required")
+return
+}
+
+let total = 0
+
+cart.forEach(item=>{
+total += item.price * item.quantity
+})
+
+try{
+
+const res = await fetch(`${BACKEND_URL}/initialize-payment`,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+email,
+amount: total
+})
+})
+
+const data = await res.json()
+
+if(data.status){
+
+// 🔥 Save cart for verification page
+localStorage.setItem("pendingCart", JSON.stringify(cart))
+localStorage.setItem("pendingEmail", email)
+
+// 🔥 Redirect to Paystack
+window.location = data.data.authorization_url
+
+}else{
+alert("Payment failed to initialize")
+}
+
+}catch(err){
+console.error(err)
+alert("Error connecting to server")
+}
+
+}
+
+/* ===========================
    INIT
 =========================== */
 

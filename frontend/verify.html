@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Verifying Payment...</title>
+</head>
+<body>
+
+<h2>Processing payment...</h2>
+
+<script>
+
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+
+const params=new URLSearchParams(window.location.search)
+const reference=params.get("reference")
+
+const cart=JSON.parse(localStorage.getItem("pendingCart")||"[]")
+const email=localStorage.getItem("pendingEmail")
+
+async function verify(){
+
+const orderData={
+customerName:"Customer",
+email,
+address:"N/A",
+items:cart,
+totalAmount:cart.reduce((sum,i)=>sum+i.price*i.quantity,0),
+paymentReference:reference,
+status:"Paid"
+}
+
+const res=await fetch(`${BACKEND_URL}/verify-payment`,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({reference,orderData})
+})
+
+const data=await res.json()
+
+if(data.success){
+
+localStorage.removeItem("cart")
+localStorage.removeItem("pendingCart")
+localStorage.removeItem("pendingEmail")
+
+alert("Payment successful 🎉")
+
+window.location="index.html"
+
+}else{
+alert("Payment verification failed")
+}
+
+}
+
+verify()
+
+</script>
+
+</body>
+</html>
