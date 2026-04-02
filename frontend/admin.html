@@ -2,22 +2,174 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TechMart Admin</title>
+
+<style>
+
+body{
+  font-family:Arial;
+  background:#f4f6f9;
+  margin:0;
+}
+
+/* HEADER */
+.header{
+  background:#0a7cff;
+  color:white;
+  padding:15px;
+  text-align:center;
+}
+
+/* CONTAINER */
+.container{
+  max-width:1100px;
+  margin:20px auto;
+  padding:20px;
+}
+
+/* CARDS */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:15px;
+  margin-bottom:20px;
+}
+
+.card{
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+  text-align:center;
+}
+
+.card h3{
+  margin:0;
+  color:#555;
+}
+
+.card p{
+  font-size:22px;
+  font-weight:bold;
+  margin-top:10px;
+}
+
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:white;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+
+th, td{
+  padding:12px;
+  border-bottom:1px solid #eee;
+  text-align:left;
+}
+
+th{
+  background:#0a7cff;
+  color:white;
+}
+
+/* STATUS */
+.status{
+  padding:5px 10px;
+  border-radius:6px;
+  color:white;
+  font-size:12px;
+}
+
+.Processing{background:orange;}
+.Shipped{background:blue;}
+.Delivered{background:green;}
+
+/* LOGIN */
+#login{
+  max-width:300px;
+  margin:80px auto;
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  text-align:center;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+}
+
+button{
+  padding:10px;
+  width:100%;
+  background:#0a7cff;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#085ec4;
+}
+
+</style>
+
 </head>
 
 <body>
 
-<h2>Admin Login</h2>
+<div class="header">
+  <h2>📊 TechMart Admin Dashboard</h2>
+</div>
 
+<!-- LOGIN -->
 <div id="login">
-  <input id="email" placeholder="Email"><br>
-  <input id="password" type="password" placeholder="Password"><br>
+  <h3>Admin Login</h3>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
   <button onclick="login()">Login</button>
 </div>
 
-<div id="dashboard" style="display:none;">
-  <h2>Orders</h2>
-  <div id="orders"></div>
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none;" class="container">
+
+  <!-- STATS -->
+  <div class="cards">
+    <div class="card">
+      <h3>Total Orders</h3>
+      <p id="totalOrders">0</p>
+    </div>
+
+    <div class="card">
+      <h3>Total Revenue</h3>
+      <p id="totalRevenue">₦0</p>
+    </div>
+
+    <div class="card">
+      <h3>Processing</h3>
+      <p id="processingOrders">0</p>
+    </div>
+  </div>
+
+  <!-- ORDERS TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th>Customer</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th>Change</th>
+      </tr>
+    </thead>
+    <tbody id="orders"></tbody>
+  </table>
+
 </div>
 
 <script>
@@ -25,67 +177,89 @@
 const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 let token = null;
 
-function login() {
+/* LOGIN */
+function login(){
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  fetch(`${BACKEND_URL}/admin/login`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ email, password })
+  fetch(`${BACKEND_URL}/admin/login`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email,password})
   })
-  .then(res => res.json())
-  .then(data => {
-
-    if (data.success) {
+  .then(res=>res.json())
+  .then(data=>{
+    if(data.success){
       token = data.token;
 
-      document.getElementById("login").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("login").style.display="none";
+      document.getElementById("dashboard").style.display="block";
 
       loadOrders();
-
-    } else {
+    }else{
       alert("Login failed");
     }
+  });
+}
+
+/* LOAD ORDERS */
+function loadOrders(){
+  fetch(`${BACKEND_URL}/api/orders`,{
+    headers:{Authorization:`Bearer ${token}`}
+  })
+  .then(res=>res.json())
+  .then(orders=>{
+
+    if(!Array.isArray(orders)) return;
+
+    let total = 0;
+    let processing = 0;
+
+    const tbody = document.getElementById("orders");
+    tbody.innerHTML="";
+
+    orders.forEach(order=>{
+
+      total += order.totalAmount;
+
+      if(order.status==="Processing") processing++;
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${order.customerName}</td>
+        <td>₦${order.totalAmount}</td>
+        <td><span class="status ${order.status}">${order.status}</span></td>
+        <td>
+          <select onchange="updateStatus('${order._id}',this.value)">
+            <option ${order.status==="Processing"?"selected":""}>Processing</option>
+            <option ${order.status==="Shipped"?"selected":""}>Shipped</option>
+            <option ${order.status==="Delivered"?"selected":""}>Delivered</option>
+          </select>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("totalOrders").textContent = orders.length;
+    document.getElementById("totalRevenue").textContent = "₦" + total;
+    document.getElementById("processingOrders").textContent = processing;
 
   });
 }
 
-function loadOrders() {
-
-  fetch(`${BACKEND_URL}/api/orders`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+/* UPDATE STATUS */
+function updateStatus(id,status){
+  fetch(`${BACKEND_URL}/api/orders/${id}`,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      Authorization:`Bearer ${token}`
+    },
+    body:JSON.stringify({status})
   })
-  .then(res => {
-
-    if (res.status === 401) {
-      alert("Unauthorized - login again");
-      location.reload();
-      return;
-    }
-
-    return res.json();
-  })
-  .then(orders => {
-
-    if (!orders || !Array.isArray(orders)) return;
-
-    const container = document.getElementById("orders");
-    container.innerHTML = "";
-
-    orders.forEach(order => {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <p>${order.customerName} - ₦${order.totalAmount} - ${order.status}</p>
-      `;
-      container.appendChild(div);
-    });
-
-  });
-
+  .then(()=>loadOrders());
 }
 
 </script>
