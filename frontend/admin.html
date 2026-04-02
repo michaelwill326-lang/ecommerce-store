@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TechMart Admin</title>
 
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 
 body{
@@ -53,6 +56,21 @@ body{
   font-size:22px;
   font-weight:bold;
   margin-top:10px;
+}
+
+/* CHARTS */
+.charts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+  margin-bottom:20px;
+}
+
+.chart-box{
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
 }
 
 /* TABLE */
@@ -157,7 +175,20 @@ button:hover{
     </div>
   </div>
 
-  <!-- ORDERS TABLE -->
+  <!-- CHARTS -->
+  <div class="charts">
+    <div class="chart-box">
+      <h3>📈 Revenue Trend</h3>
+      <canvas id="revenueChart"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <h3>📊 Order Status</h3>
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+  <!-- TABLE -->
   <table>
     <thead>
       <tr>
@@ -176,6 +207,8 @@ button:hover{
 
 const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 let token = null;
+let revenueChart;
+let statusChart;
 
 /* LOGIN */
 function login(){
@@ -246,6 +279,8 @@ function loadOrders(){
     document.getElementById("totalRevenue").textContent = "₦" + total;
     document.getElementById("processingOrders").textContent = processing;
 
+    renderCharts(orders);
+
   });
 }
 
@@ -260,6 +295,62 @@ function updateStatus(id,status){
     body:JSON.stringify({status})
   })
   .then(()=>loadOrders());
+}
+
+/* CHARTS */
+function renderCharts(orders){
+
+  /* REVENUE */
+  const dates = {};
+  orders.forEach(order=>{
+    const date = new Date(order.createdAt).toLocaleDateString();
+    dates[date] = (dates[date] || 0) + order.totalAmount;
+  });
+
+  if(revenueChart) revenueChart.destroy();
+
+  revenueChart = new Chart(
+    document.getElementById("revenueChart"),
+    {
+      type:"line",
+      data:{
+        labels:Object.keys(dates),
+        datasets:[{
+          label:"Revenue",
+          data:Object.values(dates),
+          borderWidth:2
+        }]
+      }
+    }
+  );
+
+  /* STATUS */
+  const statusCount = {Processing:0,Shipped:0,Delivered:0};
+
+  orders.forEach(o=>{
+    if(statusCount[o.status]!==undefined){
+      statusCount[o.status]++;
+    }
+  });
+
+  if(statusChart) statusChart.destroy();
+
+  statusChart = new Chart(
+    document.getElementById("statusChart"),
+    {
+      type:"pie",
+      data:{
+        labels:["Processing","Shipped","Delivered"],
+        datasets:[{
+          data:[
+            statusCount.Processing,
+            statusCount.Shipped,
+            statusCount.Delivered
+          ]
+        }]
+      }
+    }
+  );
 }
 
 </script>
