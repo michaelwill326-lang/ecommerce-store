@@ -9,41 +9,72 @@
 
 <style>
 
+body{
+  background:#f5f5f5;
+  font-family:Arial, sans-serif;
+}
+
+/* Container */
 .checkout-container{
-max-width:600px;
-margin:40px auto;
-padding:20px;
-background:#fff;
-border-radius:10px;
-box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  max-width:600px;
+  margin:40px auto;
+  padding:25px;
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
 }
 
+/* Title */
 .checkout-container h2{
-margin-bottom:20px;
+  margin-bottom:20px;
+  text-align:center;
 }
 
+/* Inputs */
 .checkout-container input,
 .checkout-container textarea{
-width:100%;
-padding:10px;
-margin-bottom:10px;
-border:1px solid #ddd;
-border-radius:5px;
+  width:100%;
+  padding:12px;
+  margin-bottom:12px;
+  border:1px solid #ddd;
+  border-radius:6px;
+  font-size:14px;
 }
 
+/* Summary */
+#order-summary p{
+  display:flex;
+  justify-content:space-between;
+  margin:6px 0;
+}
+
+/* Total */
+#checkout-total{
+  font-size:18px;
+  margin-top:15px;
+}
+
+/* Button */
 .checkout-btn{
-width:100%;
-padding:12px;
-background:#0a7cff;
-color:white;
-border:none;
-border-radius:6px;
-font-size:16px;
-cursor:pointer;
+  width:100%;
+  padding:14px;
+  background:#0a7cff;
+  color:white;
+  border:none;
+  border-radius:8px;
+  font-size:16px;
+  cursor:pointer;
+  transition:0.3s;
 }
 
 .checkout-btn:hover{
-background:#085ec4;
+  background:#085ec4;
+}
+
+/* Loading state */
+.checkout-btn.loading{
+  background:#999;
+  cursor:not-allowed;
 }
 
 </style>
@@ -54,7 +85,7 @@ background:#085ec4;
 
 <div class="checkout-container">
 
-<h2>💳 Checkout</h2>
+<h2>💳 Secure Checkout</h2>
 
 <form id="checkout-form">
 
@@ -82,16 +113,14 @@ required
 
 <div id="order-summary"></div>
 
-<p
-id="checkout-total"
-style="font-weight:bold;margin-top:10px;"
->
+<p id="checkout-total">
 Total: ₦0.00
 </p>
 
 <button
 type="submit"
 class="checkout-btn"
+id="pay-btn"
 >
 Pay with Card
 </button>
@@ -100,11 +129,24 @@ Pay with Card
 
 </div>
 
-<!-- Paystack Script (must load first) -->
+<!-- ✅ Paystack Script (REQUIRED) -->
 <script src="https://js.paystack.co/v1/inline.js"></script>
 
-<!-- Checkout Logic -->
+<!-- ✅ Checkout Logic -->
 <script src="checkout.js"></script>
+
+<script>
+/* ===========================
+   BUTTON LOADING UX (PRO)
+=========================== */
+const form = document.getElementById("checkout-form");
+const btn = document.getElementById("pay-btn");
+
+form.addEventListener("submit", () => {
+  btn.textContent = "Processing...";
+  btn.classList.add("loading");
+});
+</script>
 
 </body>
 </html>

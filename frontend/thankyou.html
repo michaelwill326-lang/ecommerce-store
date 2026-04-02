@@ -3,201 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thank You - TechMart</title>
+<title>Order Confirmation - TechMart</title>
 
 <style>
-
 body{
-font-family:Arial, sans-serif;
-background:#f4f6f9;
-padding:40px;
-text-align:center;
+  font-family:Arial, sans-serif;
+  background:#f5f5f5;
+  text-align:center;
 }
 
 .container{
-background:white;
-padding:30px;
-border-radius:10px;
-max-width:700px;
-margin:auto;
-box-shadow:0 4px 12px rgba(0,0,0,0.1);
+  max-width:600px;
+  margin:40px auto;
+  background:#fff;
+  padding:25px;
+  border-radius:12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
 }
 
 h1{
-color:#16a34a;
+  color:green;
 }
 
-.order-box{
-margin-top:20px;
-text-align:left;
-padding:20px;
-background:#f9fafb;
-border-radius:8px;
+.items{
+  text-align:left;
+  margin-top:20px;
 }
 
 .item{
-display:flex;
-justify-content:space-between;
-margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+  padding:5px 0;
 }
 
 .total{
-margin-top:15px;
-font-weight:bold;
-font-size:18px;
+  font-weight:bold;
+  margin-top:15px;
 }
 
-.buttons{
-margin-top:25px;
+.btn{
+  display:inline-block;
+  margin-top:20px;
+  padding:12px 20px;
+  background:#0a7cff;
+  color:white;
+  text-decoration:none;
+  border-radius:6px;
 }
 
-button{
-padding:10px 18px;
-border:none;
-border-radius:6px;
-cursor:pointer;
-margin:5px;
+.btn:hover{
+  background:#085ec4;
 }
-
-.shop-btn{
-background:#2563eb;
-color:white;
-}
-
-.track-btn{
-background:#16a34a;
-color:white;
-}
-
 </style>
+
 </head>
 
 <body>
 
 <div class="container">
 
-<h1>✔ Thank You!</h1>
+<h1>✅ Payment Successful</h1>
 
-<p>Your order has been placed successfully.</p>
+<p>Your order has been placed successfully 🎉</p>
 
-<h3>Order Summary</h3>
+<p id="order-id"></p>
 
-<div id="order-summary" class="order-box">
-Loading order details...
-</div>
+<div class="items" id="items"></div>
 
-<div class="buttons">
+<p class="total" id="total"></p>
 
-<button
-class="shop-btn"
-onclick="window.location.href='index.html'"
->
-Continue Shopping
-</button>
+<p id="status"></p>
 
-<button
-class="track-btn"
-onclick="goTrack()"
->
-Track My Order
-</button>
-
-</div>
+<a id="track-btn" class="btn">Track Order</a>
 
 </div>
 
 <script>
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 
-const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com"
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get("orderId");
 
-const params = new URLSearchParams(window.location.search)
-
-const orderId = params.get("orderId")
-
-const summaryDiv = document.getElementById("order-summary")
-
-let trackingNumber = ""
+if (!orderId) {
+  document.body.innerHTML = "<h2>Invalid Order</h2>";
+}
 
 /* ===========================
-   LOAD ORDER
+   FETCH ORDER
 =========================== */
+fetch(`${BACKEND_URL}/api/orders/${orderId}`)
+  .then(res => res.json())
+  .then(order => {
 
-async function loadOrder(){
+    document.getElementById("order-id").innerHTML =
+      `<strong>Order ID:</strong> ${order._id}`;
 
-try{
+    const itemsDiv = document.getElementById("items");
 
-const res = await fetch(`${BACKEND_URL}/api/orders/${orderId}`)
+    order.items.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <span>${item.name} × ${item.quantity}</span>
+        <span>₦${(item.price * item.quantity).toFixed(2)}</span>
+      `;
+      itemsDiv.appendChild(div);
+    });
 
-if(!res.ok){
-throw new Error("Order not found")
-}
+    document.getElementById("total").innerText =
+      `Total: ₦${order.totalAmount.toFixed(2)}`;
 
-const order = await res.json()
+    document.getElementById("status").innerHTML =
+      `<strong>Status:</strong> ${order.status}`;
 
-trackingNumber = order.trackingNumber
+    document.getElementById("track-btn").href =
+      `track.html?tracking=${order.trackingNumber}`;
 
-let itemsHTML = ""
-
-order.items.forEach(item=>{
-
-itemsHTML += `
-<div class="item">
-<span>${item.name} × ${item.quantity}</span>
-<span>₦${(item.price * item.quantity).toFixed(2)}</span>
-</div>
-`
-
-})
-
-summaryDiv.innerHTML = `
-
-<p><b>Order ID:</b> ${order._id}</p>
-<p><b>Name:</b> ${order.customerName}</p>
-<p><b>Email:</b> ${order.email}</p>
-
-<hr>
-
-${itemsHTML}
-
-<div class="total">
-Total: ₦${order.totalAmount}
-</div>
-
-<p><b>Status:</b> ${order.status}</p>
-
-`
-
-}catch(err){
-
-console.error("Error loading order:",err)
-
-summaryDiv.innerHTML = "Could not load order details."
-
-}
-
-}
-
-loadOrder()
-
-/* ===========================
-   TRACK BUTTON
-=========================== */
-
-function goTrack(){
-
-if(!trackingNumber){
-
-alert("Tracking number not assigned yet.")
-
-return
-
-}
-
-window.location.href =
-`track.html?tracking=${trackingNumber}`
-
-}
-
+  })
+  .catch(() => {
+    document.body.innerHTML = "<h2>Error loading order</h2>";
+  });
 </script>
 
 </body>

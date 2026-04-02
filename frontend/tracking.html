@@ -1,116 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Track Order - TechMart</title>
 
 <style>
 
 body{
-font-family:Arial, sans-serif;
-background:#f4f6f9;
-margin:0;
-padding:40px;
+  font-family:Arial, sans-serif;
+  background:#f5f5f5;
+  text-align:center;
 }
-
-/* HEADER */
-
-header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:15px 30px;
-background:#111827;
-color:white;
-margin:-40px -40px 40px -40px;
-}
-
-header a{
-color:white;
-text-decoration:none;
-margin-left:20px;
-}
-
-/* CONTAINER */
 
 .container{
-max-width:700px;
-margin:auto;
-background:white;
-padding:30px;
-border-radius:10px;
-box-shadow:0 4px 12px rgba(0,0,0,0.08);
+  max-width:600px;
+  margin:40px auto;
+  background:#fff;
+  padding:25px;
+  border-radius:12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
 }
 
-/* INPUT */
-
 input{
-width:100%;
-padding:12px;
-border:1px solid #ccc;
-border-radius:6px;
-margin-top:10px;
+  width:80%;
+  padding:10px;
+  margin:10px 0;
+  border:1px solid #ddd;
+  border-radius:5px;
 }
 
 button{
-margin-top:10px;
-padding:12px 18px;
-background:#2563eb;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
+  padding:10px 20px;
+  background:#0a7cff;
+  color:white;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
 }
 
 button:hover{
-background:#1d4ed8;
+  background:#085ec4;
 }
 
-/* TIMELINE */
+.result{
+  margin-top:20px;
+  text-align:left;
+}
 
-.timeline{
-margin-top:30px;
+.status{
+  margin-top:15px;
+  font-weight:bold;
+}
+
+/* Progress Bar */
+.progress{
+  display:flex;
+  justify-content:space-between;
+  margin-top:20px;
 }
 
 .step{
-padding:14px;
-border-left:4px solid #d1d5db;
-margin-bottom:12px;
-background:#f9fafb;
-border-radius:4px;
+  flex:1;
+  text-align:center;
+  position:relative;
 }
 
-.step.active{
-border-color:#10b981;
-background:#ecfdf5;
-font-weight:bold;
+.step::before{
+  content:"";
+  position:absolute;
+  top:12px;
+  left:0;
+  right:0;
+  height:4px;
+  background:#ddd;
+  z-index:-1;
 }
 
-/* ORDER INFO */
-
-.order-info{
-margin-top:25px;
-padding:15px;
-background:#f9fafb;
-border-radius:8px;
+.circle{
+  width:25px;
+  height:25px;
+  margin:auto;
+  border-radius:50%;
+  background:#ddd;
+  line-height:25px;
+  color:white;
 }
 
-.items{
-margin-top:10px;
-}
-
-.item{
-border-bottom:1px solid #e5e7eb;
-padding:8px 0;
-}
-
-.error{
-color:red;
-margin-top:15px;
+.active{
+  background:green;
 }
 
 </style>
@@ -119,139 +97,95 @@ margin-top:15px;
 
 <body>
 
-<header>
-
-<h2>🛒 TechMart</h2>
-
-<div>
-
-<a href="index.html">Home</a>
-<a href="account.html">Account</a>
-<a href="cart.html">Cart</a>
-
-</div>
-
-</header>
-
 <div class="container">
 
 <h2>📦 Track Your Order</h2>
 
-<p>Enter your tracking number below.</p>
+<input
+type="text"
+id="tracking"
+placeholder="Enter Tracking Number"
+/>
 
-<input id="trackingNumber" placeholder="Tracking Number (example: DHL123456)">
+<br>
 
-<button onclick="track()">Track Order</button>
+<button onclick="trackOrder()">Track</button>
 
-<div id="result"></div>
+<div class="result" id="result"></div>
 
 </div>
 
 <script>
 
-const API="https://techmart-backend-ecbi.onrender.com"
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 
-async function track(){
+/* ===========================
+   AUTO LOAD FROM URL
+=========================== */
+const params = new URLSearchParams(window.location.search);
+const trackingFromURL = params.get("tracking");
 
-const tracking=document.getElementById("trackingNumber").value.trim()
-
-const result=document.getElementById("result")
-
-result.innerHTML="Loading..."
-
-try{
-
-const res=await fetch(API+"/api/track/"+tracking)
-
-if(!res.ok){
-throw new Error("Tracking number not found")
+if (trackingFromURL) {
+  document.getElementById("tracking").value = trackingFromURL;
+  trackOrder();
 }
 
-const order=await res.json()
+/* ===========================
+   TRACK ORDER
+=========================== */
+function trackOrder() {
 
-const steps=[
-"Processing",
-"Shipped",
-"Delivered"
-]
+  const tracking = document.getElementById("tracking").value;
 
-let timeline="<div class='timeline'>"
+  if (!tracking) {
+    alert("Enter tracking number");
+    return;
+  }
 
-steps.forEach(step=>{
+  fetch(`${BACKEND_URL}/api/track/${tracking}`)
+    .then(res => res.json())
+    .then(order => {
 
-const active=steps.indexOf(step)<=steps.indexOf(order.status)
+      if (order.error) {
+        document.getElementById("result").innerHTML =
+          "<p>Order not found</p>";
+        return;
+      }
 
-timeline+=`
+      let steps = ["Processing", "Shipped", "Delivered"];
 
-<div class="step ${active?"active":""}">
-${step}
-</div>
+      let progressHTML = '<div class="progress">';
 
-`
+      steps.forEach(step => {
 
-})
+        const active = steps.indexOf(step) <= steps.indexOf(order.status);
 
-timeline+="</div>"
+        progressHTML += `
+          <div class="step">
+            <div class="circle ${active ? "active" : ""}"></div>
+            <p>${step}</p>
+          </div>
+        `;
+      });
 
-/* ORDER ITEMS */
+      progressHTML += "</div>";
 
-let itemsHTML=""
+      document.getElementById("result").innerHTML = `
+        <p><strong>Tracking:</strong> ${order.trackingNumber}</p>
+        <p><strong>Status:</strong> ${order.status}</p>
+        <p><strong>Carrier:</strong> ${order.carrier}</p>
+        ${progressHTML}
+      `;
 
-if(order.items){
-
-order.items.forEach(item=>{
-
-itemsHTML+=`
-
-<div class="item">
-
-<strong>${item.name}</strong>
-x${item.quantity}
-
-</div>
-
-`
-
-})
-
-}
-
-result.innerHTML=`
-
-${timeline}
-
-<div class="order-info">
-
-<p><strong>Status:</strong> ${order.status}</p>
-
-<p><strong>Carrier:</strong> ${order.carrier || "-"}</p>
-
-<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>
-
-<p><strong>Total:</strong> ₦${order.totalAmount}</p>
-
-<div class="items">
-
-<h4>Items</h4>
-
-${itemsHTML || "No items listed"}
-
-</div>
-
-</div>
-
-`
-
-}catch(err){
-
-result.innerHTML=`<p class="error">Tracking number not found.</p>`
-
-}
+    })
+    .catch(() => {
+      document.getElementById("result").innerHTML =
+        "<p>Error fetching order</p>";
+    });
 
 }
 
 </script>
 
 </body>
-
 </html>

@@ -1,233 +1,146 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shopping Cart</title>
-
-<link rel="stylesheet" href="style.css">
-
+<title>Cart</title>
 </head>
 <body>
 
-<div class="checkout-container">
-
-<h2>🛒 Your Shopping Cart</h2>
+<h2>🛒 Your Cart</h2>
 
 <div id="cart-items"></div>
 
-<p id="cart-total"
-style="text-align:right;font-size:18px;font-weight:bold;margin-top:15px;">
-Total: ₦0.00
-</p>
+<h3>Total: <span id="cart-total">₦0</span></h3>
 
-<div style="display:flex;justify-content:space-between;margin-top:20px;">
-
-<button id="clear-cart">
-Clear Cart
-</button>
-
-<button id="checkout-btn">
-Proceed to Checkout
-</button>
-
-</div>
-
-</div>
+<button id="clear-cart">Clear Cart</button>
+<button id="checkout-btn">Checkout</button>
 
 <script>
 
-const cartItemsDiv = document.getElementById("cart-items")
-const cartTotalEl = document.getElementById("cart-total")
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
 
-let cart = JSON.parse(localStorage.getItem("cart")) || []
+let cart = JSON.parse(localStorage.getItem("cart") || [])
 
-/* ===========================
-   RENDER CART
-=========================== */
+function saveCart(){
+localStorage.setItem("cart", JSON.stringify(cart))
+renderCart()
+}
 
+/* RENDER CART */
 function renderCart(){
 
-cartItemsDiv.innerHTML=""
+const container = document.getElementById("cart-items")
+container.innerHTML=""
 
 if(cart.length===0){
-
-cartItemsDiv.innerHTML="<p>Your cart is empty.</p>"
-cartTotalEl.textContent="Total: ₦0.00"
-
+container.innerHTML="<p>Cart is empty</p>"
+document.getElementById("cart-total").innerText="₦0"
 return
 }
+
+let total = 0
 
 cart.forEach(item=>{
 
-const div=document.createElement("div")
+total += item.price * item.quantity
 
-div.className="ordered-product"
-
-div.innerHTML=`
-
+container.innerHTML += `
+<div>
 <img src="${item.image}" width="80">
+<h4>${item.name}</h4>
+<p>₦${item.price}</p>
 
-<div class="ordered-product-details">
-
-<p><strong>${item.name}</strong></p>
-
-<p>Price: ₦${item.price}</p>
-
-<p>
-
-Quantity:
-
-<button class="decrease" data-id="${item._id}">−</button>
-
+<button onclick="decrease('${item.id}')">-</button>
 ${item.quantity}
+<button onclick="increase('${item.id}')">+</button>
 
-<button class="increase" data-id="${item._id}">+</button>
-
-</p>
-
-<button class="remove-item-btn" data-id="${item._id}">
-Remove
-</button>
-
+<button onclick="removeItem('${item.id}')">Remove</button>
 </div>
-
 `
-
-cartItemsDiv.appendChild(div)
-
 })
 
-updateTotal()
-attachEvents()
+document.getElementById("cart-total").innerText="₦"+total
 
 }
 
-/* ===========================
-   UPDATE TOTAL
-=========================== */
+/* ACTIONS */
 
-function updateTotal(){
-
-const total = cart.reduce((sum,item)=>{
-
-return sum + item.price * item.quantity
-
-},0)
-
-cartTotalEl.textContent=`Total: ₦${total}`
-
-}
-
-/* ===========================
-   BUTTON EVENTS
-=========================== */
-
-function attachEvents(){
-
-document.querySelectorAll(".increase").forEach(btn=>{
-
-btn.addEventListener("click",()=>{
-
-const id = btn.dataset.id
-
-const item = cart.find(i=>i._id===id)
-
+function increase(id){
+const item = cart.find(i=>i.id===id)
 item.quantity++
-
 saveCart()
+}
 
-renderCart()
-
-})
-
-})
-
-document.querySelectorAll(".decrease").forEach(btn=>{
-
-btn.addEventListener("click",()=>{
-
-const id = btn.dataset.id
-
-const item = cart.find(i=>i._id===id)
+function decrease(id){
+const item = cart.find(i=>i.id===id)
 
 if(item.quantity>1){
-
 item.quantity--
-
 }else{
-
-cart = cart.filter(i=>i._id!==id)
-
+cart = cart.filter(i=>i.id!==id)
 }
 
 saveCart()
+}
 
-renderCart()
-
-})
-
-})
-
-document.querySelectorAll(".remove-item-btn").forEach(btn=>{
-
-btn.addEventListener("click",()=>{
-
-const id = btn.dataset.id
-
-cart = cart.filter(i=>i._id!==id)
-
+function removeItem(id){
+cart = cart.filter(i=>i.id!==id)
 saveCart()
-
-renderCart()
-
-})
-
-})
-
 }
 
-/* ===========================
-   SAVE CART
-=========================== */
+/* CLEAR CART */
 
-function saveCart(){
-
-localStorage.setItem("cart",JSON.stringify(cart))
-
-}
-
-/* ===========================
-   CLEAR CART
-=========================== */
-
-document.getElementById("clear-cart").addEventListener("click",()=>{
-
+document.getElementById("clear-cart").onclick=()=>{
 cart=[]
-
 saveCart()
+}
 
-renderCart()
+/* CHECKOUT */
 
-})
-
-/* ===========================
-   CHECKOUT
-=========================== */
-
-document.getElementById("checkout-btn").addEventListener("click",()=>{
+document.getElementById("checkout-btn").onclick=async()=>{
 
 if(cart.length===0){
-
-alert("Your cart is empty!")
-
+alert("Cart is empty")
 return
-
 }
 
-window.location.href="checkout.html"
+const email = prompt("Enter your email")
 
+if(!email){
+alert("Email required")
+return
+}
+
+localStorage.setItem("pendingCart", JSON.stringify(cart))
+localStorage.setItem("pendingEmail", email)
+
+let total = 0
+cart.forEach(i=>{
+total += i.price * i.quantity
 })
+
+try{
+
+const res = await fetch(`${BACKEND_URL}/initialize-payment`,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+email,
+amount: total
+})
+})
+
+const data = await res.json()
+
+window.location = data.data.authorization_url
+
+}catch(err){
+alert("Payment failed")
+console.error(err)
+}
+
+}
 
 renderCart()
 

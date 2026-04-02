@@ -1,63 +1,125 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Verifying Payment...</title>
-</head>
-<body>
-
-<h2>Processing payment...</h2>
-
 <script>
 
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
-
-const params=new URLSearchParams(window.location.search)
-const reference=params.get("reference")
-
-const cart=JSON.parse(localStorage.getItem("pendingCart")||"[]")
-const email=localStorage.getItem("pendingEmail")
-
-async function verify(){
-
-const orderData={
-customerName:"Customer",
-email,
-address:"N/A",
-items:cart,
-totalAmount:cart.reduce((sum,i)=>sum+i.price*i.quantity,0),
-paymentReference:reference,
-status:"Paid"
-}
-
-const res=await fetch(`${BACKEND_URL}/verify-payment`,{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({reference,orderData})
-})
-
-const data=await res.json()
-
-if(data.success){
+    const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+    
+    /* ===========================
+       GET REFERENCE FIRST (CRITICAL)
+    =========================== */
+    
+    const params = new URLSearchParams(window.location.search)
+    
+    const reference =
+    params.get("reference") ||
+    params.get("trxref") ||
+    params.get("tx_ref")
+    
+    console.log("REFERENCE:", reference)
+    
+    /* ===========================
+       GET STORED DATA
+    =========================== */
+    
+    const cart = JSON.parse(localStorage.getItem("pendingCart") || "[]")
+    const email = localStorage.getItem("pendingEmail")
+    
+    console.log("CART:", cart)
+    console.log("EMAIL:", email)
+    
+    /* ===========================
+       VERIFY FUNCTION
+    =========================== */
+    
+    async function verify(){
+    
+    try{
+    
+    if(!reference){
+    document.getElementById("app").innerHTML = `
+    <h2 style="color:red;">Invalid Payment</h2>
+    <p>No reference found</p>
+    <button onclick="window.location='index.html'">Go Home</button>
+    `
+    return
+    }
+    
+    if(cart.length === 0){
+    document.getElementById("app").innerHTML = `
+    <h2 style="color:red;">Cart Missing</h2>
+    <p>No items found</p>
+    <button onclick="window.location='index.html'">Go Home</button>
+    `
+    return
+    }
+    
+    /* BUILD ORDER */
+    const orderData = {
+    customerName:"Customer",
+    email: email || "test@email.com",
+    address:"N/A",
+    items: cart,
+    totalAmount: cart.reduce((sum,i)=>sum+i.price*i.quantity,0),
+    paymentReference: reference,
+    status:"Paid"
+    }
+    
+    /* VERIFY PAYMENT */
+    const res = await fetch(`${BACKEND_URL}/verify-payment`,{
+    method:"POST",
+    headers:{
+    "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+    reference,
+    orderData
+    })
+    })
+    
+    const data = await res.json()
+    
+    console.log("VERIFY RESPONSE:", data)
+    
+    /* SUCCESS */
+    if(data.success){
+    
+    localStorage.removeItem("cart")
+    localStorage.removeItem("pendingCart")
+    localStorage.removeItem("pendingEmail")
+    
+    if(data.success){
 
 localStorage.removeItem("cart")
 localStorage.removeItem("pendingCart")
 localStorage.removeItem("pendingEmail")
 
-alert("Payment successful 🎉")
-
-window.location="index.html"
-
-}else{
-alert("Payment verification failed")
-}
+// 🔥 THIS IS THE FIX
+window.location = `thankyou.html?orderId=${data.orderId}`
 
 }
-
-verify()
-
-</script>
-
-</body>
-</html>
+    
+    }else{
+    
+    document.getElementById("app").innerHTML = `
+    <h2 style="color:red;">Payment Failed</h2>
+    <p>Verification failed</p>
+    <button onclick="window.location='index.html'">Try Again</button>
+    `
+    
+    }
+    
+    }catch(err){
+    
+    console.error(err)
+    
+    document.getElementById("app").innerHTML = `
+    <h2 style="color:red;">Error</h2>
+    <p>Something went wrong</p>
+    <button onclick="window.location='index.html'">Go Home</button>
+    `
+    
+    }
+    
+    }
+    
+    verify()
+    
+    </script>
