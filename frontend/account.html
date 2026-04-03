@@ -1,13 +1,10 @@
 <!DOCTYPE html>
-
 <html>
 
 <head>
-
 <title>My Account | TechMart</title>
 
 <style>
-
 body{
 font-family:Arial;
 background:#f5f5f5;
@@ -52,6 +49,16 @@ border-bottom:1px solid #ddd;
 text-align:left;
 }
 
+.status{
+padding:4px 8px;
+border-radius:5px;
+color:white;
+font-size:12px;
+}
+
+.Processing{background:orange;}
+.Shipped{background:blue;}
+.Delivered{background:green;}
 </style>
 
 </head>
@@ -63,36 +70,28 @@ text-align:left;
 <h1>My TechMart Account</h1>
 
 <!-- PROFILE -->
-
 <div class="card">
-
 <h2>Profile</h2>
 
 <p><strong>Name:</strong> <span id="userName"></span></p>
-
 <p><strong>Email:</strong> <span id="userEmail"></span></p>
 
 <button onclick="logout()">Logout</button>
-
 </div>
 
 <!-- ORDERS -->
-
 <div class="card">
-
 <h2>My Orders</h2>
 
 <table>
-
 <thead>
-
 <tr>
 <th>Order ID</th>
 <th>Total</th>
 <th>Status</th>
 <th>Date</th>
+<th>Track</th>
 </tr>
-
 </thead>
 
 <tbody id="ordersTable"></tbody>
@@ -102,115 +101,126 @@ text-align:left;
 </div>
 
 <!-- WISHLIST -->
-
 <div class="card">
-
 <h2>Wishlist</h2>
-
 <div id="wishlist"></div>
-
 </div>
 
 </div>
 
 <script>
 
-const API="https://techmart-backend-ecbi.onrender.com"
+const API = "https://techmart-backend-ecbi.onrender.com";
 
-const user=JSON.parse(localStorage.getItem("user"))
+/* ===========================
+   GET USER + TOKEN
+=========================== */
+const user = JSON.parse(localStorage.getItem("user"));
+const token = localStorage.getItem("userToken");
 
-if(!user){
-
-alert("Please login")
-
-window.location="login.html"
-
+if(!user || !token){
+  alert("Please login");
+  window.location = "login.html";
 }
 
-document.getElementById("userName").textContent=user.name
-document.getElementById("userEmail").textContent=user.email
+/* ===========================
+   SET PROFILE
+=========================== */
+document.getElementById("userName").textContent = user.name;
+document.getElementById("userEmail").textContent = user.email;
 
-/* LOGOUT */
-
+/* ===========================
+   LOGOUT
+=========================== */
 function logout(){
-
-localStorage.removeItem("token")
-localStorage.removeItem("user")
-
-window.location="index.html"
-
+  localStorage.removeItem("userToken");
+  localStorage.removeItem("user");
+  window.location = "index.html";
 }
 
-/* LOAD ORDERS */
-
+/* ===========================
+   LOAD ORDERS (FIXED)
+=========================== */
 async function loadOrders(){
 
-const res=await fetch(API+"/api/orders")
+  try{
 
-const orders=await res.json()
+    const res = await fetch(API + "/api/my-orders",{
+      headers:{
+        "Authorization": "Bearer " + token
+      }
+    });
 
-const table=document.getElementById("ordersTable")
+    const orders = await res.json();
 
-table.innerHTML=""
+    const table = document.getElementById("ordersTable");
+    table.innerHTML = "";
 
-orders
-.filter(o=>o.email===user.email)
-.forEach(o=>{
+    if(!orders.length){
+      table.innerHTML = "<tr><td colspan='5'>No orders yet</td></tr>";
+      return;
+    }
 
-table.innerHTML+=`
+    orders.forEach(o => {
 
-<tr>
+      table.innerHTML += `
+      <tr>
+        <td>${o._id}</td>
+        <td>₦${o.totalAmount}</td>
+        <td>
+          <span class="status ${o.status}">
+            ${o.status}
+          </span>
+        </td>
+        <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+        <td>
+          <a href="track-order.html?tracking=${o.trackingNumber}">
+            Track
+          </a>
+        </td>
+      </tr>
+      `;
+    });
 
-<td>${o._id}</td>
-
-<td>₦${o.totalAmount}</td>
-
-<td>${o.status}</td>
-
-<td>${new Date(o.createdAt).toLocaleDateString()}</td>
-
-</tr>
-
-`
-
-})
+  }catch(err){
+    console.error(err);
+  }
 
 }
 
-loadOrders()
+loadOrders();
 
-/* WISHLIST */
+/* ===========================
+   WISHLIST
+=========================== */
+let wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
 
-let wishlist=JSON.parse(localStorage.getItem("wishlist")||"[]")
-
-const container=document.getElementById("wishlist")
+const container = document.getElementById("wishlist");
 
 function renderWishlist(){
 
-container.innerHTML=""
+  container.innerHTML = "";
 
-wishlist.forEach(p=>{
+  if(wishlist.length === 0){
+    container.innerHTML = "<p>No wishlist items</p>";
+    return;
+  }
 
-container.innerHTML+=`
-
-<div style="margin-bottom:10px">
-
-<a href="product.html?slug=${p.slug}">
-${p.name}
-</a>
-
-</div>
-
-`
-
-})
+  wishlist.forEach(p=>{
+    container.innerHTML += `
+    <div style="margin-bottom:10px">
+      <a href="product.html?slug=${p.slug}">
+        ${p.name}
+      </a>
+    </div>
+    `;
+  });
 
 }
 
-renderWishlist()
+renderWishlist();
 
 </script>
 
 </body>
-
 </html>

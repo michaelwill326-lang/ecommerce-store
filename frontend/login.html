@@ -1,121 +1,149 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TechMart Admin Login</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f3f4f6;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
+<title>Login | TechMart</title>
 
-    .login-box {
-      background-color: white;
-      padding: 35px 40px;
-      border-radius: 12px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-      width: 100%;
-      max-width: 420px;
-    }
+<style>
+body{
+  font-family:Arial;
+  background:#f5f5f5;
+  padding:40px;
+}
 
-    h2 {
-      text-align: center;
-      margin-bottom: 25px;
-    }
+.container{
+  max-width:400px;
+  margin:auto;
+  background:white;
+  padding:20px;
+  border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
 
-    input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-    }
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #111827;
-      color: white;
-      font-weight: bold;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
+button{
+  width:100%;
+  padding:10px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
 
-    button:hover {
-      background-color: #1f2937;
-    }
+button:hover{
+  background:#1d4ed8;
+}
 
-    .error {
-      color: red;
-      text-align: center;
-      margin-top: 12px;
-      font-size: 14px;
-    }
+.toggle{
+  text-align:center;
+  margin-top:10px;
+  cursor:pointer;
+  color:#2563eb;
+}
+</style>
 
-    .brand {
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-  </style>
 </head>
+
 <body>
 
-  <div class="login-box">
-    <div class="brand">TechMart Admin</div>
-    <h2>Login</h2>
+<div class="container">
 
-    <input type="email" id="email" placeholder="Admin Email" />
-    <input type="password" id="password" placeholder="Password" />
+<h2 id="title">Login</h2>
 
-    <button id="loginBtn">Login</button>
-    <div class="error" id="errorMsg"></div>
-  </div>
+<input id="name" placeholder="Name" style="display:none;">
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
 
-  <script>
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const errorMsg = document.getElementById('errorMsg');
+<button onclick="submitForm()">Continue</button>
 
-      if (!email || !password) {
-        errorMsg.textContent = "Please enter both email and password.";
-        return;
-      }
+<p class="toggle" onclick="toggleMode()">
+  Don't have an account? Register
+</p>
 
-      try {
-        const res = await fetch('http://localhost:5002/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
+</div>
 
-        const data = await res.json();
+<script>
 
-        if (!res.ok) {
-          errorMsg.textContent = data.message || "Login failed.";
-          return;
-        }
+const API = "https://techmart-backend-ecbi.onrender.com";
 
-        localStorage.setItem('token', data.token);
-        window.location.href = 'admin.html';
+let isLogin = true;
 
-      } catch (err) {
-        errorMsg.textContent = "Network error. Try again.";
-        console.error(err);
-      }
-    });
-  </script>
+/* ===========================
+   TOGGLE LOGIN / REGISTER
+=========================== */
+function toggleMode(){
+
+  isLogin = !isLogin;
+
+  document.getElementById("title").textContent =
+    isLogin ? "Login" : "Register";
+
+  document.getElementById("name").style.display =
+    isLogin ? "none" : "block";
+
+  document.querySelector(".toggle").textContent =
+    isLogin
+      ? "Don't have an account? Register"
+      : "Already have an account? Login";
+}
+
+/* ===========================
+   SUBMIT
+=========================== */
+async function submitForm(){
+
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const url = isLogin
+    ? "/api/users/login"
+    : "/api/users/register";
+
+  const body = isLogin
+    ? { email, password }
+    : { name, email, password };
+
+  const res = await fetch(API + url,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify(body)
+  });
+
+  const data = await res.json();
+
+  if(isLogin){
+
+    if(data.success){
+
+      localStorage.setItem("userToken", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      window.location = "account.html";
+
+    }else{
+      alert("Login failed");
+    }
+
+  }else{
+
+    if(data.success){
+      alert("Registered! Now login.");
+      toggleMode();
+    }else{
+      alert(data.message || "Error");
+    }
+
+  }
+
+}
+
+</script>
 
 </body>
 </html>

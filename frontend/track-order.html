@@ -1,115 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Track Your Order - TechMart</title>
-
-<link rel="stylesheet" href="style.css">
-
-<style>
-
-.container{
-max-width:600px;
-margin:auto;
-background:white;
-padding:30px;
-border-radius:10px;
-box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
-
-.status{
-padding:8px 14px;
-border-radius:6px;
-color:white;
-display:inline-block;
-margin-top:10px;
-}
-
-.Processing{background:#f59e0b}
-.Shipped{background:#3b82f6}
-.Delivered{background:#10b981}
-
-</style>
-
-</head>
-
-<body>
-
-<h1 style="text-align:center">📦 Track Your Order</h1>
-
-<div class="container">
-
-<input
-id="trackingInput"
-placeholder="Enter Tracking Number"
-style="width:100%;padding:10px;margin-bottom:10px"
->
-
-<button onclick="trackOrder()" style="width:100%">
-Track Order
-</button>
-
-<div id="result" style="margin-top:20px"></div>
-
-</div>
-
 <script>
 
-const API="https://techmart-backend-ecbi.onrender.com"
-
-async function trackOrder(){
-
-const tracking=document.getElementById("trackingInput").value
-
-if(!tracking){
-alert("Enter tracking number")
-return
-}
-
-const res=await fetch(API+"/api/track/"+tracking)
-
-if(!res.ok){
-
-document.getElementById("result").innerHTML=
-"<p>Tracking number not found.</p>"
-
-return
-}
-
-const order=await res.json()
-
-document.getElementById("result").innerHTML=`
-
-<h3>Order Status</h3>
-
-<p><strong>Customer:</strong> ${order.customerName}</p>
-
-<p><strong>Status:</strong>
-<span class="status ${order.status}">
-${order.status}
-</span>
-</p>
-
-<p><strong>Carrier:</strong> ${order.carrier || "Not assigned yet"}</p>
-
-<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>
-
-<p><strong>Date:</strong>
-${new Date(order.createdAt).toLocaleDateString()}
-</p>
-
-<h4>Items</h4>
-
-${order.items.map(i=>`
-<p>${i.name} x ${i.quantity}</p>
-`).join("")}
-
-`
-
-}
-
-</script>
-
-</body>
-</html>
+    const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
+    
+    /* ===========================
+       GET URL PARAM
+    =========================== */
+    function getTrackingFromURL(){
+      const params = new URLSearchParams(window.location.search);
+      return params.get("tracking");
+    }
+    
+    /* ===========================
+       TRACK ORDER
+    =========================== */
+    function trackOrder(trackingParam){
+    
+      const tracking = trackingParam || document.getElementById("trackingInput").value.trim();
+    
+      if(!tracking){
+        alert("Enter tracking number");
+        return;
+      }
+    
+      fetch(`${BACKEND_URL}/api/track/${tracking}`)
+      .then(res=>{
+        if(!res.ok){
+          throw new Error("Not found");
+        }
+        return res.json();
+      })
+      .then(order=>{
+        renderOrder(order);
+      })
+      .catch(()=>{
+        document.getElementById("result").innerHTML =
+          "<p style='color:red;'>Order not found</p>";
+      });
+    
+    }
+    
+    /* ===========================
+       RENDER ORDER
+    =========================== */
+    function renderOrder(order){
+    
+      const steps = ["Processing","Shipped","Delivered"];
+      const currentIndex = steps.indexOf(order.status);
+    
+      const progressHTML = steps.map((step,index)=>{
+        const active = index <= currentIndex ? "active" : "";
+    
+        return `
+          <div class="step">
+            <div class="circle ${active}">${index+1}</div>
+            <p>${step}</p>
+            <div class="line"></div>
+          </div>
+        `;
+      }).join("");
+    
+      document.getElementById("result").innerHTML = `
+        <div class="order-info">
+          <p><strong>Customer:</strong> ${order.customerName}</p>
+          <p><strong>Email:</strong> ${order.email}</p>
+          <p><strong>Total:</strong> ₦${order.totalAmount}</p>
+          <p><strong>Status:</strong> ${order.status}</p>
+          <p><strong>Tracking:</strong> ${order.trackingNumber}</p>
+    
+          <div class="progress">
+            ${progressHTML}
+          </div>
+        </div>
+      `;
+    }
+    
+    /* ===========================
+       AUTO LOAD
+    =========================== */
+    window.onload = () => {
+      const tracking = getTrackingFromURL();
+    
+      if(tracking){
+        document.getElementById("trackingInput").value = tracking;
+        trackOrder(tracking);
+      }
+    };
+    
+    </script>

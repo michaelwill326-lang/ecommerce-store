@@ -7,7 +7,7 @@ const totalEl = document.getElementById("checkout-total");
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
 /* ===========================
-   CHECK EMPTY CART
+   CHECK CART
 =========================== */
 if (cart.length === 0) {
   alert("Your cart is empty!");
@@ -15,12 +15,21 @@ if (cart.length === 0) {
 }
 
 /* ===========================
-   RENDER ORDER SUMMARY
+   AUTO FILL USER
+=========================== */
+const user = JSON.parse(localStorage.getItem("user"));
+
+if (user) {
+  document.getElementById("name").value = user.name;
+  document.getElementById("email").value = user.email;
+}
+
+/* ===========================
+   RENDER SUMMARY
 =========================== */
 function renderSummary() {
 
   summaryDiv.innerHTML = "";
-
   let total = 0;
 
   cart.forEach(item => {
@@ -48,14 +57,16 @@ function renderSummary() {
 renderSummary();
 
 /* ===========================
-   HANDLE CHECKOUT (PAYSTACK)
+   CHECKOUT SUBMIT
 =========================== */
 form.addEventListener("submit", async (e) => {
 
   e.preventDefault();
 
+  const token = localStorage.getItem("userToken");
+
   const customerName = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
+  const email = user ? user.email : document.getElementById("email").value.trim();
   const address = document.getElementById("address").value.trim();
 
   if (!customerName || !email || !address) {
@@ -67,80 +78,110 @@ form.addEventListener("submit", async (e) => {
     return sum + item.price * item.quantity;
   }, 0);
 
-  const amountInKobo = Math.round(totalAmount * 100);
+  try {
 
-  if (typeof PaystackPop === "undefined") {
-    alert("Paystack script not loaded.");
-    return;
-  }
-
-  /* ===========================
-     PAYSTACK POPUP
-  ============================ */
-  const handler = PaystackPop.setup({
-
-    key: "pk_test_c37b9c580095dffc5e9a977f82c04ecac4bd8337",
-
-    email: email,
-    amount: amountInKobo,
-    currency: "NGN",
-
-    callback: function (response) {
-
-      console.log("Payment successful:", response);
-
-      fetch(`${BACKEND_URL}/verify-payment`, {
-
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-          reference: response.reference,
-          orderData: {
-            customerName,
-            email,
-            address,
-            items: cart,
-            totalAmount
-          }
-        })
-
+    /* ===========================
+       INIT PAYMENT
+    ============================ */
+    const initResponse = await fetch(`${BACKEND_URL}/initialize-payment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        amount: totalAmount
       })
-      .then(res => res.json())
-      .then(data => {
+    });
 
-        console.log("Verify response:", data);
-
-        if (data.success && data.orderId) {
-
-          // Clear cart
-          localStorage.removeItem("cart");
-
-          // Redirect to success page
-          window.location.href =
-            `thankyou.html?orderId=${data.orderId}`;
-
-        } else {
-          alert("Payment verification failed.");
-        }
-
-      })
-      .catch(err => {
-        console.error("Verification error:", err);
-        alert("Verification failed.");
-      });
-
-    },
-
-    onClose: function () {
-      console.log("Payment popup closed.");
+    if (!initResponse.ok) {
+      alert("Payment initialization failed.");
+      return;
     }
 
-  });
+    const initData = await initResponse.json();
 
-  handler.openIframe();
+    if (!initData.status) {
+      alert("Payment failed.");
+      return;
+    }
+
+    if (typeof PaystackPop === "undefined") {
+      alert("Payment system not loaded.");
+      return;
+    }
+
+    /* ===========================
+       PAYSTACK POPUP
+    ============================ */
+    const handler = PaystackPop.setup({
+
+      key: "pk_test_c37b9c580095dffc5e9a977f82c04ecac4bd8337",
+      email: email,
+      amount: Math.round(totalAmount * 100),
+      currency: "NGN",
+      ref: initData.data.reference,
+
+      callback: function (response) {
+
+        fetch(`${BACKEND_URL}/verify-payment`, {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+
+            reference: response.reference,
+
+            orderData: {
+              customerName,
+              email,
+              address,
+              items: cart,
+              totalAmount
+            }
+
+          })
+
+        })
+        .then(res => res.json())
+        .then(data => {
+
+          if (data.success) {
+
+            localStorage.removeItem("cart");
+
+            window.location.href =
+              `thankyou.html?orderId=${data.orderId}`;
+
+          } else {
+            alert("Payment verification failed.");
+          }
+
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Verification error.");
+        });
+
+      },
+
+      onClose: function () {
+        console.log("Payment window closed");
+      }
+
+    });
+
+    handler.openIframe();
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Something went wrong.");
+
+  }
 
 });

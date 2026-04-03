@@ -167,70 +167,18 @@ background:#1d4ed8;
 
 </head>
 
-<div id="chatbot">
-
-    <div id="chat-header">
-    TechMart Assistant
-    </div>
-    
-    <div id="chat-messages"></div>
-    
-    <input 
-    type="text" 
-    id="chat-input"
-    placeholder="Ask about products..."
-    onkeydown="if(event.key==='Enter')sendMessage()"
-    >
-    
-    </div>
-    
-    <style>
-    
-    #chatbot{
-    position:fixed;
-    bottom:20px;
-    right:20px;
-    width:300px;
-    background:white;
-    border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,0.2);
-    overflow:hidden;
-    font-family:Arial;
-    }
-    
-    #chat-header{
-    background:#2563eb;
-    color:white;
-    padding:10px;
-    font-weight:bold;
-    }
-    
-    #chat-messages{
-    height:200px;
-    overflow:auto;
-    padding:10px;
-    font-size:14px;
-    }
-    
-    #chat-input{
-    width:100%;
-    border:none;
-    border-top:1px solid #ddd;
-    padding:10px;
-    }
-    
-    </style>
 <body>
 
 <header>
 
 <h1>🛒 TechMart</h1>
 
-<nav>
+<nav id="navBar">
 
 <a href="index.html">Home</a>
 
-<a href="account.html">Account</a>
+<!-- THIS WILL CHANGE AUTOMATICALLY -->
+<a href="login.html" id="accountLink">Login</a>
 
 <div class="search-container">
 
@@ -266,7 +214,7 @@ placeholder="Search TechMart products..."
 
 <div style="margin-bottom:20px">
 
-<label for="sortProducts"><strong>Sort by:</strong></label>
+<label><strong>Sort by:</strong></label>
 
 <select id="sortProducts">
 
@@ -284,60 +232,125 @@ placeholder="Search TechMart products..."
 
 </main>
 
+<!-- CHATBOT -->
+<div id="chatbot">
+
+<div id="chat-header">TechMart Assistant</div>
+
+<div id="chat-messages"></div>
+
+<input 
+type="text" 
+id="chat-input"
+placeholder="Ask about products..."
+onkeydown="if(event.key==='Enter')sendMessage()"
+>
+
+</div>
+
+<style>
+
+#chatbot{
+position:fixed;
+bottom:20px;
+right:20px;
+width:300px;
+background:white;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+overflow:hidden;
+}
+
+#chat-header{
+background:#2563eb;
+color:white;
+padding:10px;
+font-weight:bold;
+}
+
+#chat-messages{
+height:200px;
+overflow:auto;
+padding:10px;
+font-size:14px;
+}
+
+#chat-input{
+width:100%;
+border:none;
+border-top:1px solid #ddd;
+padding:10px;
+}
+
+</style>
+
 <script src="script.js"></script>
 
 <script>
 
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+/* ===========================
+   SMART ACCOUNT LINK
+=========================== */
 
-const searchBox=document.getElementById("searchBox")
-const searchResults=document.getElementById("search-results")
+const user = JSON.parse(localStorage.getItem("user"));
+const accountLink = document.getElementById("accountLink");
+const navBar = document.getElementById("navBar");
 
-/* SEARCH SUGGESTIONS */
+if(user){
+  accountLink.textContent = "My Account";
+  accountLink.href = "account.html";
+
+  // Greeting
+  const greeting = document.createElement("span");
+  greeting.style.color = "#9ca3af";
+  greeting.textContent = "Hi, " + user.name;
+
+  navBar.appendChild(greeting);
+
+}else{
+  accountLink.textContent = "Login";
+  accountLink.href = "login.html";
+}
+
+/* ===========================
+   SEARCH
+=========================== */
+
+const BACKEND_URL="https://techmart-backend-ecbi.onrender.com";
+
+const searchBox=document.getElementById("searchBox");
+const searchResults=document.getElementById("search-results");
 
 searchBox.addEventListener("input", async function(){
 
-const query=searchBox.value.trim()
+const query=searchBox.value.trim();
 
 if(query.length < 2){
-searchResults.innerHTML=""
-return
+searchResults.innerHTML="";
+return;
 }
 
-const res=await fetch(`${BACKEND_URL}/api/products/search?q=${query}`)
+const res=await fetch(`${BACKEND_URL}/api/products/search?q=${query}`);
+const products=await res.json();
 
-const products=await res.json()
-
-searchResults.innerHTML=""
+searchResults.innerHTML="";
 
 products.forEach(p=>{
-
 searchResults.innerHTML+=`
-
 <div class="search-item"
 onclick="window.location='product.html?slug=${p.slug}'">
-
 ${p.name}
-
 </div>
+`;
+});
 
-`
-
-})
-
-})
-
-/* ENTER SEARCH PAGE */
+});
 
 searchBox.addEventListener("keypress",function(e){
-
 if(e.key==="Enter"){
-
-window.location=`search.html?q=${searchBox.value}`
-
+window.location=`search.html?q=${searchBox.value}`;
 }
-
-})
+});
 
 </script>
 
