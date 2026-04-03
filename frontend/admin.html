@@ -11,19 +11,23 @@ background:#f5f5f5;
 padding:20px;
 }
 
+.container{
+max-width:900px;
+margin:auto;
+}
+
 .card{
 background:white;
 padding:20px;
-margin-bottom:20px;
 border-radius:8px;
+margin-bottom:20px;
 box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 input{
-display:block;
-margin:10px 0;
-padding:8px;
 width:100%;
+padding:8px;
+margin:8px 0;
 }
 
 button{
@@ -37,13 +41,41 @@ cursor:pointer;
 button:hover{
 background:#1d4ed8;
 }
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+td,th{
+padding:10px;
+border-bottom:1px solid #ddd;
+}
 </style>
 
 </head>
 
 <body>
 
-<h1>📊 TechMart Admin</h1>
+<div class="container">
+
+<h1>📊 TechMart Admin Dashboard</h1>
+
+<!-- LOGIN -->
+<div class="card" id="loginCard">
+
+<h2>Admin Login</h2>
+
+<input id="adminEmail" placeholder="Email">
+<input id="adminPassword" type="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none;">
 
 <!-- ADD PRODUCT -->
 <div class="card">
@@ -61,56 +93,152 @@ background:#1d4ed8;
 
 </div>
 
+<!-- PRODUCTS -->
+<div class="card">
+
+<h2>Products</h2>
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Price</th>
+<th>Stock</th>
+</tr>
+</thead>
+
+<tbody id="productsTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
 <script>
 
 const API = "https://techmart-backend-ecbi.onrender.com";
 
+/* ===========================
+   LOGIN
+=========================== */
+async function login(){
+
+  const email = document.getElementById("adminEmail").value;
+  const password = document.getElementById("adminPassword").value;
+
+  try{
+
+    const res = await fetch(API + "/admin/login",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({email,password})
+    });
+
+    const data = await res.json();
+
+    console.log("LOGIN:", data);
+
+    if(data.success){
+
+      localStorage.setItem("token", data.token);
+
+      document.getElementById("loginCard").style.display="none";
+      document.getElementById("dashboard").style.display="block";
+
+      loadProducts();
+
+    }else{
+      alert("Login failed");
+    }
+
+  }catch(err){
+    console.error(err);
+    alert("Network error during login");
+  }
+
+}
+
+/* ===========================
+   LOAD PRODUCTS
+=========================== */
+async function loadProducts(){
+
+  const res = await fetch(API + "/api/products");
+  const products = await res.json();
+
+  const table = document.getElementById("productsTable");
+  table.innerHTML = "";
+
+  products.forEach(p=>{
+    table.innerHTML += `
+      <tr>
+        <td>${p.name}</td>
+        <td>₦${p.price}</td>
+        <td>${p.stock}</td>
+      </tr>
+    `;
+  });
+
+}
+
+/* ===========================
+   ADD PRODUCT (FIXED)
+=========================== */
 async function addProduct(){
 
   const token = localStorage.getItem("token");
 
-  const name = document.getElementById("name").value;
-  const price = document.getElementById("price").value;
-  const stock = document.getElementById("stock").value;
-  const description = document.getElementById("description").value;
-  const file = document.getElementById("image").files[0];
-
   const formData = new FormData();
 
-  formData.append("name", name);
-  formData.append("price", price);
-  formData.append("stock", stock);
-  formData.append("description", description);
+  formData.append("name", document.getElementById("name").value);
+  formData.append("price", document.getElementById("price").value);
+  formData.append("stock", document.getElementById("stock").value);
+  formData.append("description", document.getElementById("description").value);
 
+  const file = document.getElementById("image").files[0];
   if(file){
     formData.append("image", file);
   }
 
   try{
 
-    const res = await fetch(API + "/api/products",{
-      method:"POST",
-      headers:{
-        "Authorization":"Bearer " + token
+    const res = await fetch(API + "/api/products", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token
       },
       body: formData
     });
 
-    const data = await res.json();
-
-    console.log(data);
+    const text = await res.text();
+    console.log("UPLOAD RESPONSE:", text);
 
     if(res.ok){
       alert("✅ Product added!");
+      loadProducts();
     }else{
-      alert("❌ Failed");
+      alert("❌ Failed: " + text);
     }
 
   }catch(err){
-    console.error(err);
+    console.error("NETWORK ERROR:", err);
     alert("❌ Network error");
   }
 
+}
+
+/* ===========================
+   AUTO LOGIN
+=========================== */
+if(localStorage.getItem("token")){
+  document.getElementById("loginCard").style.display="none";
+  document.getElementById("dashboard").style.display="block";
+  loadProducts();
 }
 
 </script>
