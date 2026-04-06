@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>🛒 TechMart</title>
-
-<link rel="stylesheet" href="style.css">
 
 <style>
 
-body{
-font-family:Arial, sans-serif;
-background:#f4f6f9;
+/* RESET */
+*{
 margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial;
+}
+
+body{
+background:#f5f7fa;
 }
 
 /* HEADER */
-
 header{
 display:flex;
 justify-content:space-between;
@@ -29,57 +29,25 @@ background:#111827;
 color:white;
 }
 
-header h1{
-margin:0;
-}
-
 nav{
 display:flex;
+gap:15px;
 align-items:center;
-gap:20px;
 }
 
-header a{
+nav a{
 color:white;
 text-decoration:none;
-}
-
-/* SEARCH */
-
-.search-container{
-position:relative;
 }
 
 #searchBox{
 padding:8px;
 border-radius:6px;
-border:1px solid #ccc;
-width:220px;
+border:none;
 }
 
-#search-results{
-position:absolute;
-background:white;
-width:100%;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
-border-radius:6px;
-margin-top:4px;
-z-index:100;
-}
-
-.search-item{
-padding:10px;
-cursor:pointer;
-border-bottom:1px solid #eee;
-}
-
-.search-item:hover{
-background:#f3f4f6;
-}
-
-/* CART BADGE */
-
-.cart-icon-wrapper{
+/* CART */
+.cart{
 position:relative;
 }
 
@@ -90,60 +58,56 @@ right:-10px;
 background:red;
 color:white;
 border-radius:50%;
-padding:3px 7px;
+padding:2px 6px;
 font-size:12px;
 }
 
 /* MAIN */
-
 main{
 max-width:1200px;
-margin:auto;
-padding:30px;
+margin:30px auto;
+padding:20px;
 }
 
-/* PRODUCTS GRID */
-
+/* GRID */
 .product-list{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
-gap:25px;
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+gap:20px;
 }
 
-/* PRODUCT CARD */
-
+/* CARD */
 .product-card{
 background:white;
-border-radius:10px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
+border-radius:12px;
 overflow:hidden;
+box-shadow:0 5px 15px rgba(0,0,0,0.05);
+transition:0.3s;
 }
 
+.product-card:hover{
+transform:translateY(-5px);
+}
+
+/* IMAGE */
 .product-image img{
 width:100%;
 height:200px;
 object-fit:cover;
 }
 
+/* INFO */
 .product-info{
 padding:15px;
-}
-
-.product-info h3{
-margin:5px 0;
 }
 
 .price{
 font-weight:bold;
 font-size:18px;
-margin:8px 0;
+margin:10px 0;
 }
 
-.rating{
-color:#fbbf24;
-margin-bottom:8px;
-}
-
+/* BUTTONS */
 .actions{
 display:flex;
 gap:8px;
@@ -153,14 +117,44 @@ gap:8px;
 flex:1;
 padding:8px;
 border:none;
-background:#2563eb;
-color:white;
 border-radius:6px;
 cursor:pointer;
 }
 
-.actions button:hover{
-background:#1d4ed8;
+.actions button:first-child{
+background:#2563eb;
+color:white;
+}
+
+.actions button:last-child{
+background:#e5e7eb;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width:768px){
+
+header{
+flex-direction:column;
+align-items:flex-start;
+gap:10px;
+}
+
+nav{
+flex-wrap:wrap;
+}
+
+#searchBox{
+width:100%;
+}
+
+.product-list{
+grid-template-columns:repeat(2,1fr);
+}
+
+.product-image img{
+height:140px;
+}
+
 }
 
 </style>
@@ -170,190 +164,98 @@ background:#1d4ed8;
 <body>
 
 <header>
+<h2>🛒 TechMart</h2>
 
-<h1>🛒 TechMart</h1>
-
-<nav id="navBar">
-
+<nav>
 <a href="index.html">Home</a>
+<a href="account.html">Account</a>
 
-<!-- THIS WILL CHANGE AUTOMATICALLY -->
-<a href="login.html" id="accountLink">Login</a>
+<input type="text" id="searchBox" placeholder="Search...">
 
-<div class="search-container">
-
-<input 
-type="text"
-id="searchBox"
-placeholder="Search TechMart products..."
->
-
-<div id="search-results"></div>
-
-</div>
-
-<div class="cart-icon-wrapper">
-
-<a href="cart.html">🛒 Cart</a>
-
+<div class="cart">
+<a href="cart.html">🛒</a>
 <span id="cart-count" class="badge">0</span>
-
 </div>
 
 </nav>
-
 </header>
 
 <main>
 
-<h2>🔥 Trending Products</h2>
-
-<div id="trending" class="product-list"></div>
-
-<h2>All Products</h2>
-
-<div style="margin-bottom:20px">
-
-<label><strong>Sort by:</strong></label>
-
-<select id="sortProducts">
-
-<option value="default">Default</option>
-<option value="newest">Newest</option>
-<option value="price-low">Price Low → High</option>
-<option value="price-high">Price High → Low</option>
-<option value="reviews">Most Reviewed</option>
-
-</select>
-
-</div>
-
+<h2>🔥 Products</h2>
 <div id="products" class="product-list"></div>
 
 </main>
 
-<!-- CHATBOT -->
-<div id="chatbot">
-
-<div id="chat-header">TechMart Assistant</div>
-
-<div id="chat-messages"></div>
-
-<input 
-type="text" 
-id="chat-input"
-placeholder="Ask about products..."
-onkeydown="if(event.key==='Enter')sendMessage()"
->
-
-</div>
-
-<style>
-
-#chatbot{
-position:fixed;
-bottom:20px;
-right:20px;
-width:300px;
-background:white;
-border-radius:10px;
-box-shadow:0 0 10px rgba(0,0,0,0.2);
-overflow:hidden;
-}
-
-#chat-header{
-background:#2563eb;
-color:white;
-padding:10px;
-font-weight:bold;
-}
-
-#chat-messages{
-height:200px;
-overflow:auto;
-padding:10px;
-font-size:14px;
-}
-
-#chat-input{
-width:100%;
-border:none;
-border-top:1px solid #ddd;
-padding:10px;
-}
-
-</style>
-
-<script src="script.js"></script>
-
 <script>
 
-/* ===========================
-   SMART ACCOUNT LINK
-=========================== */
+const API="https://techmart-backend-ecbi.onrender.com"
 
-const user = JSON.parse(localStorage.getItem("user"));
-const accountLink = document.getElementById("accountLink");
-const navBar = document.getElementById("navBar");
+async function loadProducts(){
 
-if(user){
-  accountLink.textContent = "My Account";
-  accountLink.href = "account.html";
+const res = await fetch(API+"/api/products")
+const products = await res.json()
 
-  // Greeting
-  const greeting = document.createElement("span");
-  greeting.style.color = "#9ca3af";
-  greeting.textContent = "Hi, " + user.name;
-
-  navBar.appendChild(greeting);
-
-}else{
-  accountLink.textContent = "Login";
-  accountLink.href = "login.html";
-}
-
-/* ===========================
-   SEARCH
-=========================== */
-
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com";
-
-const searchBox=document.getElementById("searchBox");
-const searchResults=document.getElementById("search-results");
-
-searchBox.addEventListener("input", async function(){
-
-const query=searchBox.value.trim();
-
-if(query.length < 2){
-searchResults.innerHTML="";
-return;
-}
-
-const res=await fetch(`${BACKEND_URL}/api/products/search?q=${query}`);
-const products=await res.json();
-
-searchResults.innerHTML="";
+const container = document.getElementById("products")
+container.innerHTML=""
 
 products.forEach(p=>{
-searchResults.innerHTML+=`
-<div class="search-item"
-onclick="window.location='product.html?slug=${p.slug}'">
-${p.name}
+container.innerHTML += `
+<div class="product-card">
+
+<div class="product-image">
+<img src="${p.image}">
 </div>
-`;
-});
 
-});
+<div class="product-info">
+<h3>${p.name}</h3>
+<div class="price">₦${p.price}</div>
 
-searchBox.addEventListener("keypress",function(e){
-if(e.key==="Enter"){
-window.location=`search.html?q=${searchBox.value}`;
+<div class="actions">
+<button onclick="addToCart('${p._id}')">Add</button>
+<button onclick="viewProduct('${p.slug}')">View</button>
+</div>
+
+</div>
+</div>
+`
+})
+
 }
-});
+
+function addToCart(id){
+
+let cart = JSON.parse(localStorage.getItem("cart")) || []
+
+const item = cart.find(i=>i.id===id)
+
+if(item){
+item.quantity++
+}else{
+cart.push({id,quantity:1})
+}
+
+localStorage.setItem("cart", JSON.stringify(cart))
+updateCart()
+
+alert("Added to cart")
+
+}
+
+function viewProduct(slug){
+window.location=`product.html?slug=${slug}`
+}
+
+function updateCart(){
+let cart = JSON.parse(localStorage.getItem("cart")) || []
+document.getElementById("cart-count").textContent =
+cart.reduce((sum,i)=>sum+i.quantity,0)
+}
+
+updateCart()
+loadProducts()
 
 </script>
 
 </body>
-
 </html>

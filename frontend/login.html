@@ -1,52 +1,42 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-<title>Login | TechMart</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechMart Auth</title>
 
 <style>
 body{
   font-family:Arial;
   background:#f5f5f5;
+  text-align:center;
   padding:40px;
 }
-
 .container{
+  background:white;
+  padding:25px;
+  border-radius:10px;
   max-width:400px;
   margin:auto;
-  background:white;
-  padding:20px;
-  border-radius:8px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
-
 input{
-  width:100%;
+  width:90%;
   padding:10px;
-  margin-bottom:10px;
+  margin:10px 0;
 }
-
 button{
-  width:100%;
   padding:10px;
+  width:95%;
   background:#2563eb;
   color:white;
   border:none;
-  cursor:pointer;
+  border-radius:6px;
 }
-
-button:hover{
-  background:#1d4ed8;
-}
-
 .toggle{
-  text-align:center;
-  margin-top:10px;
   cursor:pointer;
-  color:#2563eb;
+  color:blue;
 }
 </style>
-
 </head>
 
 <body>
@@ -73,9 +63,7 @@ const API = "https://techmart-backend-ecbi.onrender.com";
 
 let isLogin = true;
 
-/* ===========================
-   TOGGLE LOGIN / REGISTER
-=========================== */
+/* TOGGLE */
 function toggleMode(){
 
   isLogin = !isLogin;
@@ -92,9 +80,7 @@ function toggleMode(){
       : "Already have an account? Login";
 }
 
-/* ===========================
-   SUBMIT
-=========================== */
+/* SUBMIT */
 async function submitForm(){
 
   const name = document.getElementById("name").value;
@@ -102,43 +88,60 @@ async function submitForm(){
   const password = document.getElementById("password").value;
 
   const url = isLogin
-    ? "/api/users/login"
-    : "/api/users/register";
+    ? "/api/login"        // ✅ FIXED
+    : "/api/register";    // ✅ FIXED
 
   const body = isLogin
     ? { email, password }
     : { name, email, password };
 
-  const res = await fetch(API + url,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify(body)
-  });
+  try{
 
-  const data = await res.json();
+    const res = await fetch(API + url,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(body)
+    });
 
-  if(isLogin){
+    const text = await res.text();
+    console.log("RESPONSE:", text);
 
-    if(data.success){
-
-      localStorage.setItem("userToken", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      window.location = "account.html";
-
-    }else{
-      alert("Login failed");
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      alert("❌ Server error");
+      return;
     }
 
-  }else{
+    if(isLogin){
 
-    if(data.success){
-      alert("Registered! Now login.");
-      toggleMode();
+      if(data.success){
+
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        alert("✅ Login successful");
+        window.location = "account.html";
+
+      }else{
+        alert("❌ " + (data.error || "Login failed"));
+      }
+
     }else{
-      alert(data.message || "Error");
+
+      if(data.success){
+        alert("✅ Registered! Now login.");
+        toggleMode();
+      }else{
+        alert("❌ " + (data.error || "Error"));
+      }
+
     }
 
+  }catch(err){
+    console.error(err);
+    alert("❌ Network error");
   }
 
 }

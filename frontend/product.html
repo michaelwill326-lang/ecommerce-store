@@ -1,13 +1,10 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Product | TechMart</title>
+<title>Product</title>
 
 <style>
 
@@ -15,70 +12,78 @@ body{
 font-family:Arial;
 background:#f5f5f5;
 margin:0;
-padding:30px;
+}
+
+header{
+background:#111827;
+color:white;
+padding:15px 20px;
 }
 
 .container{
-max-width:1100px;
-margin:auto;
+max-width:1000px;
+margin:20px auto;
 background:white;
-padding:30px;
-border-radius:8px;
+padding:20px;
+border-radius:10px;
 }
 
-.grid{
+/* GRID */
+.product{
 display:grid;
 grid-template-columns:1fr 1fr;
-gap:40px;
+gap:30px;
 }
 
-img{
+/* IMAGE */
+.product img{
 width:100%;
-border-radius:8px;
+border-radius:10px;
+}
+
+/* INFO */
+.price{
+font-size:22px;
+font-weight:bold;
+margin:10px 0;
 }
 
 button{
-padding:10px 18px;
-background:#2563eb;
-color:white;
+padding:10px;
 border:none;
 border-radius:6px;
 cursor:pointer;
 margin-right:10px;
 }
 
-button:hover{
-background:#1d4ed8;
+.add{
+background:#2563eb;
+color:white;
 }
 
-.section{
-margin-top:40px;
+.buy{
+background:#16a34a;
+color:white;
 }
 
-.products-grid{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:20px;
-}
-
-.product{
-background:white;
-padding:10px;
-border-radius:8px;
-text-align:center;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
+/* REVIEWS */
 .review{
 border-bottom:1px solid #ddd;
 padding:10px 0;
 }
 
-textarea,input{
+/* MOBILE */
+@media (max-width:768px){
+
+.product{
+grid-template-columns:1fr;
+}
+
+button{
 width:100%;
-padding:8px;
-margin-top:6px;
 margin-bottom:10px;
+}
+
 }
 
 </style>
@@ -87,288 +92,123 @@ margin-bottom:10px;
 
 <body>
 
+<header>
+<h2>🛒 TechMart</h2>
+</header>
+
 <div class="container">
 
-<div class="grid">
+<div class="product">
 
 <div>
-
-<img id="product-image">
-
+<img id="productImage">
 </div>
 
 <div>
+<h2 id="productName"></h2>
+<div class="price" id="productPrice"></div>
+<p id="productDesc"></p>
 
-<h1 id="product-name"></h1>
-
-<h2 id="product-price"></h2>
-
-<p id="product-description"></p>
-
-<p>
-<a id="seller-store-link">Visit Seller Store</a>
-</p>
-
-<button id="add-cart">Add to Cart</button>
-
-<button id="add-wishlist">Wishlist</button>
+<button class="add" onclick="addToCart()">Add to Cart</button>
+<button class="buy" onclick="buyNow()">Buy Now</button>
 
 </div>
 
 </div>
 
-<!-- REVIEWS -->
-
-<div class="section">
-
-<h2>Customer Reviews</h2>
-
+<h3>⭐ Reviews</h3>
 <div id="reviews"></div>
 
-<h3>Leave a Review</h3>
-
-<input id="review-name" placeholder="Your Name">
-
-<select id="review-rating">
-<option value="5">⭐⭐⭐⭐⭐</option>
-<option value="4">⭐⭐⭐⭐</option>
-<option value="3">⭐⭐⭐</option>
-<option value="2">⭐⭐</option>
-<option value="1">⭐</option>
-</select>
-
-<textarea id="review-comment" placeholder="Write your review"></textarea>
-
-<button onclick="submitReview()">Submit Review</button>
-
-</div>
-
-<!-- ALSO BOUGHT -->
-
-<div class="section">
-
-<h2>Customers Also Bought</h2>
-
-<div id="also-bought" class="products-grid"></div>
-
-</div>
-
-<!-- AI RECOMMENDATIONS -->
-
-<div class="section">
-
-<h2>Recommended For You</h2>
-
-<div id="ai-recommendations" class="products-grid"></div>
-
-</div>
+<h4>Add Review</h4>
+<input id="name" placeholder="Name"><br><br>
+<input id="rating" placeholder="Rating"><br><br>
+<textarea id="comment" placeholder="Comment"></textarea><br><br>
+<button onclick="addReview()">Submit</button>
 
 </div>
 
 <script>
 
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+const API="https://techmart-backend-ecbi.onrender.com"
 
-const params=new URLSearchParams(window.location.search)
+const slug = new URLSearchParams(window.location.search).get("slug")
 
-const slug=params.get("slug")
-
-let product
-
-/* LOAD PRODUCT */
+let currentProduct=null
 
 async function loadProduct(){
 
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
+const res = await fetch(`${API}/api/products/${slug}`)
+const p = await res.json()
 
-product=await res.json()
+currentProduct=p
 
-document.getElementById("product-name").innerText=product.name
-document.getElementById("product-price").innerText="₦"+product.price
-document.getElementById("product-description").innerText=product.description
-document.getElementById("product-image").src=product.image
+document.getElementById("productName").textContent=p.name
+document.getElementById("productPrice").textContent="₦"+p.price
+document.getElementById("productDesc").textContent=p.description
+document.getElementById("productImage").src=p.image
 
-document.getElementById("seller-store-link").href=
-`store.html?seller=${product.sellerId}`
+const reviews=document.getElementById("reviews")
+reviews.innerHTML=""
 
-document.getElementById("add-cart").onclick=()=>addToCart()
-document.getElementById("add-wishlist").onclick=()=>addToWishlist()
-
-loadReviews()
-loadAlsoBought()
-loadAIRecommendations()
+p.reviews.forEach(r=>{
+reviews.innerHTML+=`
+<div class="review">
+<strong>${r.name}</strong> ⭐${r.rating}
+<p>${r.comment}</p>
+</div>
+`
+})
 
 }
 
-/* CART */
-
 function addToCart(){
 
-let cart=JSON.parse(localStorage.getItem("cart")||"[]")
+let cart = JSON.parse(localStorage.getItem("cart")) || []
 
+const existing = cart.find(i=>i.id===currentProduct._id)
+
+if(existing){
+existing.quantity++
+}else{
 cart.push({
-id:product._id,
-name:product.name,
-price:product.price,
-image:product.image,
+id:currentProduct._id,
+name:currentProduct.name,
+price:currentProduct.price,
 quantity:1
 })
+}
 
-localStorage.setItem("cart",JSON.stringify(cart))
+localStorage.setItem("cart", JSON.stringify(cart))
 
 alert("Added to cart")
 
 }
 
-/* WISHLIST */
-
-function addToWishlist(){
-
-let wishlist=JSON.parse(localStorage.getItem("wishlist")||"[]")
-
-wishlist.push({
-id:product._id,
-name:product.name,
-slug:product.slug
-})
-
-localStorage.setItem("wishlist",JSON.stringify(wishlist))
-
-alert("Added to wishlist")
-
+function buyNow(){
+addToCart()
+window.location="checkout.html"
 }
 
-/* LOAD REVIEWS */
+async function addReview(){
 
-async function loadReviews(){
-
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}`)
-
-const p=await res.json()
-
-const container=document.getElementById("reviews")
-
-container.innerHTML=""
-
-p.reviews.forEach(r=>{
-
-container.innerHTML+=`
-
-<div class="review">
-
-<strong>${r.name}</strong>
-
-<p>${"⭐".repeat(r.rating)}</p>
-
-<p>${r.comment}</p>
-
-</div>
-
-`
-
-})
-
-}
-
-/* SUBMIT REVIEW */
-
-async function submitReview(){
-
-const name=document.getElementById("review-name").value
-const rating=document.getElementById("review-rating").value
-const comment=document.getElementById("review-comment").value
-
-await fetch(`${BACKEND_URL}/api/products/${slug}/reviews`,{
-
+await fetch(`${API}/api/products/${slug}/reviews`,{
 method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({name,rating,comment})
-
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+name:document.getElementById("name").value,
+rating:document.getElementById("rating").value,
+comment:document.getElementById("comment").value
+})
 })
 
-alert("Review submitted")
-
-loadReviews()
-
-}
-
-/* ALSO BOUGHT */
-
-async function loadAlsoBought(){
-
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}/also-bought`)
-
-const products=await res.json()
-
-const container=document.getElementById("also-bought")
-
-container.innerHTML=""
-
-products.forEach(p=>{
-
-container.innerHTML+=`
-
-<div class="product">
-
-<a href="product.html?slug=${p.slug}">
-<img src="${p.image}">
-</a>
-
-<p>${p.name}</p>
-<p>₦${p.price}</p>
-
-</div>
-
-`
-
-})
+alert("Review added")
+loadProduct()
 
 }
-
-/* AI RECOMMENDATIONS */
-
-async function loadAIRecommendations(){
-
-const res=await fetch(`${BACKEND_URL}/api/products/${slug}/ai-recommendations`)
-
-const products=await res.json()
-
-const container=document.getElementById("ai-recommendations")
-
-container.innerHTML=""
-
-products.forEach(p=>{
-
-container.innerHTML+=`
-
-<div class="product">
-
-<a href="product.html?slug=${p.slug}">
-<img src="${p.image}">
-</a>
-
-<p>${p.name}</p>
-
-<p>₦${p.price}</p>
-
-</div>
-
-`
-
-})
-
-}
-
-/* INIT */
 
 loadProduct()
 
 </script>
 
 </body>
-
 </html>

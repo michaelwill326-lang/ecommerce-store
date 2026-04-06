@@ -8,87 +8,118 @@
 <style>
 
 body{
-  font-family:Arial, sans-serif;
-  background:#f5f5f5;
-  text-align:center;
+font-family:Arial;
+background:#f5f5f5;
+margin:0;
 }
 
+/* HEADER */
+header{
+background:#111827;
+color:white;
+padding:15px 20px;
+}
+
+/* CONTAINER */
 .container{
-  max-width:600px;
-  margin:40px auto;
-  background:#fff;
-  padding:25px;
-  border-radius:12px;
-  box-shadow:0 6px 20px rgba(0,0,0,0.08);
+max-width:600px;
+margin:40px auto;
+background:white;
+padding:25px;
+border-radius:12px;
+box-shadow:0 6px 20px rgba(0,0,0,0.08);
 }
 
+/* INPUT */
 input{
-  width:80%;
-  padding:10px;
-  margin:10px 0;
-  border:1px solid #ddd;
-  border-radius:5px;
+width:100%;
+padding:12px;
+margin:10px 0;
+border:1px solid #ddd;
+border-radius:6px;
 }
 
 button{
-  padding:10px 20px;
-  background:#0a7cff;
-  color:white;
-  border:none;
-  border-radius:5px;
-  cursor:pointer;
+width:100%;
+padding:12px;
+background:#2563eb;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-size:15px;
 }
 
 button:hover{
-  background:#085ec4;
+background:#1d4ed8;
 }
 
+/* RESULT */
 .result{
-  margin-top:20px;
-  text-align:left;
+margin-top:25px;
 }
 
-.status{
-  margin-top:15px;
-  font-weight:bold;
+/* STATUS BADGE */
+.status-badge{
+display:inline-block;
+padding:6px 12px;
+border-radius:6px;
+background:#e5e7eb;
+margin-top:5px;
 }
 
-/* Progress Bar */
+/* PROGRESS */
 .progress{
-  display:flex;
-  justify-content:space-between;
-  margin-top:20px;
+display:flex;
+justify-content:space-between;
+position:relative;
+margin-top:30px;
 }
 
+/* LINE */
+.progress::before{
+content:"";
+position:absolute;
+top:12px;
+left:0;
+width:100%;
+height:4px;
+background:#ddd;
+z-index:0;
+}
+
+/* STEP */
 .step{
-  flex:1;
-  text-align:center;
-  position:relative;
+text-align:center;
+z-index:1;
+flex:1;
 }
 
-.step::before{
-  content:"";
-  position:absolute;
-  top:12px;
-  left:0;
-  right:0;
-  height:4px;
-  background:#ddd;
-  z-index:-1;
-}
-
+/* CIRCLE */
 .circle{
-  width:25px;
-  height:25px;
-  margin:auto;
-  border-radius:50%;
-  background:#ddd;
-  line-height:25px;
-  color:white;
+width:25px;
+height:25px;
+border-radius:50%;
+background:#ddd;
+margin:auto;
 }
 
+/* ACTIVE */
 .active{
-  background:green;
+background:#22c55e;
+}
+
+/* LABEL */
+.step p{
+font-size:13px;
+margin-top:6px;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+.container{
+margin:20px;
+}
 }
 
 </style>
@@ -97,9 +128,11 @@ button:hover{
 
 <body>
 
-<div class="container">
-
+<header>
 <h2>📦 Track Your Order</h2>
+</header>
+
+<div class="container">
 
 <input
 type="text"
@@ -107,9 +140,7 @@ id="tracking"
 placeholder="Enter Tracking Number"
 />
 
-<br>
-
-<button onclick="trackOrder()">Track</button>
+<button onclick="trackOrder()">Track Order</button>
 
 <div class="result" id="result"></div>
 
@@ -117,71 +148,74 @@ placeholder="Enter Tracking Number"
 
 <script>
 
-const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
+const API="https://techmart-backend-ecbi.onrender.com";
 
-/* ===========================
-   AUTO LOAD FROM URL
-=========================== */
+/* AUTO LOAD FROM URL */
 const params = new URLSearchParams(window.location.search);
 const trackingFromURL = params.get("tracking");
 
 if (trackingFromURL) {
-  document.getElementById("tracking").value = trackingFromURL;
-  trackOrder();
+document.getElementById("tracking").value = trackingFromURL;
+trackOrder();
 }
 
-/* ===========================
-   TRACK ORDER
-=========================== */
-function trackOrder() {
+/* TRACK ORDER */
+async function trackOrder(){
 
-  const tracking = document.getElementById("tracking").value;
+const tracking = document.getElementById("tracking").value;
 
-  if (!tracking) {
-    alert("Enter tracking number");
-    return;
-  }
+if(!tracking){
+alert("Enter tracking number");
+return;
+}
 
-  fetch(`${BACKEND_URL}/api/track/${tracking}`)
-    .then(res => res.json())
-    .then(order => {
+try{
 
-      if (order.error) {
-        document.getElementById("result").innerHTML =
-          "<p>Order not found</p>";
-        return;
-      }
+const res = await fetch(`${API}/api/track/${tracking}`);
+const order = await res.json();
 
-      let steps = ["Processing", "Shipped", "Delivered"];
+if(order.error){
+document.getElementById("result").innerHTML =
+"<p>❌ Order not found</p>";
+return;
+}
 
-      let progressHTML = '<div class="progress">';
+/* FIX STATUS NORMALIZATION */
+const status = (order.status || "").toLowerCase();
 
-      steps.forEach(step => {
+let steps = ["processing","shipped","delivered"];
 
-        const active = steps.indexOf(step) <= steps.indexOf(order.status);
+let progressHTML = '<div class="progress">';
 
-        progressHTML += `
-          <div class="step">
-            <div class="circle ${active ? "active" : ""}"></div>
-            <p>${step}</p>
-          </div>
-        `;
-      });
+steps.forEach(step=>{
 
-      progressHTML += "</div>";
+const active = steps.indexOf(step) <= steps.indexOf(status);
 
-      document.getElementById("result").innerHTML = `
-        <p><strong>Tracking:</strong> ${order.trackingNumber}</p>
-        <p><strong>Status:</strong> ${order.status}</p>
-        <p><strong>Carrier:</strong> ${order.carrier}</p>
-        ${progressHTML}
-      `;
+progressHTML += `
+<div class="step">
+<div class="circle ${active ? "active" : ""}"></div>
+<p>${step.charAt(0).toUpperCase() + step.slice(1)}</p>
+</div>
+`;
 
-    })
-    .catch(() => {
-      document.getElementById("result").innerHTML =
-        "<p>Error fetching order</p>";
-    });
+});
+
+progressHTML += "</div>";
+
+document.getElementById("result").innerHTML = `
+<p><strong>Tracking:</strong> ${order.trackingNumber || "-"}</p>
+<p><strong>Carrier:</strong> ${order.carrier || "-"}</p>
+
+<p><strong>Status:</strong></p>
+<div class="status-badge">${order.status}</div>
+
+${progressHTML}
+`;
+
+}catch(err){
+document.getElementById("result").innerHTML =
+"<p>❌ Error fetching order</p>";
+}
 
 }
 

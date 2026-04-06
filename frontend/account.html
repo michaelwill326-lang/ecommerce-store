@@ -1,226 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-<title>My Account | TechMart</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account | TechMart</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 50px;
+    }
 
-<style>
-body{
-font-family:Arial;
-background:#f5f5f5;
-padding:30px;
-}
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: auto;
+    }
 
-.container{
-max-width:900px;
-margin:auto;
-}
-
-.card{
-background:white;
-padding:20px;
-border-radius:8px;
-margin-bottom:20px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
-button{
-padding:8px 14px;
-background:#2563eb;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-
-button:hover{
-background:#1d4ed8;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-
-td,th{
-padding:10px;
-border-bottom:1px solid #ddd;
-text-align:left;
-}
-
-.status{
-padding:4px 8px;
-border-radius:5px;
-color:white;
-font-size:12px;
-}
-
-.Processing{background:orange;}
-.Shipped{background:blue;}
-.Delivered{background:green;}
-</style>
-
+    button {
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
+  <div class="container">
 
-<h1>My TechMart Account</h1>
+    <h2>Welcome, <span id="userName"></span></h2>
 
-<!-- PROFILE -->
-<div class="card">
-<h2>Profile</h2>
+    <h3>Order History</h3>
+    <table id="ordersTable">
+      <tr>
+        <th>Order ID</th>
+        <th>Product</th>
+        <th>Status</th>
+      </tr>
+      <!-- Orders will be displayed here -->
+    </table>
 
-<p><strong>Name:</strong> <span id="userName"></span></p>
-<p><strong>Email:</strong> <span id="userEmail"></span></p>
+    <button onclick="logout()">Logout</button>
 
-<button onclick="logout()">Logout</button>
-</div>
+  </div>
 
-<!-- ORDERS -->
-<div class="card">
-<h2>My Orders</h2>
+  <script>
+    const API = "https://techmart-backend-ecbi.onrender.com";
+    const token = localStorage.getItem("token");
 
-<table>
-<thead>
-<tr>
-<th>Order ID</th>
-<th>Total</th>
-<th>Status</th>
-<th>Date</th>
-<th>Track</th>
-</tr>
-</thead>
-
-<tbody id="ordersTable"></tbody>
-
-</table>
-
-</div>
-
-<!-- WISHLIST -->
-<div class="card">
-<h2>Wishlist</h2>
-<div id="wishlist"></div>
-</div>
-
-</div>
-
-<script>
-
-const API = "https://techmart-backend-ecbi.onrender.com";
-
-/* ===========================
-   GET USER + TOKEN
-=========================== */
-const user = JSON.parse(localStorage.getItem("user"));
-const token = localStorage.getItem("userToken");
-
-if(!user || !token){
-  alert("Please login");
-  window.location = "login.html";
-}
-
-/* ===========================
-   SET PROFILE
-=========================== */
-document.getElementById("userName").textContent = user.name;
-document.getElementById("userEmail").textContent = user.email;
-
-/* ===========================
-   LOGOUT
-=========================== */
-function logout(){
-  localStorage.removeItem("userToken");
-  localStorage.removeItem("user");
-  window.location = "index.html";
-}
-
-/* ===========================
-   LOAD ORDERS (FIXED)
-=========================== */
-async function loadOrders(){
-
-  try{
-
-    const res = await fetch(API + "/api/my-orders",{
-      headers:{
-        "Authorization": "Bearer " + token
-      }
-    });
-
-    const orders = await res.json();
-
-    const table = document.getElementById("ordersTable");
-    table.innerHTML = "";
-
-    if(!orders.length){
-      table.innerHTML = "<tr><td colspan='5'>No orders yet</td></tr>";
-      return;
+    // Check if the user is logged in
+    if (!token) {
+      alert("Please log in to view your account.");
+      window.location = "login.html";
     }
 
-    orders.forEach(o => {
+    // Function to load the user's data
+    async function loadAccountData() {
+      const res = await fetch(API + "/api/profile", {
+        headers: { "Authorization": "Bearer " + token }
+      });
 
-      table.innerHTML += `
-      <tr>
-        <td>${o._id}</td>
-        <td>₦${o.totalAmount}</td>
-        <td>
-          <span class="status ${o.status}">
-            ${o.status}
-          </span>
-        </td>
-        <td>${new Date(o.createdAt).toLocaleDateString()}</td>
-        <td>
-          <a href="track-order.html?tracking=${o.trackingNumber}">
-            Track
-          </a>
-        </td>
-      </tr>
-      `;
-    });
+      const data = await res.json();
 
-  }catch(err){
-    console.error(err);
+      if (data.error) {
+        alert("Error fetching profile data");
+        window.location = "login.html";
+      } else {
+        document.getElementById("userName").textContent = data.name;
+        loadOrders();
+      }
+    }
+
+    // Function to load the user's orders
+    async function loadOrders(){
+
+const token = localStorage.getItem("token");
+
+if(!token){
+  alert("Please login");
+  window.location = "login.html";
+  return;
+}
+
+const res = await fetch(API + "/api/my-orders", {
+  headers:{
+    "Authorization": "Bearer " + token
   }
+});
+
+const orders = await res.json();
+
+const table = document.getElementById("ordersTable");
+table.innerHTML = "";
+
+orders.forEach(o=>{
+  table.innerHTML += `
+    <tr>
+      <td>${o._id || o.id}</td>
+      <td>₦${o.totalAmount || "-"}</td>
+      <td>${o.status}</td>
+      <td>${new Date(o.createdAt || Date.now()).toLocaleDateString()}</td>
+    </tr>
+  `;
+});
 
 }
 
-loadOrders();
+    // Function to log out the user
+    function logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location = "login.html";
+    }
 
-/* ===========================
-   WISHLIST
-=========================== */
-let wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
-
-const container = document.getElementById("wishlist");
-
-function renderWishlist(){
-
-  container.innerHTML = "";
-
-  if(wishlist.length === 0){
-    container.innerHTML = "<p>No wishlist items</p>";
-    return;
-  }
-
-  wishlist.forEach(p=>{
-    container.innerHTML += `
-    <div style="margin-bottom:10px">
-      <a href="product.html?slug=${p.slug}">
-        ${p.name}
-      </a>
-    </div>
-    `;
-  });
-
-}
-
-renderWishlist();
-
-</script>
+    loadAccountData();
+  </script>
 
 </body>
+
 </html>

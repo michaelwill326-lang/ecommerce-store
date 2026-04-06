@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register | TechMart</title>
+
+<style>
+body{
+  font-family:Arial;
+  background:#f5f5f5;
+  text-align:center;
+  padding:40px;
+}
+.container{
+  background:white;
+  padding:25px;
+  border-radius:10px;
+  max-width:400px;
+  margin:auto;
+}
+input{
+  width:90%;
+  padding:10px;
+  margin:10px 0;
+  border:1px solid #ddd;
+  border-radius:6px;
+}
+button{
+  padding:10px;
+  width:95%;
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🔐 Create Account</h2>
+
+<input id="name" placeholder="Full Name">
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+
+<input id="otp" placeholder="OTP (skip for now)">
+
+<button type="button" onclick="register()">Continue</button>
+
+<p>Already have account? <a href="login.html">Login</a></p>
+
+</div>
+
+<script>
+
+const API = "https://techmart-backend-ecbi.onrender.com";
+
+async function register(){
+
+  console.log("REGISTER CLICKED ✅");
+
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if(!name || !email || !password){
+    alert("Fill all fields");
+    return;
+  }
+
+  try{
+
+    const res = await fetch(API + "/api/register", {   // ✅ CORRECT
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({ name, email, password })
+    });
+
+    const text = await res.text();
+    console.log("REGISTER RESPONSE:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      alert("❌ Server error");
+      return;
+    }
+
+    if(data.success){
+      alert("✅ Account created!");
+      window.location.href = "login.html";
+    }else{
+      alert("❌ " + (data.error || "Failed"));
+    }
+
+  }catch(err){
+    console.error(err);
+    alert("❌ Network error");
+  }
+
+}
+
+</script>
+
+</body>
+</html>
