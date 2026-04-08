@@ -5,147 +5,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checkout - TechMart</title>
 
-<link rel="stylesheet" href="style.css">
-
 <style>
-
 body{
+  font-family:Arial;
   background:#f5f5f5;
-  font-family:Arial, sans-serif;
-}
-
-/* Container */
-.checkout-container{
-  max-width:600px;
-  margin:40px auto;
-  padding:25px;
-  background:#fff;
-  border-radius:12px;
-  box-shadow:0 6px 20px rgba(0,0,0,0.08);
-}
-
-/* Title */
-.checkout-container h2{
-  margin-bottom:20px;
+  padding:40px;
   text-align:center;
 }
 
-/* Inputs */
-.checkout-container input,
-.checkout-container textarea{
-  width:100%;
+.container{
+  background:white;
+  padding:25px;
+  border-radius:10px;
+  max-width:500px;
+  margin:auto;
+}
+
+button{
   padding:12px;
-  margin-bottom:12px;
-  border:1px solid #ddd;
-  border-radius:6px;
-  font-size:14px;
-}
-
-/* Summary */
-#order-summary p{
-  display:flex;
-  justify-content:space-between;
-  margin:6px 0;
-}
-
-/* Total */
-#checkout-total{
-  font-size:18px;
-  margin-top:15px;
-}
-
-/* Button */
-.checkout-btn{
   width:100%;
-  padding:14px;
-  background:#0a7cff;
+  background:green;
   color:white;
   border:none;
-  border-radius:8px;
-  font-size:16px;
+  border-radius:6px;
   cursor:pointer;
-  transition:0.3s;
+  margin-top:20px;
 }
 
-.checkout-btn:hover{
-  background:#085ec4;
+.cart-item{
+  display:flex;
+  justify-content:space-between;
+  margin:10px 0;
 }
 
-/* Loading state */
-.checkout-btn.loading{
-  background:#999;
-  cursor:not-allowed;
+.total{
+  font-weight:bold;
+  margin-top:20px;
 }
-
 </style>
-
 </head>
 
 <body>
 
-<div class="checkout-container">
+<div class="container">
 
-<h2>💳 Secure Checkout</h2>
+<h2>🛒 Checkout</h2>
 
-<form id="checkout-form">
+<div id="cartItems"></div>
 
-<input
-type="text"
-id="name"
-placeholder="Full Name"
-required
-/>
+<p class="total">Total: ₦<span id="total">0</span></p>
 
-<input
-type="email"
-id="email"
-placeholder="Email Address"
-required
-/>
-
-<textarea
-id="address"
-placeholder="Shipping Address"
-required
-></textarea>
-
-<h3>🧾 Order Summary</h3>
-
-<div id="order-summary"></div>
-
-<p id="checkout-total">
-Total: ₦0.00
-</p>
-
-<button
-type="submit"
-class="checkout-btn"
-id="pay-btn"
->
-Pay with Card
-</button>
-
-</form>
+<button onclick="placeOrder()">Place Order</button>
 
 </div>
 
-<!-- ✅ Paystack Script (REQUIRED) -->
-<script src="https://js.paystack.co/v1/inline.js"></script>
-
-<!-- ✅ Checkout Logic -->
-<script src="checkout.js"></script>
-
 <script>
-/* ===========================
-   BUTTON LOADING UX (PRO)
-=========================== */
-const form = document.getElementById("checkout-form");
-const btn = document.getElementById("pay-btn");
 
-form.addEventListener("submit", () => {
-  btn.textContent = "Processing...";
-  btn.classList.add("loading");
+const API = "https://techmart-backend-ecbi.onrender.com";
+
+/* ===========================
+   LOAD CART
+=========================== */
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+const cartDiv = document.getElementById("cartItems");
+const totalSpan = document.getElementById("total");
+
+let total = 0;
+
+cart.forEach(item => {
+
+  total += item.price;
+
+  cartDiv.innerHTML += `
+    <div class="cart-item">
+      <span>${item.name}</span>
+      <span>₦${item.price}</span>
+    </div>
+  `;
 });
+
+totalSpan.textContent = total;
+
+/* ===========================
+   PLACE ORDER
+=========================== */
+async function placeOrder(){
+
+  const token = localStorage.getItem("token");
+
+  if(!token){
+    alert("Please login first");
+    window.location = "login.html";
+    return;
+  }
+
+  if(cart.length === 0){
+    alert("Cart is empty");
+    return;
+  }
+
+  try{
+
+    const res = await fetch(API + "/api/create-order",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer " + token
+      },
+      body: JSON.stringify({
+        totalAmount: total
+      })
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+
+      alert("✅ Order placed!");
+
+      // CLEAR CART
+      localStorage.removeItem("cart");
+
+      // REDIRECT
+      window.location = "account.html";
+
+    }else{
+      alert("❌ Failed to place order");
+    }
+
+  }catch(err){
+    console.error(err);
+    alert("❌ Network error");
+  }
+
+}
+
 </script>
 
 </body>

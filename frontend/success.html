@@ -1,15 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Payment Success</title>
+<title>Payment Success</title>
 </head>
 <body>
-  <h1>✅ Payment Successful!</h1>
-  <p>Thank you for your order.</p>
 
-  <script>
-    // Clear cart after successful payment
-    localStorage.removeItem("cart");
-  </script>
+<h2>✅ Payment Successful</h2>
+<p>Saving your order...</p>
+
+<script>
+
+const API = "https://techmart-backend-ecbi.onrender.com";
+
+async function saveOrder(){
+
+  const token = localStorage.getItem("token");
+  const cart = JSON.parse(localStorage.getItem("pendingCart")) || [];
+
+  if(!token || cart.length === 0){
+    alert("Missing order data");
+    window.location = "index.html";
+    return;
+  }
+
+  let total = 0;
+  cart.forEach(i=>{
+    total += i.price * i.quantity;
+  });
+
+  try{
+
+    const res = await fetch(API + "/api/create-order",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer " + token
+      },
+      body: JSON.stringify({
+        totalAmount: total
+      })
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+
+      // CLEAR CART
+      localStorage.removeItem("cart");
+      localStorage.removeItem("pendingCart");
+
+      alert("🎉 Order saved!");
+
+      window.location = "account.html";
+
+    }else{
+      alert("Order save failed");
+    }
+
+  }catch(err){
+    console.error(err);
+    alert("Error saving order");
+  }
+
+}
+
+saveOrder();
+
+</script>
+
 </body>
 </html>

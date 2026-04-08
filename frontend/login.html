@@ -65,7 +65,6 @@ let isLogin = true;
 
 /* TOGGLE */
 function toggleMode(){
-
   isLogin = !isLogin;
 
   document.getElementById("title").textContent =
@@ -73,23 +72,28 @@ function toggleMode(){
 
   document.getElementById("name").style.display =
     isLogin ? "none" : "block";
-
-  document.querySelector(".toggle").textContent =
-    isLogin
-      ? "Don't have an account? Register"
-      : "Already have an account? Login";
 }
 
 /* SUBMIT */
 async function submitForm(){
 
-  const name = document.getElementById("name").value;
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-  const url = isLogin
-    ? "/api/login"        // ✅ FIXED
-    : "/api/register";    // ✅ FIXED
+  console.log("SENDING:", { name, email, password });
+
+  if(!email || !password){
+    alert("Email and password required");
+    return;
+  }
+
+  if(!isLogin && !name){
+    alert("Name is required");
+    return;
+  }
+
+  const url = isLogin ? "/api/login" : "/api/register";
 
   const body = isLogin
     ? { email, password }
@@ -106,26 +110,18 @@ async function submitForm(){
     const text = await res.text();
     console.log("RESPONSE:", text);
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      alert("❌ Server error");
-      return;
-    }
+    const data = JSON.parse(text);
 
     if(isLogin){
 
       if(data.success){
-
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
         alert("✅ Login successful");
         window.location = "account.html";
-
       }else{
-        alert("❌ " + (data.error || "Login failed"));
+        alert("❌ " + data.message);
       }
 
     }else{
@@ -134,7 +130,7 @@ async function submitForm(){
         alert("✅ Registered! Now login.");
         toggleMode();
       }else{
-        alert("❌ " + (data.error || "Error"));
+        alert("❌ " + data.message);
       }
 
     }
@@ -143,7 +139,6 @@ async function submitForm(){
     console.error(err);
     alert("❌ Network error");
   }
-
 }
 
 </script>
