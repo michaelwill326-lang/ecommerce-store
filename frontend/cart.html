@@ -1,266 +1,60 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Cart - TechMart</title>
-    
-    <meta http-equiv="Content-Security-Policy"
-    content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;">
-    
-    <style>
-body{
-  font-family:Arial;
-  background:#f5f5f5;
-  padding:30px;
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart - TechMart</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  padding: 40px;
+  text-align: center;
 }
-
-.container{
-  max-width:800px;
-  margin:auto;
-  background:white;
-  padding:20px;
-  border-radius:10px;
+.container {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  max-width: 600px;
+  margin: auto;
 }
-
-.cart-item{
-  display:flex;
-  gap:15px;
-  align-items:center;
-  border-bottom:1px solid #ddd;
-  padding:10px 0;
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
 }
-
-.cart-item img{
-  width:80px;
-  border-radius:6px;
+button {
+  padding: 8px 12px;
+  margin-left: 5px;
+  cursor: pointer;
 }
-
-.controls button{
-  padding:5px 10px;
-  margin:0 3px;
+.total {
+  font-weight: bold;
+  margin-top: 20px;
 }
-
-.actions{
-  margin-top:20px;
-}
-
-button{
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.clear{
-  background:red;
-  color:white;
-}
-
-.checkout{
-  background:green;
-  color:white;
+.clear-btn, .checkout-btn {
+  padding: 12px;
+  width: 100%;
+  background: green;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
 }
 </style>
-
 </head>
-
 <body>
 
 <div class="container">
-
-<h2>🛒 Your Cart</h2>
-
-<div id="cart-items"></div>
-
-<h3>Total: ₦<span id="cart-total">0</span></h3>
-
-<div class="actions">
-  <button class="clear" id="clear-cart">Clear Cart</button>
-  <button class="checkout" id="checkout-btn">Checkout</button>
+  <h2>🛒 Your Cart</h2>
+  <div id="cartItems"></div>
+  <p class="total">Total: ₦<span id="total">0</span></p>
+  <button class="clear-btn" onclick="clearCart()">Clear Cart</button>
+  <button class="checkout-btn" onclick="goToCheckout()">Checkout</button>
 </div>
 
-</div>
-
-<script>
-
-const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
-
-let cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-/* ===========================
-   SAVE CART
-=========================== */
-function saveCart(){
-  localStorage.setItem("cart", JSON.stringify(cart));
-  renderCart();
-}
-
-/* ===========================
-   RENDER CART
-=========================== */
-function renderCart(){
-
-  const container = document.getElementById("cart-items");
-  container.innerHTML = "";
-
-  if(cart.length === 0){
-    container.innerHTML = "<p>Cart is empty</p>";
-    document.getElementById("cart-total").innerText = "0";
-    return;
-  }
-
-  let total = 0;
-
-  cart.forEach(item => {
-
-    total += item.price * item.quantity;
-
-    container.innerHTML += `
-      <div class="cart-item">
-
-        <img src="${item.image || ''}">
-
-        <div>
-          <h4>${item.name}</h4>
-          <p>₦${item.price}</p>
-
-          <div class="controls">
-            <button onclick="decrease('${item.id}')">-</button>
-            ${item.quantity}
-            <button onclick="increase('${item.id}')">+</button>
-          </div>
-
-          <button onclick="removeItem('${item.id}')">Remove</button>
-        </div>
-
-      </div>
-    `;
-  });
-
-  document.getElementById("cart-total").innerText = total;
-}
-
-/* ===========================
-   CART ACTIONS
-=========================== */
-function increase(id){
-  const item = cart.find(i => i.id === id);
-  if(item){
-    item.quantity++;
-    saveCart();
-  }
-}
-
-function decrease(id){
-  const item = cart.find(i => i.id === id);
-
-  if(item){
-    if(item.quantity > 1){
-      item.quantity--;
-    }else{
-      cart = cart.filter(i => i.id !== id);
-    }
-    saveCart();
-  }
-}
-
-function removeItem(id){
-  cart = cart.filter(i => i.id !== id);
-  saveCart();
-}
-
-/* ===========================
-   CLEAR CART
-=========================== */
-document.getElementById("clear-cart").onclick = () => {
-  cart = [];
-  saveCart();
-};
-
-/* ===========================
-   CHECKOUT (FULLY FIXED)
-=========================== */
-document.getElementById("checkout-btn").onclick = async () => {
-
-  if(cart.length === 0){
-    alert("Cart is empty");
-    return;
-  }
-
-  const token = localStorage.getItem("token");
-
-  if(!token){
-    alert("Please login first");
-    window.location = "login.html";
-    return;
-  }
-
-  const email = prompt("Enter your email");
-
-  if(!email){
-    alert("Email required");
-    return;
-  }
-
-  // Save cart for after payment
-  localStorage.setItem("pendingCart", JSON.stringify(cart));
-  localStorage.setItem("pendingEmail", email);
-
-  let total = 0;
-  cart.forEach(i => total += i.price * i.quantity);
-
-  try{
-
-    const res = await fetch(`${BACKEND_URL}/initialize-payment`,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        email,
-        amount: total
-      })
-    });
-
-    const text = await res.text();
-    console.log("PAYSTACK RAW:", text);
-
-    let data;
-
-    try{
-      data = JSON.parse(text);
-    }catch{
-      alert("❌ Server returned HTML (check backend route)");
-      return;
-    }
-
-    console.log("PAYSTACK JSON:", data);
-
-    if(data.status && data.data && data.data.authorization_url){
-
-      // ✅ Redirect to Paystack
-      window.location = data.data.authorization_url;
-
-    }else{
-
-      alert("❌ Payment failed: " + (data.message || "Check backend"));
-      console.log("ERROR RESPONSE:", data);
-
-    }
-
-  }catch(err){
-    console.error("CHECKOUT ERROR:", err);
-    alert("❌ Network error");
-  }
-
-};
-
-/* ===========================
-   INIT
-=========================== */
-renderCart();
-
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>

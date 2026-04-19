@@ -1,76 +1,99 @@
-const BACKEND_URL="https://techmart-backend-ecbi.onrender.com"
+const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
 
 /* ===========================
-   CART
+   LOAD CART
 =========================== */
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-let cart = JSON.parse(localStorage.getItem("cart") || "[]")
-
+/* ===========================
+   SAVE CART
+=========================== */
 function saveCart(){
-localStorage.setItem("cart", JSON.stringify(cart))
-}
-
-/* ADD TO CART */
-function addToCart(id,name,price,image){
-
-const existing = cart.find(item => item.id === id)
-
-if(existing){
-existing.quantity++
-}else{
-cart.push({
-id,
-name,
-price,
-image,
-quantity:1
-})
-}
-
-saveCart()
-alert("Added to cart")
+  localStorage.setItem("cart", JSON.stringify(cart));
 }
 
 /* ===========================
-   LOAD PRODUCTS
+   RENDER CART (FIXED)
 =========================== */
+function renderCart(){
 
-async function loadProducts(){
+  const cartDiv = document.getElementById("cartItems");
+  const totalSpan = document.getElementById("total");
 
-try{
+  if(!cartDiv) return;
 
-const res = await fetch(`${BACKEND_URL}/api/products`)
-const products = await res.json()
+  cartDiv.innerHTML = "";
 
-const container = document.getElementById("products")
-if(!container) return
+  let total = 0;
 
-container.innerHTML = ""
+  cart.forEach((item, index) => {
 
-products.forEach(p=>{
-container.innerHTML += `
-<div class="product-card">
-<img src="${p.image}" width="100%">
-<h3>${p.name}</h3>
-<p>₦${p.price}</p>
+    const name = item.name || "Item";
+    const price = Number(item.price) || 0;
+    const quantity = Number(item.quantity) || 1;
 
-<button onclick="addToCart('${p._id}','${p.name}','${p.price}','${p.image}')">
-Add to Cart
-</button>
+    const itemTotal = price * quantity;
+    total += itemTotal;
 
-<a href="cart.html">View Cart</a>
-</div>
-`
-})
+    cartDiv.innerHTML += `
+      <div class="cart-item">
+        <span>${name} x${quantity}</span>
+        <span>₦${itemTotal}</span>
 
-}catch(err){
-console.error(err)
+        <div>
+          <button onclick="decreaseQuantity(${index})">-</button>
+          <button onclick="increaseQuantity(${index})">+</button>
+          <button onclick="removeItem(${index})">Remove</button>
+        </div>
+      </div>
+    `;
+  });
+
+  if(totalSpan){
+    totalSpan.textContent = total;
+  }
 }
 
+/* ===========================
+   CART ACTIONS
+=========================== */
+function increaseQuantity(index){
+  cart[index].quantity++;
+  saveCart();
+  renderCart();
+}
+
+function decreaseQuantity(index){
+  if(cart[index].quantity > 1){
+    cart[index].quantity--;
+  }else{
+    cart.splice(index,1);
+  }
+  saveCart();
+  renderCart();
+}
+
+function removeItem(index){
+  cart.splice(index,1);
+  saveCart();
+  renderCart();
+}
+
+function clearCart(){
+  cart = [];
+  saveCart();
+  renderCart();
+}
+
+function goToCheckout(){
+  if(cart.length === 0){
+    alert("Cart is empty");
+    return;
+  }
+  window.location = "checkout.html";
 }
 
 /* ===========================
    INIT
 =========================== */
-
-loadProducts()
+renderCart();
