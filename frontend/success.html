@@ -1,93 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payment Success - TechMart</title>
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f5f5f5;
-  padding: 40px;
-  text-align: center;
-}
-.container {
-  background: white;
-  padding: 25px;
-  border-radius: 10px;
-  max-width: 500px;
-  margin: auto;
-}
-</style>
+<title>Payment Success</title>
 </head>
 <body>
 
-<div class="container">
-  <h2>✅ Payment Successful</h2>
-  <p>Saving your order...</p>
-</div>
+<h2>✅ Payment Successful</h2>
+<p>Verifying payment & saving order...</p>
 
 <script>
-// Backend URL
+
 const API = "https://techmart-backend-ecbi.onrender.com";
 
-// ===========================
-// SAVE ORDER AFTER PAYMENT
-// ===========================
-async function saveOrder() {
-  const token = localStorage.getItem("token");
-  const cart = JSON.parse(localStorage.getItem("pendingCart")) || [];
+async function verifyPayment(){
 
-  if (!token || cart.length === 0) {
-    alert("Missing order data");
+  const params = new URLSearchParams(window.location.search);
+  const reference = params.get("reference");
+
+  if(!reference){
+    alert("No payment reference");
     window.location = "index.html";
     return;
   }
 
-  // Calculate total
-  let total = 0;
-  cart.forEach(item => {
-    total += item.price * item.quantity;
-  });
+  try{
 
-  try {
-    const res = await fetch(API + "/api/create-order", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify({
-        totalAmount: total,
-        items: cart.map(i => ({
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-          image: i.image
-        }))
-      })
-    });
-
+    const res = await fetch(API + "/verify-payment/" + reference);
     const data = await res.json();
 
-    if (data.success) {
-      // Clear cart and pendingCart
+    if(data.success){
+
       localStorage.removeItem("cart");
       localStorage.removeItem("pendingCart");
 
-      alert("🎉 Your order has been saved!");
+      alert("🎉 Payment successful & order saved!");
+
       window.location = "account.html";
-    } else {
-      alert("❌ Failed to save order");
+
+    }else{
+      alert("Payment verification failed");
     }
 
-  } catch (err) {
+  }catch(err){
     console.error(err);
-    alert("❌ Network or server error while saving order");
+    alert("Error verifying payment");
   }
+
 }
 
-saveOrder();
+verifyPayment();
+
 </script>
 
 </body>

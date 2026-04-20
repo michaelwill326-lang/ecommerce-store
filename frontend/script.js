@@ -1,26 +1,56 @@
-const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
+const API = "https://techmart-backend-ecbi.onrender.com";
 
-/* ===========================
-   LOAD CART
-=========================== */
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-/* ===========================
-   SAVE CART
-=========================== */
 function saveCart(){
   localStorage.setItem("cart", JSON.stringify(cart));
 }
 
 /* ===========================
-   RENDER CART (FIXED)
+   SELF-HEAL CART (🔥 KEY FIX)
 =========================== */
-function renderCart(){
+async function fixCartData(){
+
+  let updated = false;
+
+  for(let item of cart){
+
+    if(!item.name || !item.price){
+
+      try{
+        const res = await fetch(API + "/api/products");
+        const products = await res.json();
+
+        const product = products.find(p => p._id == item.id);
+
+        if(product){
+          item.name = product.name;
+          item.price = product.price;
+          item.image = product.image;
+          updated = true;
+        }
+
+      }catch(err){
+        console.error("Fix cart error:", err);
+      }
+
+    }
+  }
+
+  if(updated){
+    saveCart();
+  }
+}
+
+/* ===========================
+   RENDER CART
+=========================== */
+async function renderCart(){
+
+  await fixCartData(); // 🔥 AUTO FIX
 
   const cartDiv = document.getElementById("cartItems");
   const totalSpan = document.getElementById("total");
-
-  if(!cartDiv) return;
 
   cartDiv.innerHTML = "";
 
@@ -28,7 +58,6 @@ function renderCart(){
 
   cart.forEach((item, index) => {
 
-    const name = item.name || "Item";
     const price = Number(item.price) || 0;
     const quantity = Number(item.quantity) || 1;
 
@@ -37,7 +66,7 @@ function renderCart(){
 
     cartDiv.innerHTML += `
       <div class="cart-item">
-        <span>${name} x${quantity}</span>
+        <span>${item.name || "Item"} x${quantity}</span>
         <span>₦${itemTotal}</span>
 
         <div>
@@ -49,32 +78,30 @@ function renderCart(){
     `;
   });
 
-  if(totalSpan){
-    totalSpan.textContent = total;
-  }
+  totalSpan.textContent = total;
 }
 
 /* ===========================
    CART ACTIONS
 =========================== */
-function increaseQuantity(index){
-  cart[index].quantity++;
+function increaseQuantity(i){
+  cart[i].quantity++;
   saveCart();
   renderCart();
 }
 
-function decreaseQuantity(index){
-  if(cart[index].quantity > 1){
-    cart[index].quantity--;
+function decreaseQuantity(i){
+  if(cart[i].quantity > 1){
+    cart[i].quantity--;
   }else{
-    cart.splice(index,1);
+    cart.splice(i,1);
   }
   saveCart();
   renderCart();
 }
 
-function removeItem(index){
-  cart.splice(index,1);
+function removeItem(i){
+  cart.splice(i,1);
   saveCart();
   renderCart();
 }
@@ -86,14 +113,8 @@ function clearCart(){
 }
 
 function goToCheckout(){
-  if(cart.length === 0){
-    alert("Cart is empty");
-    return;
-  }
   window.location = "checkout.html";
 }
 
-/* ===========================
-   INIT
-=========================== */
+/* INIT */
 renderCart();
