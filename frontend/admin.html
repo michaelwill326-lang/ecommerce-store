@@ -1,248 +1,131 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>TechMart Admin</title>
+<meta charset="UTF-8">
+<title>Admin Login</title>
 
 <style>
-body{
-font-family:Arial;
-background:#f5f5f5;
-padding:20px;
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0f172a;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
 }
 
-.container{
-max-width:900px;
-margin:auto;
+.box {
+  background:#1e293b;
+  padding:30px;
+  border-radius:10px;
+  width:300px;
+  text-align:center;
 }
 
-.card{
-background:white;
-padding:20px;
-border-radius:8px;
-margin-bottom:20px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
+input {
+  width:100%;
+  padding:10px;
+  margin:10px 0;
+  border:none;
+  border-radius:6px;
 }
 
-input{
-width:100%;
-padding:8px;
-margin:8px 0;
+button {
+  width:100%;
+  padding:10px;
+  background:#3b82f6;
+  border:none;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
 }
 
-button{
-padding:10px;
-background:#2563eb;
-color:white;
-border:none;
-cursor:pointer;
+button:hover {
+  background:#2563eb;
 }
 
-button:hover{
-background:#1d4ed8;
+.error {
+  color:red;
+  font-size:14px;
 }
 
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-
-td,th{
-padding:10px;
-border-bottom:1px solid #ddd;
+.loader {
+  display:none;
+  margin-top:10px;
 }
 </style>
-
 </head>
 
 <body>
 
-<div class="container">
+<div class="box">
+  <h2>🔐 Admin Login</h2>
 
-<h1>📊 TechMart Admin Dashboard</h1>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
 
-<!-- LOGIN -->
-<div class="card" id="loginCard">
+  <button onclick="login()">Login</button>
 
-<h2>Admin Login</h2>
-
-<input id="adminEmail" placeholder="Email">
-<input id="adminPassword" type="password" placeholder="Password">
-
-<button onclick="login()">Login</button>
-
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard" style="display:none;">
-
-<!-- ADD PRODUCT -->
-<div class="card">
-
-<h2>Add Product (with Image)</h2>
-
-<input id="name" placeholder="Product Name">
-<input id="price" placeholder="Price">
-<input id="stock" placeholder="Stock">
-<input id="description" placeholder="Description">
-
-<input type="file" id="image">
-
-<button onclick="addProduct()">Add Product</button>
-
-</div>
-
-<!-- PRODUCTS -->
-<div class="card">
-
-<h2>Products</h2>
-
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Price</th>
-<th>Stock</th>
-</tr>
-</thead>
-
-<tbody id="productsTable"></tbody>
-
-</table>
-
-</div>
-
-</div>
-
+  <div class="loader" id="loader">Logging in...</div>
+  <div class="error" id="error"></div>
 </div>
 
 <script>
-
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 /* ===========================
-   LOGIN
+LOGIN FUNCTION
 =========================== */
 async function login(){
 
-  const email = document.getElementById("adminEmail").value;
-  const password = document.getElementById("adminPassword").value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const errorBox = document.getElementById("error");
+  const loader = document.getElementById("loader");
+
+  errorBox.innerText = "";
+  loader.style.display = "block";
 
   try{
 
-    const res = await fetch(API + "/admin/login",{
-      method:"POST",
+    const res = await fetch(`${API}/api/admin/login`,{
+      method:"POST", // ✅ FIXED
       headers:{
         "Content-Type":"application/json"
       },
-      body:JSON.stringify({email,password})
+      body: JSON.stringify({ email, password })
     });
 
     const data = await res.json();
 
-    console.log("LOGIN:", data);
+    loader.style.display = "none";
 
     if(data.success){
+      localStorage.setItem("adminToken", data.token);
 
-      localStorage.setItem("token", data.token);
-
-      document.getElementById("loginCard").style.display="none";
-      document.getElementById("dashboard").style.display="block";
-
-      loadProducts();
-
+      // ✅ Redirect to dashboard
+      window.location.href = "admin.html";
     }else{
-      alert("Login failed");
+      errorBox.innerText = "Invalid email or password";
     }
 
   }catch(err){
+    loader.style.display = "none";
+    errorBox.innerText = "Network error. Check connection.";
     console.error(err);
-    alert("Network error during login");
   }
-
 }
 
 /* ===========================
-   LOAD PRODUCTS
+AUTO REDIRECT IF LOGGED IN
 =========================== */
-async function loadProducts(){
-
-  const res = await fetch(API + "/api/products");
-  const products = await res.json();
-
-  const table = document.getElementById("productsTable");
-  table.innerHTML = "";
-
-  products.forEach(p=>{
-    table.innerHTML += `
-      <tr>
-        <td>${p.name}</td>
-        <td>₦${p.price}</td>
-        <td>${p.stock}</td>
-      </tr>
-    `;
-  });
-
+if(localStorage.getItem("adminToken")){
+  window.location.href = "admin.html";
 }
-
-/* ===========================
-   ADD PRODUCT (FIXED)
-=========================== */
-async function addProduct(){
-
-  const token = localStorage.getItem("token");
-
-  const formData = new FormData();
-
-  formData.append("name", document.getElementById("name").value);
-  formData.append("price", document.getElementById("price").value);
-  formData.append("stock", document.getElementById("stock").value);
-  formData.append("description", document.getElementById("description").value);
-
-  const file = document.getElementById("image").files[0];
-  if(file){
-    formData.append("image", file);
-  }
-
-  try{
-
-    const res = await fetch(API + "/api/products", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + token
-      },
-      body: formData
-    });
-
-    const text = await res.text();
-    console.log("UPLOAD RESPONSE:", text);
-
-    if(res.ok){
-      alert("✅ Product added!");
-      loadProducts();
-    }else{
-      alert("❌ Failed: " + text);
-    }
-
-  }catch(err){
-    console.error("NETWORK ERROR:", err);
-    alert("❌ Network error");
-  }
-
-}
-
-/* ===========================
-   AUTO LOGIN
-=========================== */
-if(localStorage.getItem("token")){
-  document.getElementById("loginCard").style.display="none";
-  document.getElementById("dashboard").style.display="block";
-  loadProducts();
-}
-
 </script>
 
 </body>
-
 </html>

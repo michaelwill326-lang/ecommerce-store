@@ -3,54 +3,61 @@
 <head>
 <title>Payment Success</title>
 </head>
-<body>
+<body style="font-family:Arial;text-align:center;padding:50px;">
 
-<h2>✅ Payment Successful</h2>
-<p>Verifying payment & saving order...</p>
+<h2>Processing Payment...</h2>
+<p id="status">Please wait...</p>
 
 <script>
 
 const API = "https://techmart-backend-ecbi.onrender.com";
 
-async function verifyPayment(){
+const params = new URLSearchParams(window.location.search);
+const reference = params.get("reference");
 
-  const params = new URLSearchParams(window.location.search);
-  const reference = params.get("reference");
+async function verify(){
 
   if(!reference){
-    alert("No payment reference");
-    window.location = "index.html";
+    document.getElementById("status").innerText = "Missing payment reference";
     return;
   }
 
   try{
 
-    const res = await fetch(API + "/verify-payment/" + reference);
+    const res = await fetch(`${API}/verify-payment/${reference}`);
     const data = await res.json();
 
     if(data.success){
+      document.getElementById("status").innerText =
+        "🎉 Payment successful! Redirecting...";
 
-      localStorage.removeItem("cart");
-      localStorage.removeItem("pendingCart");
-
-      alert("🎉 Payment successful & order saved!");
-
-      window.location = "account.html";
+      setTimeout(()=>{
+        window.location = "account.html";
+      },2000);
 
     }else{
-      alert("Payment verification failed");
+      document.getElementById("status").innerText =
+        "❌ Payment verification failed";
     }
 
   }catch(err){
-    console.error(err);
-    alert("Error verifying payment");
+    document.getElementById("status").innerText =
+      "❌ Server error";
   }
 
 }
 
-verifyPayment();
+verify();
 
 </script>
+
+<footer style="text-align:center;padding:20px;background:#111;color:#fff">
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="terms.html">Terms</a>
+  <p>© 2026 TechMart</p>
+</footer>
 
 </body>
 </html>

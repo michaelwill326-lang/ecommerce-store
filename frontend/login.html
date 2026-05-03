@@ -1,147 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TechMart Auth</title>
+  <meta charset="UTF-8">
+  <title>Admin Login</title>
 
-<style>
-body{
-  font-family:Arial;
-  background:#f5f5f5;
-  text-align:center;
-  padding:40px;
-}
-.container{
-  background:white;
-  padding:25px;
-  border-radius:10px;
-  max-width:400px;
-  margin:auto;
-}
-input{
-  width:90%;
-  padding:10px;
-  margin:10px 0;
-}
-button{
-  padding:10px;
-  width:95%;
-  background:#2563eb;
-  color:white;
-  border:none;
-  border-radius:6px;
-}
-.toggle{
-  cursor:pointer;
-  color:blue;
-}
-</style>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 12px;
+      width: 95%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
+  <div class="container">
+    <h2>🔐 Admin Login</h2>
 
-<h2 id="title">Login</h2>
+    <input id="email" placeholder="Admin Email">
+    <input id="password" type="password" placeholder="Password">
 
-<input id="name" placeholder="Name" style="display:none;">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+    <button onclick="submitForm()">Login</button>
+  </div>
 
-<button onclick="submitForm()">Continue</button>
-
-<p class="toggle" onclick="toggleMode()">
-  Don't have an account? Register
-</p>
-
-</div>
-
-<script>
-
-const API = "https://techmart-backend-ecbi.onrender.com";
-
-let isLogin = true;
-
-/* TOGGLE */
-function toggleMode(){
-  isLogin = !isLogin;
-
-  document.getElementById("title").textContent =
-    isLogin ? "Login" : "Register";
-
-  document.getElementById("name").style.display =
-    isLogin ? "none" : "block";
-}
-
-/* SUBMIT */
-async function submitForm(){
-
-  const name = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-
-  console.log("SENDING:", { name, email, password });
-
-  if(!email || !password){
-    alert("Email and password required");
-    return;
-  }
-
-  if(!isLogin && !name){
-    alert("Name is required");
-    return;
-  }
-
-  const url = isLogin ? "/api/login" : "/api/register";
-
-  const body = isLogin
-    ? { email, password }
-    : { name, email, password };
-
-  try{
-
-    const res = await fetch(API + url,{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify(body)
-    });
-
-    const text = await res.text();
-    console.log("RESPONSE:", text);
-
-    const data = JSON.parse(text);
-
-    if(isLogin){
-
-      if(data.success){
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        alert("✅ Login successful");
-        window.location = "account.html";
-      }else{
-        alert("❌ " + data.message);
-      }
-
-    }else{
-
-      if(data.success){
-        alert("✅ Registered! Now login.");
-        toggleMode();
-      }else{
-        alert("❌ " + data.message);
-      }
-
-    }
-
-  }catch(err){
-    console.error(err);
-    alert("❌ Network error");
-  }
-}
-
-</script>
+  <!-- ✅ IMPORTANT: load auth.js -->
+  <script src="auth.js"></script>
 
 </body>
 </html>

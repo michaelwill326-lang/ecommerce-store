@@ -1,214 +1,336 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Product</title>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-YTRSYV720B"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-YTRSYV720B');
+</script>
+
+<title>Product | TechMart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-
 body{
-font-family:Arial;
-background:#f5f5f5;
-margin:0;
-}
-
-header{
-background:#111827;
-color:white;
-padding:15px 20px;
+  margin:0;
+  font-family:Arial;
+  background:#f5f5f5;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
 }
 
 .container{
-max-width:1000px;
-margin:20px auto;
-background:white;
-padding:20px;
-border-radius:10px;
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+  flex:1;
 }
 
-/* GRID */
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,.1);
+}
+
+/* PRODUCT LAYOUT */
 .product{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:30px;
+  display:flex;
+  gap:30px;
+  flex-wrap:wrap;
 }
 
-/* IMAGE */
-.product img{
-width:100%;
-border-radius:10px;
+.gallery{
+  flex:1;
 }
 
-/* INFO */
+.main-img{
+  width:100%;
+  max-width:400px;
+  border-radius:10px;
+}
+
+.thumbs{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+.thumbs img{
+  width:60px;
+  cursor:pointer;
+  border-radius:6px;
+}
+
+/* DETAILS */
+.details{
+  flex:1;
+}
+
 .price{
-font-size:22px;
-font-weight:bold;
-margin:10px 0;
+  font-size:24px;
+  font-weight:bold;
+  margin:10px 0;
+  color:#2563eb;
 }
 
-button{
-padding:10px;
-border:none;
-border-radius:6px;
-cursor:pointer;
-margin-right:10px;
+.stock{
+  font-weight:bold;
+  margin:10px 0;
 }
 
-.add{
-background:#2563eb;
-color:white;
+.low{color:red;}
+.ok{color:green;}
+
+.qty{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin:15px 0;
 }
 
-.buy{
-background:#16a34a;
-color:white;
+.qty button{
+  padding:8px 12px;
+  border:none;
+  background:#ddd;
+  cursor:pointer;
 }
 
-/* REVIEWS */
-.review{
-border-bottom:1px solid #ddd;
-padding:10px 0;
+/* BUTTONS */
+button.main{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
 }
 
-/* MOBILE */
-@media (max-width:768px){
+.cart-btn{background:#2563eb;color:#fff;}
+.buy-btn{background:#16a34a;color:#fff;}
 
-.product{
-grid-template-columns:1fr;
+.cart-btn:hover{background:#1d4ed8}
+.buy-btn:hover{background:#15803d}
+
+/* TRUST */
+.trust{
+  margin-top:15px;
+  font-size:14px;
+  color:#555;
 }
 
-button{
-width:100%;
-margin-bottom:10px;
+/* RELATED */
+.related{
+  margin-top:40px;
 }
 
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:15px;
 }
 
+.item{
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  cursor:pointer;
+  text-align:center;
+}
+
+.item img{
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  border-radius:6px;
+}
+
+footer{
+  text-align:center;
+  padding:20px;
+  background:#111;
+  color:#fff;
+}
+footer a{color:#fff;margin:10px;}
 </style>
 
 </head>
 
 <body>
 
-<header>
-<h2>🛒 TechMart</h2>
-</header>
-
 <div class="container">
+
+<div class="card">
 
 <div class="product">
 
-<div>
-<img id="productImage">
+<!-- GALLERY -->
+<div class="gallery">
+  <img id="mainImage" class="main-img">
+
+  <div class="thumbs" id="thumbs"></div>
 </div>
 
-<div>
-<h2 id="productName"></h2>
-<div class="price" id="productPrice"></div>
-<p id="productDesc"></p>
+<!-- DETAILS -->
+<div class="details">
 
-<button class="add" onclick="addToCart()">Add to Cart</button>
-<button class="buy" onclick="buyNow()">Buy Now</button>
+<h2 id="name"></h2>
+<div class="price" id="price"></div>
+
+<div id="stock" class="stock"></div>
+
+<p id="desc"></p>
+
+<div class="qty">
+  <button onclick="changeQty(-1)">-</button>
+  <span id="qty">1</span>
+  <button onclick="changeQty(1)">+</button>
+</div>
+
+<button class="main cart-btn" onclick="addToCart()">Add to Cart</button>
+<button class="main buy-btn" onclick="buyNow()">Buy Now</button>
+
+<div class="trust">
+  🚚 Fast Delivery | 🔒 Secure Payment | 💯 Trusted Store
+</div>
+
+</div>
 
 </div>
 
 </div>
 
-<h3>⭐ Reviews</h3>
-<div id="reviews"></div>
-
-<h4>Add Review</h4>
-<input id="name" placeholder="Name"><br><br>
-<input id="rating" placeholder="Rating"><br><br>
-<textarea id="comment" placeholder="Comment"></textarea><br><br>
-<button onclick="addReview()">Submit</button>
+<!-- RELATED -->
+<div class="related">
+<h3>🔥 Related Products</h3>
+<div class="grid" id="related"></div>
+</div>
 
 </div>
 
 <script>
+let product=null;
+let quantity=1;
 
-const API="https://techmart-backend-ecbi.onrender.com"
+/* LOAD PRODUCT */
+try{
+  product = JSON.parse(localStorage.getItem("selectedProduct"));
+}catch{}
 
-const slug = new URLSearchParams(window.location.search).get("slug")
-
-let currentProduct=null
-
-async function loadProduct(){
-
-const res = await fetch(`${API}/api/products/${slug}`)
-const p = await res.json()
-
-currentProduct=p
-
-document.getElementById("productName").textContent=p.name
-document.getElementById("productPrice").textContent="₦"+p.price
-document.getElementById("productDesc").textContent=p.description
-document.getElementById("productImage").src=p.image
-
-const reviews=document.getElementById("reviews")
-reviews.innerHTML=""
-
-p.reviews.forEach(r=>{
-reviews.innerHTML+=`
-<div class="review">
-<strong>${r.name}</strong> ⭐${r.rating}
-<p>${r.comment}</p>
-</div>
-`
-})
-
-}
-
-function addToCart(){
-
-let cart = JSON.parse(localStorage.getItem("cart")) || []
-
-const existing = cart.find(i=>i.id===currentProduct._id)
-
-if(existing){
-existing.quantity++
+if(!product){
+  window.location="index.html";
 }else{
-cart.push({
-id:currentProduct._id,
-name:currentProduct.name,
-price:currentProduct.price,
-quantity:1
-})
+
+  document.getElementById("mainImage").src =
+    product.image || "https://via.placeholder.com/400";
+
+  document.getElementById("name").innerText = product.name;
+  document.getElementById("price").innerText = "₦"+product.price;
+  document.getElementById("desc").innerText =
+    product.description || "Premium quality product.";
+
+  document.title = product.name + " | TechMart";
+
+  // STOCK UI
+  let stock = product.stock || 10;
+  let stockEl = document.getElementById("stock");
+
+  if(stock <= 3){
+    stockEl.innerHTML = "⚠️ Only "+stock+" left!";
+    stockEl.className="stock low";
+  }else{
+    stockEl.innerHTML = "In Stock";
+    stockEl.className="stock ok";
+  }
+
+  // TRACK VIEW
+  if(typeof gtag==="function"){
+    gtag('event','view_item',{
+      currency:'NGN',
+      value:product.price,
+      items:[{item_name:product.name,price:product.price}]
+    });
+  }
+
+  loadRelated();
 }
 
-localStorage.setItem("cart", JSON.stringify(cart))
-
-alert("Added to cart")
-
+/* QUANTITY */
+function changeQty(n){
+  quantity += n;
+  if(quantity<1) quantity=1;
+  document.getElementById("qty").innerText = quantity;
 }
 
+/* ADD TO CART */
+function addToCart(){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+  const existing = cart.find(i=>i.name===product.name);
+
+  if(existing){
+    existing.quantity += quantity;
+  }else{
+    cart.push({...product, quantity});
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  alert("Added to cart");
+}
+
+/* BUY NOW */
 function buyNow(){
-addToCart()
-window.location="checkout.html"
+  addToCart();
+  window.location="checkout.html";
 }
 
-async function addReview(){
+/* RELATED PRODUCTS */
+async function loadRelated(){
 
-await fetch(`${API}/api/products/${slug}/reviews`,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-name:document.getElementById("name").value,
-rating:document.getElementById("rating").value,
-comment:document.getElementById("comment").value
-})
-})
+  try{
+    const res = await fetch("https://techmart-backend.onrender.com/api/products");
+    const data = await res.json();
 
-alert("Review added")
-loadProduct()
+    const container = document.getElementById("related");
 
+    data.slice(0,6).forEach(p=>{
+      container.innerHTML += `
+      <div class="item" onclick="viewProduct('${p.name}')">
+        <img src="${p.image || 'https://via.placeholder.com/150'}">
+        <p>${p.name}</p>
+        <b>₦${p.price}</b>
+      </div>
+      `;
+    });
+
+  }catch(err){
+    console.log(err);
+  }
 }
 
-loadProduct()
-
+function viewProduct(name){
+  fetch("https://techmart-backend.onrender.com/api/products")
+  .then(res=>res.json())
+  .then(data=>{
+    const p = data.find(x=>x.name===name);
+    localStorage.setItem("selectedProduct", JSON.stringify(p));
+    location.reload();
+  });
+}
 </script>
+
+<footer>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="terms.html">Terms</a>
+  <p>© 2026 TechMart</p>
+</footer>
 
 </body>
 </html>

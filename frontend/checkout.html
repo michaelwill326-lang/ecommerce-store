@@ -1,47 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checkout - TechMart</title>
+<title>Checkout</title>
 
 <style>
-body{
-  font-family:Arial;
-  background:#f5f5f5;
-  padding:40px;
-  text-align:center;
-}
-
-.container{
-  background:white;
-  padding:25px;
-  border-radius:10px;
-  max-width:500px;
-  margin:auto;
-}
-
-button{
-  padding:12px;
-  width:100%;
-  background:green;
-  color:white;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-  margin-top:20px;
-}
-
-.cart-item{
-  display:flex;
-  justify-content:space-between;
-  margin:10px 0;
-}
-
-.total{
-  font-weight:bold;
-  margin-top:20px;
-}
+body{font-family:Arial;background:#f5f5f5;padding:20px}
+.container{max-width:500px;margin:auto;background:white;padding:20px;border-radius:10px}
+input,select{width:100%;padding:10px;margin:5px 0}
+button{width:100%;padding:12px;background:green;color:white;border:none;margin-top:10px}
+.total{font-weight:bold;margin-top:10px}
 </style>
 </head>
 
@@ -49,10 +16,28 @@ button{
 
 <div class="container">
 
-<h2>🛒 Checkout</h2>
+<h3>📍 Saved Addresses</h3>
 
+<select id="savedAddresses">
+<option value="">Select saved address</option>
+</select>
+
+<button onclick="saveAddress()">💾 Save This Address</button>
+
+<h2>🚚 Delivery Address</h2>
+
+<input id="fullName" placeholder="Full Name">
+<input id="phone" placeholder="Phone Number">
+<input id="street" placeholder="Street">
+<input id="city" placeholder="City">
+<input id="state" placeholder="State">
+<input id="country" value="Nigeria">
+<input id="postalCode" placeholder="Postal Code">
+
+<h3>🛒 Order</h3>
 <div id="cartItems"></div>
 
+<p>Shipping: ₦<span id="shipping">0</span></p>
 <p class="total">Total: ₦<span id="total">0</span></p>
 
 <button onclick="initializePayment()">Pay Now</button>
@@ -60,100 +45,164 @@ button{
 </div>
 
 <script>
-const API = "https://techmart-backend-ecbi.onrender.com";
 
-/* ===========================
-   LOAD CART (FIXED)
-=========================== */
+const API="https://techmart-backend-ecbi.onrender.com";
+
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
+let subtotal = 0;
 
-const cartDiv = document.getElementById("cartItems");
-const totalSpan = document.getElementById("total");
+cart.forEach(item=>{
+  subtotal += item.price * item.quantity;
 
-let total = 0;
-
-cart.forEach(item => {
-
-  const name = item.name || "Item";
-  const price = Number(item.price) || 0;
-  const quantity = Number(item.quantity) || 1;
-
-  const itemTotal = price * quantity;
-  total += itemTotal;
-
-  cartDiv.innerHTML += `
-    <div class="cart-item">
-      <span>${name} x${quantity}</span>
-      <span>₦${itemTotal}</span>
-    </div>
+  cartItems.innerHTML += `
+    <p>${item.name} x${item.quantity} - ₦${item.price * item.quantity}</p>
   `;
 });
 
-// ✅ VERY IMPORTANT FIX
-total = Math.round(total);
+/* SHIPPING */
+function calculateShipping(state){
+  state = state.toLowerCase();
 
-totalSpan.textContent = total;
+  if(state.includes("lagos")) return 2000;
+  if(state.includes("abuja")) return 3000;
 
-/* ===========================
-   PAYSTACK PAYMENT (FINAL)
-=========================== */
+  return 5000;
+}
+
+state.addEventListener("input", updateTotal);
+
+function updateTotal(){
+  const shipping = calculateShipping(state.value);
+  document.getElementById("shipping").textContent = shipping;
+  document.getElementById("total").textContent = subtotal + shipping;
+}
+
+updateTotal();
+
+/* LOAD ADDRESSES */
+async function loadAddresses(){
+
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(API+"/api/addresses",{
+    headers:{ Authorization:"Bearer " + token }
+  });
+
+  const addresses = await res.json();
+
+  const select = document.getElementById("savedAddresses");
+
+  select.innerHTML = `<option value="">Select saved address</option>`;
+
+  addresses.forEach((addr,i)=>{
+    select.innerHTML += `
+      <option value="${i}">
+        ${addr.street}, ${addr.city}
+      </option>
+    `;
+  });
+
+  window.savedAddresses = addresses;
+}
+
+/* SELECT ADDRESS */
+savedAddresses.addEventListener("change", function(){
+
+  const addr = window.savedAddresses[this.value];
+  if(!addr) return;
+
+  fullName.value = addr.fullName;
+  phone.value = addr.phone;
+  street.value = addr.street;
+  city.value = addr.city;
+  state.value = addr.state;
+  country.value = addr.country;
+  postalCode.value = addr.postalCode;
+
+  updateTotal();
+});
+
+/* SAVE ADDRESS */
+async function saveAddress(){
+
+  const token = localStorage.getItem("token");
+
+  const address = {
+    fullName: fullName.value,
+    phone: phone.value,
+    street: street.value,
+    city: city.value,
+    state: state.value,
+    country: country.value,
+    postalCode: postalCode.value
+  };
+
+  const res = await fetch(API+"/api/save-address",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      Authorization:"Bearer " + token
+    },
+    body: JSON.stringify(address)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert("✅ Address saved");
+    loadAddresses();
+  }
+}
+
+/* PAYMENT */
 async function initializePayment(){
 
   const user = JSON.parse(localStorage.getItem("user"));
 
-  if(!user){
-    alert("Please login first");
-    window.location = "login.html";
-    return;
-  }
+  const address = {
+    fullName: fullName.value,
+    phone: phone.value,
+    street: street.value,
+    city: city.value,
+    state: state.value,
+    country: country.value,
+    postalCode: postalCode.value
+  };
 
-  if(cart.length === 0){
-    alert("Cart is empty");
-    return;
-  }
+  const shippingFee = calculateShipping(address.state);
+  const total = subtotal + shippingFee;
 
-  // ✅ SAFETY CHECK
-  if(!total || total <= 0){
-    alert("❌ Invalid total amount");
-    console.error("BAD TOTAL:", total);
-    return;
-  }
+  const res = await fetch(API+"/initialize-payment",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      email: user.email,
+      phone: address.phone,
+      amount: total,
+      items: cart,
+      userId: user._id,
+      address,
+      shippingFee
+    })
+  });
 
-  try{
+  const data = await res.json();
 
-    // Save cart for success page
-    localStorage.setItem("pendingCart", JSON.stringify(cart));
-
-    const res = await fetch(API + "/initialize-payment",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify({
-        email: user.email || "test@email.com",
-        amount: total // ✅ correct (backend multiplies by 100)
-      })
-    });
-
-    const data = await res.json();
-
-    console.log("PAYSTACK RESPONSE:", data);
-
-    // ✅ FINAL FIX
-    if(data.authorization_url){
-      window.location.href = data.authorization_url;
-    }else{
-      alert("❌ Payment failed");
-      console.error(data);
-    }
-
-  }catch(err){
-    console.error(err);
-    alert("❌ Network error");
-  }
-
+  window.location.href = data.authorization_url;
 }
+
+/* INIT */
+loadAddresses();
+
 </script>
+
+<footer style="text-align:center;padding:20px;background:#111;color:#fff">
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="terms.html">Terms</a>
+  <p>© 2026 TechMart</p>
+</footer>
 
 </body>
 </html>

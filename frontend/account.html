@@ -1,156 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Account | TechMart</title>
-
+<title>My Account - TechMart</title>
 <style>
-body {
-  font-family: Arial;
-  background: #f5f5f5;
-  text-align: center;
-  padding: 50px;
-}
-
-.container {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  max-width: 700px;
-  margin: auto;
-}
-
-table {
-  width: 100%;
-  margin-top: 20px;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-}
-
-button {
-  padding: 10px;
-  margin-top: 20px;
-  background: red;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+body{font-family:Arial;background:#f5f5f5;padding:20px;}
+.card{
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  margin-bottom:15px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<h2>Welcome, <span id="userName"></span></h2>
-
-<h3>📦 Order History</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th>Order ID</th>
-      <th>Amount</th>
-      <th>Status</th>
-      <th>Date</th>
-    </tr>
-  </thead>
-  <tbody id="ordersTable"></tbody>
-</table>
-
-<button onclick="logout()">Logout</button>
-
-</div>
+<h2>📦 My Orders</h2>
+<div id="orders"></div>
 
 <script>
 
 const API = "https://techmart-backend-ecbi.onrender.com";
-const token = localStorage.getItem("token");
 
-/* ===========================
-   PROTECT PAGE
-=========================== */
-if(!token){
-  alert("Please login first");
-  window.location = "login.html";
-}
-
-/* ===========================
-   LOAD USER (FROM LOCAL STORAGE)
-=========================== */
-const user = JSON.parse(localStorage.getItem("user"));
-
-if(user){
-  document.getElementById("userName").textContent = user.name;
-}
-
-/* ===========================
-   LOAD ORDERS
-=========================== */
 async function loadOrders(){
+
+  const token = localStorage.getItem("token");
+
+  if(!token){
+    alert("Login first");
+    window.location = "login.html";
+    return;
+  }
 
   try{
 
-    const res = await fetch(API + "/api/my-orders", {
+    const res = await fetch(API + "/api/my-orders",{
       headers:{
-        "Authorization": "Bearer " + token
+        "Authorization":"Bearer " + token
       }
     });
 
-    const data = await res.json();
+    const orders = await res.json();
 
-    if(data.error){
-      alert("Session expired, login again");
-      logout();
+    const container = document.getElementById("orders");
+    container.innerHTML = "";
+
+    if(orders.length === 0){
+      container.innerHTML = "<p>No orders yet</p>";
       return;
     }
 
-    const table = document.getElementById("ordersTable");
-    table.innerHTML = "";
+    orders.forEach(o=>{
+      container.innerHTML += `
+        <div class="card">
+          <p><strong>Amount:</strong> ₦${o.totalAmount}</p>
+          <p><strong>Status:</strong> ${o.status}</p>
+          <p><strong>Tracking:</strong> ${o.trackingNumber}</p>
 
-    if(data.length === 0){
-      table.innerHTML = "<tr><td colspan='4'>No orders yet</td></tr>";
-      return;
-    }
-
-    data.forEach(o => {
-
-      table.innerHTML += `
-        <tr>
-          <td>${o._id}</td>
-          <td>₦${o.totalAmount || 0}</td>
-          <td>${o.status}</td>
-          <td>${new Date(o.createdAt).toLocaleDateString()}</td>
-        </tr>
+          <a href="tracking.html?tracking=${o.trackingNumber}">
+            Track Order
+          </a>
+        </div>
       `;
     });
 
   }catch(err){
     console.error(err);
-    alert("Failed to load orders");
   }
 
 }
 
-/* ===========================
-   LOGOUT
-=========================== */
-function logout(){
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  window.location = "login.html";
-}
-
-/* ===========================
-   INIT
-=========================== */
 loadOrders();
 
 </script>

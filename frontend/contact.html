@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Contact Us - TechMart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Arial;padding:20px;max-width:600px;margin:auto}
+input,textarea,button{
+width:100%;
+padding:10px;
+margin:10px 0;
+}
+button{
+background:#2563eb;
+color:#fff;
+border:none;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Contact Us</h1>
+
+<form onsubmit="sendMessage(event)">
+<input type="text" placeholder="Your Name" required>
+<input type="email" placeholder="Your Email" required>
+<textarea placeholder="Your Message" required></textarea>
+<button type="submit">Send Message</button>
+</form>
+
+<script>
+function sendMessage(e){
+e.preventDefault();
+alert("Message sent! We will contact you soon.");
+}
+</script>
+
+<footer style="text-align:center;padding:20px;background:#111;color:#fff">
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="terms.html">Terms</a>
+  <p>© 2026 TechMart</p>
+</footer>
+
+</body>
+</html>

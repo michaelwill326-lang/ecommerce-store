@@ -1,60 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cart - TechMart</title>
+  <!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-YTRSYV720B"></script>
+
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', 'G-YTRSYV720B');
+</script>
+<title>Cart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f5f5f5;
-  padding: 40px;
-  text-align: center;
-}
-.container {
-  background: white;
-  padding: 25px;
-  border-radius: 10px;
-  max-width: 600px;
-  margin: auto;
-}
-.cart-item {
-  display: flex;
-  justify-content: space-between;
-  margin: 10px 0;
-}
-button {
-  padding: 8px 12px;
-  margin-left: 5px;
-  cursor: pointer;
-}
-.total {
-  font-weight: bold;
-  margin-top: 20px;
-}
-.clear-btn, .checkout-btn {
-  padding: 12px;
-  width: 100%;
-  background: green;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 10px;
-}
+body{font-family:Arial;background:#f5f5f5;margin:0}
+.container{max-width:800px;margin:auto;padding:20px}
+.card{background:#fff;padding:20px;border-radius:10px;margin-bottom:15px}
+button{padding:10px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer}
 </style>
+
 </head>
+
 <body>
 
 <div class="container">
-  <h2>🛒 Your Cart</h2>
-  <div id="cartItems"></div>
-  <p class="total">Total: ₦<span id="total">0</span></p>
-  <button class="clear-btn" onclick="clearCart()">Clear Cart</button>
-  <button class="checkout-btn" onclick="goToCheckout()">Checkout</button>
+
+<h2>🛒 Your Cart</h2>
+
+<div id="cartItems"></div>
+
+<div class="card">
+  <h3 id="subtotal"></h3>
+  <p>Shipping: ₦2000</p>
+  <h2 id="total"></h2>
+  <button onclick="checkout()">Proceed to Payment</button>
 </div>
 
-<script src="script.js"></script>
+</div>
+
+<script>
+const API = "https://techmart-backend-ecbi.onrender.com";
+
+function loadCart(){
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const container = document.getElementById("cartItems");
+
+  container.innerHTML = "";
+
+  cart.forEach((item,index)=>{
+    container.innerHTML += `
+      <div class="card">
+        <h4>${item.name}</h4>
+        <p>₦${item.price} x ${item.quantity}</p>
+        <button onclick="removeItem(${index})">Remove</button>
+      </div>
+    `;
+  });
+
+  calculateTotal();
+}
+
+function removeItem(i){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  cart.splice(i,1);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  loadCart();
+}
+
+function calculateTotal(){
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+  let subtotal = cart.reduce((sum,i)=> sum + (i.price*i.quantity),0);
+  let shipping = 2000;
+  let total = subtotal + shipping;
+
+  document.getElementById("subtotal").innerText = "Subtotal: ₦"+subtotal;
+  document.getElementById("total").innerText = "Total: ₦"+total;
+
+  return total;
+}
+
+async function checkout(){
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  let total = calculateTotal();
+
+  const res = await fetch(API+"/initialize-payment",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      email:"test@email.com",
+      amount:total,
+      items:cart
+    })
+  });
+
+  const data = await res.json();
+  window.location = data.authorization_url;
+}
+
+loadCart();
+</script>
+
+<footer style="text-align:center;padding:20px;background:#111;color:#fff">
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy.html">Privacy Policy</a>
+  <a href="terms.html">Terms</a>
+  <p>© 2026 TechMart</p>
+</footer>
 
 </body>
 </html>
