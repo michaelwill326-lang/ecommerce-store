@@ -3,18 +3,13 @@ const API = "https://techmart-backend-ecbi.onrender.com";
 console.log("AUTH SCRIPT LOADED");
 
 /* ===========================
-   ADMIN LOGIN
+   LOGIN FUNCTION
 =========================== */
 async function submitForm() {
-  const email = document.getElementById("email")?.value.trim();
-  const password = document.getElementById("password")?.value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   console.log("SENDING:", { email, password });
-
-  if (!email || !password) {
-    alert("❌ Email and password required");
-    return;
-  }
 
   try {
     const res = await fetch(API + "/api/admin/login", {
@@ -29,17 +24,29 @@ async function submitForm() {
     console.log("RESPONSE:", data);
 
     if (data.success) {
-      // ✅ Save token
       localStorage.setItem("adminToken", data.token);
-
-      // ✅ Redirect to admin dashboard
-      window.location.href = "admin.html";
+      alert("✅ Login success");
     } else {
-      alert("❌ " + (data.message || "Login failed"));
+      alert("❌ " + data.message);
     }
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    alert("❌ Network error");
+    console.error("ERROR:", err);
   }
 }
+
+/* ===========================
+   BUTTON CONNECTOR (VERY IMPORTANT)
+=========================== */
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM READY");
+
+  const btn = document.getElementById("loginBtn");
+
+  if (!btn) {
+    console.error("❌ Button not found");
+    return;
+  }
+
+  btn.addEventListener("click", submitForm);
+});
