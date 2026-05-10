@@ -1,7 +1,6 @@
-// src/socket.js
 import { io } from "socket.io-client";
 
-// Named export
+// Use environment variable for backend URL
 export const socket = io(import.meta.env.VITE_API_URL, {
   transports: ["websocket"],
   reconnection: true,
