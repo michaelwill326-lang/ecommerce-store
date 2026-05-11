@@ -1,4 +1,3 @@
-// src/pages/ProductDetail.jsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
@@ -13,11 +12,11 @@ export default function ProductDetail() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/products`);
-        const found = res.data.find((p) => p._id === id);
-        setProduct(found || null);
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
+        setProduct(res.data);
       } catch (err) {
         console.error("Product fetch error:", err);
+        setProduct(null);
       } finally {
         setLoading(false);
       }
@@ -31,7 +30,7 @@ export default function ProductDetail() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>{product.name}</h1>
-      {product.images && product.images.length > 0 && (
+      {product.images?.length > 0 && (
         <img src={product.images[0]} alt={product.name} style={{ width: "300px" }} />
       )}
       <p>{product.description}</p>
