@@ -1,43 +1,116 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { useCart } from "../context/CartContext.jsx";
+
+const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function ProductDetail() {
   const { id } = useParams();
+
   const [product, setProduct] = useState(null);
-  const { addToCart } = useCart();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
-        setProduct(res.data);
-      } catch (err) {
-        console.error("Product fetch error:", err);
-        setProduct(null);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchProduct();
   }, [id]);
 
-  if (loading) return <p>Loading product...</p>;
-  if (!product) return <p>Product not found</p>;
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+
+      const res = await axios.get(`${API}/api/products/${id}`);
+
+      console.log("PRODUCT RESPONSE:", res.data);
+
+      setProduct(res.data);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("Product not found");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addToCart = () => {
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    const existing = cart.find((item) => item._id === product._id);
+
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({
+        ...product,
+        quantity: 1,
+      });
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+
+    alert("✅ Added to cart");
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: "30px" }}>
+        <h2>Loading product...</h2>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div style={{ padding: "30px" }}>
+        <h2>{error || "Product not found"}</h2>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ padding: "30px" }}>
       <h1>{product.name}</h1>
-      {product.images?.length > 0 && (
-        <img src={product.images[0]} alt={product.name} style={{ width: "300px" }} />
-      )}
+
+      <img
+        src={
+          product.images && product.images.length > 0
+            ? product.images[0]
+            : "https://via.placeholder.com/300"
+        }
+        alt={product.name}
+        style={{
+          width: "300px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      />
+
+      <h2>₦{product.price}</h2>
+
       <p>{product.description}</p>
-      <p>₦{product.price}</p>
-      <p>Stock: {product.stock}</p>
-      <button onClick={() => addToCart(product)} disabled={product.stock === 0}>
-        {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+
+      <p>
+        <strong>Category:</strong> {product.category}
+      </p>
+
+      <p>
+        <strong>Stock:</strong> {product.stock}
+      </p>
+
+      <button
+        onClick={addToCart}
+        style={{
+          padding: "12px 20px",
+          background: "black",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          marginTop: "20px",
+        }}
+      >
+        Add To Cart
       </button>
     </div>
   );
