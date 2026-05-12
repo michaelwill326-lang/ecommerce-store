@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { CartContext } from "../context/CartContext";
 
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const { cart, setCart } = useContext(CartContext);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     fetchProduct();
@@ -18,11 +21,7 @@ export default function ProductDetail() {
   const fetchProduct = async () => {
     try {
       setLoading(true);
-
       const res = await axios.get(`${API}/api/products/${id}`);
-
-      console.log("PRODUCT RESPONSE:", res.data);
-
       setProduct(res.data);
       setError("");
     } catch (err) {
@@ -34,69 +33,60 @@ export default function ProductDetail() {
   };
 
   const addToCart = () => {
-    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+    if (!product) return;
 
-    const existing = cart.find((item) => item._id === product._id);
+    let updatedCart = [...cart];
+    const existing = updatedCart.find((item) => item._id === product._id);
 
     if (existing) {
-      existing.quantity += 1;
+      const newQty = existing.quantity + quantity;
+      if (newQty > product.stock) {
+        alert(`⚠ Only ${product.stock} items in stock`);
+        return;
+      }
+      existing.quantity = newQty;
     } else {
-      cart.push({
-        ...product,
-        quantity: 1,
-      });
+      if (quantity > product.stock) {
+        alert(`⚠ Only ${product.stock} items in stock`);
+        return;
+      }
+      updatedCart.push({ ...product, quantity });
     }
 
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-    alert("✅ Added to cart");
+    setCart(updatedCart);
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    alert(`✅ Added ${quantity} item(s) to cart`);
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: "30px" }}>
-        <h2>Loading product...</h2>
-      </div>
-    );
-  }
-
-  if (error || !product) {
-    return (
-      <div style={{ padding: "30px" }}>
-        <h2>{error || "Product not found"}</h2>
-      </div>
-    );
-  }
+  if (loading) return <div style={{ padding: "30px" }}><h2>Loading product...</h2></div>;
+  if (error || !product) return <div style={{ padding: "30px" }}><h2>{error}</h2></div>;
 
   return (
-    <div style={{ padding: "30px" }}>
+    <div style={{ padding: "30px", maxWidth: "600px", margin: "0 auto" }}>
       <h1>{product.name}</h1>
 
       <img
-        src={
-          product.images && product.images.length > 0
-            ? product.images[0]
-            : "https://via.placeholder.com/300"
-        }
+        src={product.images?.[0] || "https://via.placeholder.com/300"}
         alt={product.name}
-        style={{
-          width: "300px",
-          borderRadius: "10px",
-          marginBottom: "20px",
-        }}
+        style={{ width: "100%", borderRadius: "10px", marginBottom: "20px" }}
       />
 
       <h2>₦{product.price}</h2>
-
       <p>{product.description}</p>
+      <p><strong>Category:</strong> {product.category}</p>
+      <p><strong>Stock:</strong> {product.stock}</p>
 
-      <p>
-        <strong>Category:</strong> {product.category}
-      </p>
-
-      <p>
-        <strong>Stock:</strong> {product.stock}
-      </p>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "15px" }}>
+        <label>Quantity:</label>
+        <input
+          type="number"
+          value={quantity}
+          min={1}
+          max={product.stock}
+          onChange={(e) => setQuantity(Number(e.target.value))}
+          style={{ width: "60px", padding: "5px" }}
+        />
+      </div>
 
       <button
         onClick={addToCart}
