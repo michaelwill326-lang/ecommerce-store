@@ -4,7 +4,9 @@ export default function ProductCard({ product }) {
   const addToCart = () => {
     let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-    const existing = cart.find((item) => item._id === product._id);
+    const existing = cart.find(
+      (item) => item._id === product._id
+    );
 
     if (existing) {
       existing.quantity += 1;
@@ -15,7 +17,10 @@ export default function ProductCard({ product }) {
       });
     }
 
-    localStorage.setItem("cart", JSON.stringify(cart));
+    localStorage.setItem(
+      "cart",
+      JSON.stringify(cart)
+    );
 
     alert("✅ Added to cart");
   };
@@ -24,16 +29,15 @@ export default function ProductCard({ product }) {
     <div
       style={{
         border: "1px solid #ddd",
-        borderRadius: "10px",
         padding: "20px",
+        borderRadius: "10px",
         marginBottom: "20px",
       }}
     >
       <img
         src={
-          product.images && product.images.length > 0
-            ? product.images[0]
-            : "https://via.placeholder.com/250"
+          product.images?.[0] ||
+          "https://via.placeholder.com/250"
         }
         alt={product.name}
         style={{
@@ -47,7 +51,13 @@ export default function ProductCard({ product }) {
 
       <p>₦{product.price}</p>
 
-      <div style={{ display: "flex", gap: "10px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginTop: "10px",
+        }}
+      >
         <button
           onClick={addToCart}
           style={{
