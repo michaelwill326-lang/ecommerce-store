@@ -1,40 +1,57 @@
 import { Link } from "react-router-dom";
 
 export default function ProductCard({ product }) {
-  if (!product) return null;
+  const addToCart = () => {
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-  const image =
-    product?.images?.[0] ||
-    "https://via.placeholder.com/300x200?text=TechMart";
+    const existing = cart.find((item) => item._id === product._id);
+
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({
+        ...product,
+        quantity: 1,
+      });
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+
+    alert("✅ Added to cart");
+  };
 
   return (
     <div
       style={{
         border: "1px solid #ddd",
         borderRadius: "10px",
-        padding: "15px",
-        background: "#fff",
+        padding: "20px",
+        marginBottom: "20px",
       }}
     >
       <img
-        src={image}
+        src={
+          product.images && product.images.length > 0
+            ? product.images[0]
+            : "https://via.placeholder.com/250"
+        }
         alt={product.name}
         style={{
           width: "100%",
-          height: "200px",
-          objectFit: "cover",
+          maxWidth: "250px",
           borderRadius: "10px",
         }}
       />
 
-      <h2>{product.name || "No name"}</h2>
+      <h2>{product.name}</h2>
 
-      <p>₦{product.price || 0}</p>
+      <p>₦{product.price}</p>
 
-      <Link to={`/product/${product._id}`}>
+      <div style={{ display: "flex", gap: "10px" }}>
         <button
+          onClick={addToCart}
           style={{
-            padding: "10px 15px",
+            padding: "10px",
             background: "black",
             color: "white",
             border: "none",
@@ -42,9 +59,24 @@ export default function ProductCard({ product }) {
             cursor: "pointer",
           }}
         >
-          View Product
+          Add To Cart
         </button>
-      </Link>
+
+        <Link to={`/product/${product._id}`}>
+          <button
+            style={{
+              padding: "10px",
+              background: "green",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            View Product
+          </button>
+        </Link>
+      </div>
     </div>
   );
 }
