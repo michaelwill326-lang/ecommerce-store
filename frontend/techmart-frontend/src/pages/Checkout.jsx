@@ -1,39 +1,43 @@
-import { useCart } from "../context/CartContext";
+import { Link } from "react-router-dom";
 
 export default function Checkout() {
-  const { cart, total } = useCart();
-
-  const handlePay = async () => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/paystack/init`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email: "customer@email.com",
-        amount: total,
-        cart
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.url) {
-      window.location.href = data.url;
-    }
-  };
+  const token = localStorage.getItem("token");
 
   return (
-    <div className="checkout-container">
-      <h1>Checkout</h1>
+    <div style={{ padding: "30px" }}>
+      <h1>💳 Checkout</h1>
 
-      <div className="checkout-summary">
-        <h2>Total: ₦{total}</h2>
+      {!token ? (
+        <>
+          <p>You must login first.</p>
 
-        <button className="pay-btn" onClick={handlePay}>
-          Pay with Paystack
+          <Link to="/login">
+            <button
+              style={{
+                padding: "12px",
+                background: "black",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+              }}
+            >
+              Login / Create Account
+            </button>
+          </Link>
+        </>
+      ) : (
+        <button
+          style={{
+            padding: "12px",
+            background: "green",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+          }}
+        >
+          Proceed To Payment
         </button>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,38 +1,58 @@
-import { useContext } from "react";
-import { CartContext } from "../context/CartContext";
+import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 export default function Cart() {
-  const { cart, setCart } = useContext(CartContext);
+  const [cart, setCart] = useState([]);
 
-  const removeItem = (id) => {
-    const updated = cart.filter(item => item._id !== id);
-    setCart(updated);
-    localStorage.setItem("cart", JSON.stringify(updated));
-  };
+  useEffect(() => {
+    const stored =
+      JSON.parse(localStorage.getItem("cart")) || [];
 
-  const changeQty = (id, qty) => {
-    const updated = cart.map(item => item._id === id ? { ...item, quantity: qty } : item);
-    setCart(updated);
-    localStorage.setItem("cart", JSON.stringify(updated));
-  };
+    setCart(stored);
+  }, []);
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  if (cart.length === 0) return <div style={{ padding: "30px" }}><h2>Your cart is empty</h2></div>;
+  const total = cart.reduce(
+    (sum, item) =>
+      sum + item.price * item.quantity,
+    0
+  );
 
   return (
     <div style={{ padding: "30px" }}>
-      <h1>Your Cart</h1>
-      {cart.map(item => (
-        <div key={item._id} style={{ borderBottom: "1px solid #ccc", padding: "10px 0" }}>
+      <h1>🛒 Cart</h1>
+
+      {cart.map((item) => (
+        <div
+          key={item._id}
+          style={{
+            border: "1px solid #ddd",
+            padding: "15px",
+            marginBottom: "15px",
+          }}
+        >
           <h3>{item.name}</h3>
-          <p>₦{item.price} × 
-            <input type="number" min="1" value={item.quantity} onChange={(e) => changeQty(item._id, parseInt(e.target.value))} style={{ width:"50px", marginLeft:"5px" }} />
-          </p>
-          <button onClick={() => removeItem(item._id)} style={{ padding:"5px 10px", background:"red", color:"#fff", border:"none", borderRadius:"5px" }}>Remove</button>
+
+          <p>₦{item.price}</p>
+
+          <p>Qty: {item.quantity}</p>
         </div>
       ))}
+
       <h2>Total: ₦{total}</h2>
+
+      <Link to="/checkout">
+        <button
+          style={{
+            padding: "12px",
+            background: "green",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+          }}
+        >
+          Proceed To Checkout
+        </button>
+      </Link>
     </div>
   );
 }
