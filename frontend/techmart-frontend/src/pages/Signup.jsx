@@ -1,39 +1,82 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Signup() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
+
+    setLoading(true);
     try {
-      const res = await axios.post(`${API}/api/auth/signup`, form);
+      const res = await axios.post(`${API}/api/auth/signup`, { name, email, password });
+
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      alert("✅ Signup successful!");
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.error || "Signup failed");
+      console.error(err);
+      alert(err.response?.data?.error || "Signup failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: "30px" }}>
+    <div style={{ padding: "30px", maxWidth: "400px", margin: "0 auto" }}>
       <h1>Signup</h1>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required style={{ display:"block", marginBottom:"10px", padding:"8px" }} />
-        <input name="email" placeholder="Email" value={form.email} onChange={handleChange} type="email" required style={{ display:"block", marginBottom:"10px", padding:"8px" }} />
-        <input name="password" placeholder="Password" value={form.password} onChange={handleChange} type="password" required style={{ display:"block", marginBottom:"10px", padding:"8px" }} />
-        <button type="submit" style={{ padding:"10px 20px", background:"black", color:"white", border:"none", borderRadius:"5px" }}>Signup</button>
+      <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          style={{ padding: "10px", borderRadius: "5px", border: "1px solid #ddd" }}
+        />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ padding: "10px", borderRadius: "5px", border: "1px solid #ddd" }}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ padding: "10px", borderRadius: "5px", border: "1px solid #ddd" }}
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            padding: "12px",
+            background: "black",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+          }}
+        >
+          {loading ? "Signing up..." : "Signup"}
+        </button>
       </form>
+      <p style={{ marginTop: "15px" }}>
+        Already have an account? <Link to="/login">Login here</Link>
+      </p>
     </div>
   );
 }

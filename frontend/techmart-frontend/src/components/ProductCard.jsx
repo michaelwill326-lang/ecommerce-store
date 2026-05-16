@@ -1,93 +1,34 @@
 import { Link } from "react-router-dom";
 
-export default function ProductCard({ product }) {
-
-  const addToCart = () => {
-
-    let cart =
-      JSON.parse(localStorage.getItem("cart")) || [];
-
-    const existing = cart.find(
-      (item) => item._id === product._id
-    );
-
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      cart.push({
-        ...product,
-        quantity: 1,
-      });
-    }
-
-    localStorage.setItem(
-      "cart",
-      JSON.stringify(cart)
-    );
-
-    alert("✅ Added to cart");
-  };
-
+export default function ProductCard({ product, onAddToCart }) {
   return (
     <div
       style={{
         border: "1px solid #ddd",
+        padding: "15px",
         borderRadius: "10px",
-        padding: "20px",
-        width: "260px",
-        background: "#fff",
+        width: "250px",
+        textAlign: "center",
       }}
     >
-
       <img
-        src={
-          product.images?.[0] ||
-          "https://via.placeholder.com/400x300?text=TechMart"
-        }
+        src={product.images?.[0] || "https://via.placeholder.com/250"}
         alt={product.name}
-        style={{
-          width: "100%",
-          height: "200px",
-          objectFit: "cover",
-          borderRadius: "10px",
-        }}
+        style={{ width: "100%", borderRadius: "10px" }}
       />
 
-      <h2
-        style={{
-          marginTop: "15px",
-          fontSize: "20px",
-        }}
-      >
-        {product.name}
-      </h2>
+      <h2>{product.name}</h2>
+      <p>₦{product.price}</p>
 
-      <p
-        style={{
-          fontWeight: "bold",
-          fontSize: "18px",
-        }}
-      >
-        ₦{product.price}
-      </p>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginTop: "15px",
-        }}
-      >
-
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "10px" }}>
         <button
-          onClick={addToCart}
+          onClick={() => onAddToCart(product)}
           style={{
             background: "black",
             color: "white",
-            padding: "10px 15px",
+            padding: "10px",
             border: "none",
-            borderRadius: "6px",
+            borderRadius: "5px",
             cursor: "pointer",
           }}
         >
@@ -99,31 +40,15 @@ export default function ProductCard({ product }) {
             style={{
               background: "green",
               color: "white",
-              padding: "10px 15px",
+              padding: "10px",
               border: "none",
-              borderRadius: "6px",
+              borderRadius: "5px",
               cursor: "pointer",
             }}
           >
-            View Product
+            View
           </button>
         </Link>
-
-        <Link to="/cart">
-          <button
-            style={{
-              background: "orange",
-              color: "white",
-              padding: "10px 15px",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
-            View Cart
-          </button>
-        </Link>
-
       </div>
     </div>
   );

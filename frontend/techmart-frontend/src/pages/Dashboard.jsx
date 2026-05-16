@@ -6,7 +6,6 @@ const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProducts();
@@ -15,44 +14,34 @@ export default function Dashboard() {
   const fetchProducts = async () => {
     try {
       const res = await axios.get(`${API}/api/products`);
-
-      console.log("PRODUCTS:", res.data);
-
-      if (Array.isArray(res.data)) {
-        setProducts(res.data);
-      } else {
-        setProducts([]);
-      }
+      setProducts(res.data);
     } catch (err) {
       console.error("Failed to load products", err);
-      setProducts([]);
-    } finally {
-      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: "20px" }}>
-        <h2>Loading products...</h2>
-      </div>
-    );
-  }
+  const handleAddToCart = (product) => {
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+    const existing = cart.find((item) => item._id === product._id);
+
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({ ...product, quantity: 1 });
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+    alert("✅ Added to cart");
+  };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>🛍 TechMart Products</h1>
-
-      {products.length === 0 ? (
-        <p>No products found</p>
-      ) : (
-        products.map((product) => (
-          <ProductCard
-            key={product._id}
-            product={product}
-          />
-        ))
-      )}
+    <div style={{ padding: "30px" }}>
+      <h1>🔥 Products</h1>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+        {products.map((p) => (
+          <ProductCard key={p._id} product={p} onAddToCart={handleAddToCart} />
+        ))}
+      </div>
     </div>
   );
 }

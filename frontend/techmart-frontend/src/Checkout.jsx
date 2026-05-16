@@ -1,42 +1,38 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Checkout() {
-
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const storedCart =
-      JSON.parse(localStorage.getItem("cart")) || [];
-
+    const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
     setCart(storedCart);
   }, []);
 
-  const total = cart.reduce(
-    (sum, item) =>
-      sum + item.price * item.quantity,
-    0
-  );
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const handlePayment = async () => {
-
     const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
 
-    if (!token) {
+    if (!token || !user) {
       alert("Please login first");
-      window.location.href = "/login";
+      navigate("/login");
+      return;
+    }
+
+    if (cart.length === 0) {
+      alert("Your cart is empty");
       return;
     }
 
     try {
-
       setLoading(true);
-
-      const user =
-        JSON.parse(localStorage.getItem("user"));
 
       const response = await axios.post(
         `${API}/api/paystack/init`,
@@ -44,14 +40,16 @@ export default function Checkout() {
           email: user.email,
           amount: total,
           cart,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
+      // Redirect to Paystack payment page
       window.location.href = response.data.url;
-
     } catch (err) {
-      console.error(err);
-
+      console.error("Payment initialization error:", err);
       alert("Payment initialization failed");
     } finally {
       setLoading(false);
@@ -60,7 +58,6 @@ export default function Checkout() {
 
   return (
     <div style={{ padding: "30px" }}>
-
       <h1>💳 Checkout</h1>
 
       {cart.length === 0 ? (
@@ -78,9 +75,7 @@ export default function Checkout() {
               }}
             >
               <h3>{item.name}</h3>
-
               <p>₦{item.price}</p>
-
               <p>Qty: {item.quantity}</p>
             </div>
           ))}
@@ -100,9 +95,7 @@ export default function Checkout() {
               marginTop: "20px",
             }}
           >
-            {loading
-              ? "Processing..."
-              : "Proceed To Payment"}
+            {loading ? "Processing..." : "Proceed To Payment"}
           </button>
         </>
       )}
