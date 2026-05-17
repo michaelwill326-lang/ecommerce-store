@@ -8,19 +8,17 @@ export default function ProductCard({ product, onAddToCart }) {
         padding: "15px",
         borderRadius: "10px",
         width: "250px",
-        textAlign: "center",
+        marginBottom: "20px",
       }}
     >
       <img
-        src={product.images?.[0] || "https://via.placeholder.com/250"}
+        src={product.images?.[0] || "/default-product.png"}
         alt={product.name}
         style={{ width: "100%", borderRadius: "10px" }}
       />
-
       <h2>{product.name}</h2>
       <p>₦{product.price}</p>
-
-      <div style={{ display: "flex", justifyContent: "space-around", marginTop: "10px" }}>
+      <div style={{ display: "flex", gap: "10px" }}>
         <button
           onClick={() => onAddToCart(product)}
           style={{
@@ -34,7 +32,6 @@ export default function ProductCard({ product, onAddToCart }) {
         >
           Add To Cart
         </button>
-
         <Link to={`/product/${product._id}`}>
           <button
             style={{
@@ -46,7 +43,7 @@ export default function ProductCard({ product, onAddToCart }) {
               cursor: "pointer",
             }}
           >
-            View
+            View Product
           </button>
         </Link>
       </div>

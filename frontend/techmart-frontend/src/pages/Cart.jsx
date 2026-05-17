@@ -1,39 +1,34 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function Cart() {
   const [cart, setCart] = useState([]);
-  const navigate = useNavigate();
 
   useEffect(() => {
     setCart(JSON.parse(localStorage.getItem("cart")) || []);
   }, []);
 
   const removeItem = (id) => {
-    const updated = cart.filter((item) => item._id !== id);
+    const updated = cart.filter(item => item._id !== id);
     setCart(updated);
     localStorage.setItem("cart", JSON.stringify(updated));
   };
 
-  const proceedToCheckout = () => {
-    navigate("/checkout");
-  };
-
-  if (!cart.length) return <h2 style={{ padding: 30 }}>Cart is empty</h2>;
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <div style={{ padding: 30 }}>
-      {cart.map((item) => (
-        <div key={item._id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 15 }}>
-          <span>{item.name} x {item.quantity}</span>
-          <button onClick={() => removeItem(item._id)} style={{ background: "red", color: "#fff", border: "none", borderRadius: 5, padding: "5px 10px" }}>
-            Remove
-          </button>
+    <div style={{ padding: "30px" }}>
+      <h1>Cart</h1>
+      {cart.length === 0 ? <p>Your cart is empty</p> : null}
+      {cart.map(item => (
+        <div key={item._id}>
+          <h3>{item.name}</h3>
+          <p>₦{item.price} x {item.quantity}</p>
+          <button onClick={() => removeItem(item._id)}>Remove</button>
         </div>
       ))}
-      <button onClick={proceedToCheckout} style={{ padding: 12, background: "green", color: "white", border: "none", borderRadius: 8, cursor: "pointer", marginTop: 20 }}>
-        Proceed to Checkout
-      </button>
+      <h2>Total: ₦{total}</h2>
+      {cart.length > 0 && <Link to="/checkout"><button>Proceed To Checkout</button></Link>}
     </div>
   );
 }
