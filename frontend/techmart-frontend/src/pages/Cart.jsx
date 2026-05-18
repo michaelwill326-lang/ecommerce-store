@@ -27,7 +27,7 @@ export default function Cart() {
       JSON.stringify(updatedCart)
     );
 
-    alert("❌ Item removed from cart");
+    alert("❌ Item removed");
   };
 
   const clearCart = () => {
@@ -68,7 +68,7 @@ export default function Cart() {
         <Link to="/">
           <button
             style={{
-              padding: "10px 15px",
+              padding: "10px 16px",
               background: "black",
               color: "white",
               border: "none",
@@ -87,7 +87,7 @@ export default function Cart() {
         <div
           style={{
             textAlign: "center",
-            padding: "50px",
+            marginTop: "80px",
           }}
         >
           <h2>Your cart is empty</h2>
