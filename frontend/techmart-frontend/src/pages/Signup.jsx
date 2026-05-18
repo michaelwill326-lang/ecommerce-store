@@ -29,26 +29,47 @@ export default function Signup() {
 
       setLoading(true);
 
-      await axios.post(
+      console.log({
+        name,
+        email,
+        password,
+      });
+
+      const response = await axios.post(
         `${API}/api/auth/signup`,
         {
-          name,
-          email,
-          password,
+          name: name.trim(),
+          email: email.trim(),
+          password: password.trim(),
         }
       );
 
-      alert(
-        "✅ Account created successfully"
+      console.log(response.data);
+
+      localStorage.setItem(
+        "token",
+        response.data.token
       );
 
-      navigate("/login");
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.data.user)
+      );
+
+      alert("✅ Signup successful");
+
+      navigate("/");
 
     } catch (err) {
 
-      console.error(err);
+      console.log(
+        err.response?.data || err.message
+      );
 
-      alert("❌ Signup failed");
+      alert(
+        err.response?.data?.error ||
+        "Signup failed"
+      );
 
     } finally {
 
@@ -61,20 +82,14 @@ export default function Signup() {
     <div
       style={{
         maxWidth: "400px",
-        margin: "60px auto",
+        margin: "50px auto",
         padding: "30px",
         border: "1px solid #ddd",
         borderRadius: "10px",
       }}
     >
 
-      <h1
-        style={{
-          marginBottom: "20px",
-        }}
-      >
-        Signup
-      </h1>
+      <h1>Signup</h1>
 
       <form onSubmit={handleSignup}>
 
@@ -143,11 +158,7 @@ export default function Signup() {
 
       </form>
 
-      <p
-        style={{
-          marginTop: "20px",
-        }}
-      >
+      <p style={{ marginTop: "20px" }}>
         Already have an account?{" "}
         <Link to="/login">
           Login
