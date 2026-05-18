@@ -1,39 +1,69 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import ProductCard from "../components/ProductCard";
-
-const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get(`${API}/api/products`);
-        setProducts(res.data);
-      } catch (err) {
-        console.error("Failed to fetch products:", err);
-      }
-    };
     fetchProducts();
   }, []);
 
-  const handleAddToCart = (product) => {
-    let cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const existing = cart.find((item) => item._id === product._id);
-    if (existing) existing.quantity += 1;
-    else cart.push({ ...product, quantity: 1 });
-    localStorage.setItem("cart", JSON.stringify(cart));
-    alert("✅ Added to cart");
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${API}/api/products`);
+      console.log("PRODUCTS:", res.data);
+      setProducts(res.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
     <div style={{ padding: "30px" }}>
-      <h1>🛍 TechMart Products</h1>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-        {products.map((p) => (
-          <ProductCard key={p._id} product={p} onAddToCart={handleAddToCart} />
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "30px",
+        }}
+      >
+        <h1>🛒 TechMart</h1>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Link to="/cart">
+            <button>
+              Cart
+            </button>
+          </Link>
+
+          <Link to="/login">
+            <button>
+              Login
+            </button>
+          </Link>
+
+          <Link to="/signup">
+            <button>
+              Signup
+            </button>
+          </Link>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(250px,1fr))",
+          gap: "20px",
+        }}
+      >
+        {products.map((product) => (
+          <ProductCard
+            key={product._id}
+            product={product}
+          />
         ))}
       </div>
     </div>
