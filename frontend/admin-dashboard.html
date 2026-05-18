@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - TechMart</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header a {
+      color: white;
+      text-decoration: none;
+      margin-left: 20px;
+    }
+
+    .dashboard {
+      max-width: 1000px;
+      margin: 40px auto;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 20px;
+    }
+
+    .sidebar {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h3 {
+      margin-top: 0;
+    }
+
+    .sidebar button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .sidebar button:hover {
+      background: #1d4ed8;
+    }
+
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .order {
+      border-bottom: 1px solid #ddd;
+      padding: 15px 0;
+    }
+
+    .order:last-child {
+      border-bottom: none;
+    }
+
+    .status {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: inline-block;
+    }
+
+    .status.Processing {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status.Paid {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status.Shipped {
+      background: #dbeafe;
+      color: #1e3a8a;
+    }
+
+    .status.Delivered {
+      background: #d1fae5;
+      color: #065f46;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>🛒 TechMart Admin</h2>
+    <div>
+      <a href="index.html">Home</a>
+      <a href="login.html" onclick="logout()">Logout</a>
+    </div>
+  </header>
+
+  <div class="dashboard">
+    <div class="sidebar">
+      <h3>Admin Panel</h3>
+      <button onclick="loadOrders()">My Orders</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+
+    <div class="content">
+      <h3 id="content-title">Welcome</h3>
+      <div id="content-area">
+        <p>Welcome to your TechMart admin dashboard.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BACKEND_URL = "https://techmart-backend-ecbi.onrender.com";
+    const token = localStorage.getItem("adminToken");
+
+    if (!token) {
+      alert("You are not logged in. Please login.");
+      window.location.href = "login.html";
+    }
+
+    async function loadOrders() {
+      document.getElementById("content-title").textContent = "Orders";
+      const container = document.getElementById("content-area");
+      container.innerHTML = "Loading orders...";
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/orders`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        const orders = await res.json();
+
+        if (!orders || orders.length === 0) {
+          container.innerHTML = "<p>No orders found.</p>";
+          return;
+        }
+
+        container.innerHTML = `<p><strong>Total Orders:</strong> ${orders.length}</p>`;
+
+        orders.forEach(order => {
+          container.innerHTML += `
+            <div class="order">
+              <p><strong>Order ID:</strong> ${order._id}</p>
+              <p><strong>Total:</strong> ₦${order.amount}</p>
+              <p><strong>Status:</strong>
+                <span class="status ${order.status}">
+                  ${order.status}
+                </span>
+              </p>
+              <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+              <button onclick="updateStatus('${order._id}')">Update Status</button>
+            </div>
+          `;
+        });
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = "Failed to load orders.";
+      }
+    }
+
+    async function updateStatus(orderId) {
+      const status = prompt("Enter new status (Processing, Paid, Shipped, Delivered):");
+
+      if (!status) {
+        return;
+      }
+
+      const validStatuses = ["Processing", "Paid", "Shipped", "Delivered"];
+      if (!validStatuses.includes(status)) {
+        alert("Invalid status.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/orders/${orderId}/status`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ status })
+        });
+
+        const updatedOrder = await res.json();
+
+        if (updatedOrder) {
+          alert(`Order status updated to: ${status}`);
+          loadOrders(); // Reload orders after update
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to update order status.");
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("adminToken");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

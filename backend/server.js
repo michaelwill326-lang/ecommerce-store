@@ -26,7 +26,7 @@ app.get("/", (req, res) => {
 /* ===========================
    MIDDLEWARE
 =========================== */
-app.use(cors())
+app.use(cors({ origin: "*" }))
 app.use(express.json())
 
 /* ===========================
@@ -102,7 +102,7 @@ const orderSchema = new mongoose.Schema({
 const Order = mongoose.model("Order",orderSchema)
 
 /* ===========================
-   🔥 SEED PRODUCTS (FIX)
+   🔥 SEED PRODUCTS
 =========================== */
 app.get("/seed-products", async (req, res) => {
   try {

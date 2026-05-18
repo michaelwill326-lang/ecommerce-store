@@ -2,23 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechMart Login</title>
 
-  <!-- 🔥 FORCE ALLOW EVERYTHING -->
-  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
+  <!-- ⚡ CSP FIX (safe for API calls) -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self' https:;
+    connect-src 'self' https://techmart-backend-ecbi.onrender.com;
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https:;
+  ">
 
-  <title>Admin Login</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .box {
+      background: white;
+      padding: 25px;
+      width: 320px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .error {
+      color: red;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 
 <body>
 
-  <h2>Admin Login</h2>
+  <div class="box">
+    <h2>🔐 Admin Login</h2>
 
-  <input id="email" placeholder="Email"><br><br>
-  <input id="password" type="password" placeholder="Password"><br><br>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
 
-  <button id="loginBtn">Login</button>
+    <button onclick="login()">Login</button>
 
-  <script src="auth.js"></script>
+    <div class="error" id="error"></div>
+  </div>
+
+  <script>
+    const API = "https://techmart-backend-ecbi.onrender.com";
+
+    console.log("LOGIN PAGE LOADED");
+
+    /* ===========================
+       LOGIN FUNCTION
+    =========================== */
+    async function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const errorBox = document.getElementById("error");
+
+      errorBox.innerText = "";
+
+      console.log("SENDING:", { email, password });
+
+      if (!email || !password) {
+        errorBox.innerText = "❌ Email and password required";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/api/admin/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        // 🔥 IMPORTANT FIX (FULL RESPONSE VIEW)
+        console.log("FULL RESPONSE:", JSON.stringify(data, null, 2));
+
+        if (data.success) {
+          localStorage.setItem("adminToken", data.token);
+
+          alert("✅ Login successful");
+
+          window.location.href = "admin-dashboard.html";
+        } else {
+          errorBox.innerText = "❌ " + (data.message || "Invalid login details");
+        }
+
+      } catch (err) {
+        console.error("LOGIN ERROR:", err);
+        errorBox.innerText = "❌ Network or CSP error";
+      }
+    }
+  </script>
 
 </body>
 </html>

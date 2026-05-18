@@ -1,396 +1,158 @@
-/* ========================
-   🌐 Global Styles
-   ======================== */
-   body {
-    font-family: Arial, sans-serif;
-    background-color: #f7f7f7;
-    margin: 0;
-    padding: 20px;
-  }
-  
-  h1 {
-    text-align: center;
-    color: #333;
-  }
-  
-  /* ========================
-     🛍️ Product Styles
-     ======================== */
-  .product-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 25px;
-    margin-top: 30px;
-  }
-  
-  .product {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 16px;
-    padding: 20px;
-    width: 260px;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-    text-align: center;
-    transition: transform 0.3s ease;
-  }
-  
-  .product:hover {
-    transform: translateY(-5px);
-  }
-  
-  .product img {
-    max-width: 100%;
-    height: 160px;
-    object-fit: contain;
-    margin-bottom: 10px;
-    border-radius: 8px;
-  }
-  
-  .product h3 {
-    margin: 10px 0 6px;
-    font-size: 20px;
-    color: #222;
-  }
-  
-  .product p {
-    margin: 5px 0;
-    color: #555;
-    font-size: 15px;
-  }
-  
-  /* Stylish Add to Cart Button */
-  button.add-to-cart {
-    margin-top: 12px;
-    padding: 10px 18px;
-    font-size: 15px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  button.add-to-cart:hover {
-    background-color: #218838;
-  }
-  
-  /* ========================
-     ➕ Quantity Buttons
-     ======================== */
-  button.increase,
-  button.decrease {
-    padding: 4px 10px;
-    font-size: 14px;
-    margin: 0 5px;
-    border: none;
-    background-color: #3498db;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  button.increase:hover,
-  button.decrease:hover {
-    background-color: #2980b9;
-  }
-  
-  /* ========================
-     🔔 Toast Notification
-     ======================== */
-  .toast {
-    visibility: hidden;
-    min-width: 250px;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 8px;
-    padding: 12px 20px;
-    position: fixed;
-    z-index: 1000;
-    left: 50%;
-    bottom: 30px;
-    transform: translateX(-50%);
-    font-size: 16px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    opacity: 0;
-    transition: opacity 0.5s ease, visibility 0.5s ease;
-  }
-  
-  .toast.show {
-    visibility: visible;
-    opacity: 1;
-  }
-  
-  /* ========================
-     🧹 Clear Cart Button
-     ======================== */
-  .clear-cart-btn {
-    padding: 10px 20px;
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-  }
-  
-  .clear-cart-btn:hover {
-    background-color: #c0392b;
-  }
-  
-  /* ========================
-     🔙 Back to Shop Button
-     ======================== */
-  .back-to-shop-btn {
-    padding: 10px 20px;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-  }
-  
-  .back-to-shop-btn:hover {
-    background-color: #2980b9;
-  }
-  /* ========================
-   📦 Thank You Product Summary
-   ======================== */
-.ordered-product {
-  display: flex;
-  align-items: center;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 10px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.ordered-product img {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
-  border-radius: 8px;
-  margin-right: 15px;
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+  color: #111;
 }
 
-.ordered-product-details {
-  flex: 1;
-}
-
-.ordered-product-details p {
-  margin: 4px 0;
-  font-size: 15px;
-  color: #333;
-}
 /* ========================
-   🔴 Cart Badge
-   ======================== */
-   .badge {
-    background-color: red;
-    color: white;
-    padding: 3px 8px;
-    border-radius: 50%;
-    font-size: 14px;
-    vertical-align: middle;
-  }
-/* ========================
-   🛒 Floating Cart Badge
-   ======================== */
-   .cart-icon-wrapper {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .badge {
-    position: absolute;
-    top: -8px;
-    right: -10px;
-    background-color: red;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 50%;
-    font-size: 12px;
-    font-weight: bold;
-    line-height: 1;
-  }
-  /* ========================
-   🟢 Admin Order Status Badges
-   ======================== */
-.status-badge {
-  padding: 6px 12px;
-  border-radius: 12px;
+   🧭 HEADER / NAV
+======================== */
+header {
+  background: #111827;
   color: white;
-  font-weight: bold;
-  cursor: pointer;
-  display: inline-block;
-  font-size: 13px;
+  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header a {
+  color: white;
+  text-decoration: none;
+  margin-left: 15px;
+}
+
+/* ========================
+   🛍️ PRODUCT GRID (UPGRADED)
+======================== */
+.product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.product {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   text-align: center;
-  min-width: 80px;
-  user-select: none;
-  transition: background-color 0.3s ease;
+  transition: 0.2s ease;
 }
 
-.status-paid {
-  background-color: #28a745;
+.product:hover {
+  transform: translateY(-5px);
 }
 
-.status-pending {
-  background-color: #ffc107;
-  color: #333;
+.product img {
+  width: 100%;
+  height: 160px;
+  object-fit: contain;
 }
 
-.status-shipped {
-  background-color: #007bff;
-}
-#pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-  gap: 12px;
-  font-family: sans-serif;
-}
-
-#pagination button {
-  padding: 8px 14px;
-  background-color: #3498db;
+/* ========================
+   🔘 BUTTONS (GLOBAL CLEAN STYLE)
+======================== */
+button {
+  padding: 10px 14px;
   border: none;
-  color: white;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  font-size: 15px;
+  transition: 0.2s;
 }
 
-#pagination button:hover:not(:disabled) {
-  background-color: #2980b9;
-  transform: scale(1.05);
+button:hover {
+  opacity: 0.9;
 }
 
-#pagination button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-  transform: none;
+.add-to-cart {
+  background: #16a34a;
+  color: white;
 }
 
-#pagination span {
-  font-size: 15px;
-  color: #333;
-}
 /* ========================
-   📊 Admin Orders Table
-   ======================== */
-   #orders-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background-color: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  }
-  
-  #orders-table th,
-  #orders-table td {
-    padding: 12px 15px;
-    text-align: center;
-    font-size: 14px;
-    border-bottom: 1px solid #eee;
-  }
-  
-  #orders-table th {
-    background-color: #3498db;
-    color: white;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-  
-  #orders-table tr:hover {
-    background-color: #f9f9f9;
-  }
-  
-  /* ========================
-     📝 Checkout Form
-     ======================== */
-  .checkout-container {
-    max-width: 500px;
-    margin: 30px auto;
-    background: #fff;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-  }
-  
-  .checkout-container h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #333;
-  }
-  
-  .checkout-container label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: bold;
-    color: #444;
-  }
-  
-  .checkout-container input,
-  .checkout-container textarea,
-  .checkout-container select {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.3s ease;
-  }
-  
-  .checkout-container input:focus,
-  .checkout-container textarea:focus,
-  .checkout-container select:focus {
-    border-color: #3498db;
-  }
-  
-  .checkout-container button {
-    width: 100%;
-    padding: 12px;
-    background-color: #28a745;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  .checkout-container button:hover {
-    background-color: #218838;
-  }
-  
-  /* ========================
-     ⏳ Loading Spinner
-     ======================== */
-  .spinner {
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid #3498db;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin: 40px auto;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
+   🛒 CART UI
+======================== */
+.cart-item {
+  background: white;
+  padding: 12px;
+  margin: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ========================
+   📊 ADMIN DASHBOARD
+======================== */
+.dashboard {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+.sidebar {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.content {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+/* ========================
+   🟢 STATUS BADGES (FIXED + UNIFIED)
+======================== */
+.status {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: white;
+}
+
+.status.Processing { background: #f59e0b; }
+.status.Paid { background: #22c55e; }
+.status.Shipped { background: #3b82f6; }
+.status.Delivered { background: #10b981; }
+
+/* ========================
+   🧾 CHECKOUT
+======================== */
+.checkout-container {
+  max-width: 500px;
+  margin: 30px auto;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+/* ========================
+   🔔 TOAST
+======================== */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.toast.show {
+  opacity: 1;
+}

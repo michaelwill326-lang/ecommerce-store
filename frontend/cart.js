@@ -1,88 +1,50 @@
-const cartContainer = document.getElementById("cart-items")
-const totalElement = document.getElementById("cart-total")
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-function getCart(){
-return JSON.parse(localStorage.getItem("cart")) || []
+function saveCart() {
+  localStorage.setItem("cart", JSON.stringify(cart));
 }
 
-function saveCart(cart){
-localStorage.setItem("cart",JSON.stringify(cart))
-renderCart()
+function renderCart() {
+  const container = document.getElementById("cart");
+  let total = 0;
+
+  container.innerHTML = "";
+
+  cart.forEach((item, i) => {
+    total += item.price * item.quantity;
+
+    container.innerHTML += `
+      <div>
+        <p>${item.name}</p>
+        <p>₦${item.price}</p>
+
+        <button onclick="increase(${i})">+</button>
+        <button onclick="decrease(${i})">-</button>
+        <button onclick="removeItem(${i})">Remove</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("total").innerText = total;
 }
 
-function removeItem(id){
+window.increase = (i) => {
+  cart[i].quantity++;
+  saveCart();
+  renderCart();
+};
 
-let cart = getCart()
+window.decrease = (i) => {
+  cart[i].quantity--;
+  if (cart[i].quantity <= 0) cart.splice(i, 1);
+  saveCart();
+  renderCart();
+};
 
-cart = cart.filter(item => item._id !== id)
+window.removeItem = (i) => {
+  cart.splice(i, 1);
+  saveCart();
+  renderCart();
+};
 
-saveCart(cart)
-
-}
-
-function changeQty(id,amount){
-
-let cart = getCart()
-
-const item = cart.find(i => i._id === id)
-
-if(!item) return
-
-item.quantity += amount
-
-if(item.quantity <= 0){
-removeItem(id)
-return
-}
-
-saveCart(cart)
-
-}
-
-function renderCart(){
-
-const cart = getCart()
-
-cartContainer.innerHTML=""
-
-let total = 0
-
-cart.forEach(item=>{
-
-total += item.price * item.quantity
-
-cartContainer.innerHTML+=`
-
-<div class="cart-item">
-
-<img src="${item.image}" width="80">
-
-<div>
-
-<h3>${item.name}</h3>
-
-<p>₦${item.price}</p>
-
-<button onclick="changeQty('${item._id}',-1)">-</button>
-
-${item.quantity}
-
-<button onclick="changeQty('${item._id}',1)">+</button>
-
-<button onclick="removeItem('${item._id}')">
-Remove
-</button>
-
-</div>
-
-</div>
-
-`
-
-})
-
-totalElement.textContent = `Total: ₦${total}`
-
-}
-
-renderCart()
+renderCart();

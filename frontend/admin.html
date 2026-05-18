@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin Login</title>
+<title>Admin Login - TechMart</title>
 
 <style>
-body {
+body{
   margin:0;
-  font-family: Arial;
+  font-family:Arial;
   background:#0f172a;
   display:flex;
   justify-content:center;
@@ -16,15 +16,15 @@ body {
   color:white;
 }
 
-.box {
+.box{
   background:#1e293b;
   padding:30px;
   border-radius:10px;
-  width:300px;
+  width:320px;
   text-align:center;
 }
 
-input {
+input{
   width:100%;
   padding:10px;
   margin:10px 0;
@@ -32,7 +32,7 @@ input {
   border-radius:6px;
 }
 
-button {
+button{
   width:100%;
   padding:10px;
   background:#3b82f6;
@@ -42,16 +42,17 @@ button {
   cursor:pointer;
 }
 
-button:hover {
+button:hover{
   background:#2563eb;
 }
 
-.error {
-  color:red;
+.error{
+  color:#f87171;
+  margin-top:10px;
   font-size:14px;
 }
 
-.loader {
+.loader{
   display:none;
   margin-top:10px;
 }
@@ -73,15 +74,16 @@ button:hover {
 </div>
 
 <script>
+
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 /* ===========================
-LOGIN FUNCTION
+   ADMIN LOGIN
 =========================== */
 async function login(){
 
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   const errorBox = document.getElementById("error");
   const loader = document.getElementById("loader");
@@ -89,12 +91,18 @@ async function login(){
   errorBox.innerText = "";
   loader.style.display = "block";
 
+  if(!email || !password){
+    loader.style.display = "none";
+    errorBox.innerText = "Please fill all fields";
+    return;
+  }
+
   try{
 
-    const res = await fetch(`${API}/api/admin/login`,{
-      method:"POST", // ✅ FIXED
-      headers:{
-        "Content-Type":"application/json"
+    const res = await fetch(API + "/api/admin/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({ email, password })
     });
@@ -103,28 +111,34 @@ async function login(){
 
     loader.style.display = "none";
 
+    console.log("LOGIN RESPONSE:", data);
+
     if(data.success){
+
+      // save admin token
       localStorage.setItem("adminToken", data.token);
 
-      // ✅ Redirect to dashboard
-      window.location.href = "admin.html";
+      // redirect to REAL dashboard
+      window.location.href = "admin-dashboard.html";
+
     }else{
-      errorBox.innerText = "Invalid email or password";
+      errorBox.innerText = data.message || "Invalid credentials";
     }
 
   }catch(err){
     loader.style.display = "none";
-    errorBox.innerText = "Network error. Check connection.";
+    errorBox.innerText = "Network error. Try again.";
     console.error(err);
   }
 }
 
 /* ===========================
-AUTO REDIRECT IF LOGGED IN
+   AUTO REDIRECT IF ALREADY LOGGED IN
 =========================== */
 if(localStorage.getItem("adminToken")){
-  window.location.href = "admin.html";
+  window.location.href = "admin-dashboard.html";
 }
+
 </script>
 
 </body>
