@@ -5,24 +5,28 @@ export default function ProductCard({
   onAddToCart,
 }) {
 
+  if (!product) {
+    return null;
+  }
+
+  const image =
+    product?.images?.[0] ||
+    "/600x400.svg";
+
   return (
     <div
       style={{
         border: "1px solid #ddd",
-        borderRadius: "12px",
+        borderRadius: "10px",
         padding: "20px",
-        width: "260px",
+        width: "250px",
         background: "#fff",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
       }}
     >
 
       <img
-        src={
-          product.images?.[0] ||
-          "/600x400.svg"
-        }
-        alt={product.name}
+        src={image}
+        alt={product?.name || "Product"}
         style={{
           width: "100%",
           height: "220px",
@@ -31,23 +35,12 @@ export default function ProductCard({
         }}
       />
 
-      <h2
-        style={{
-          marginTop: "15px",
-          fontSize: "20px",
-        }}
-      >
-        {product.name}
+      <h2>
+        {product?.name || "No Name"}
       </h2>
 
-      <p
-        style={{
-          color: "green",
-          fontWeight: "bold",
-          fontSize: "18px",
-        }}
-      >
-        ₦{product.price}
+      <p>
+        ₦{product?.price || 0}
       </p>
 
       <div
@@ -59,35 +52,36 @@ export default function ProductCard({
       >
 
         <button
-          onClick={() => onAddToCart(product)}
+          onClick={() =>
+            onAddToCart &&
+            onAddToCart(product)
+          }
           style={{
-            flex: 1,
-            padding: "12px",
             background: "black",
             color: "white",
             border: "none",
-            borderRadius: "8px",
+            padding: "10px",
+            borderRadius: "6px",
             cursor: "pointer",
-            fontWeight: "bold",
+            flex: 1,
           }}
         >
           Add To Cart
         </button>
 
         <Link
-          to={`/product/${product._id}`}
+          to={`/product/${product?._id}`}
           style={{ flex: 1 }}
         >
           <button
             style={{
               width: "100%",
-              padding: "12px",
               background: "green",
               color: "white",
               border: "none",
-              borderRadius: "8px",
+              padding: "10px",
+              borderRadius: "6px",
               cursor: "pointer",
-              fontWeight: "bold",
             }}
           >
             View
