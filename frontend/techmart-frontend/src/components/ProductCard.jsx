@@ -11,14 +11,31 @@ export default function ProductCard({ product, onAddToCart }) {
       }}
     >
       <img
-        src={product.images?.[0] || "/products/techmart.png"} // fallback image
+        src={
+          product.images?.[0]?.startsWith("/products/")
+            ? product.images[0]
+            : "/products/techmart.png"
+        }
         alt={product.name}
-        style={{ width: "100%", borderRadius: "10px" }}
+        style={{
+          width: "100%",
+          borderRadius: "10px",
+          height: "200px",
+          objectFit: "cover",
+        }}
       />
+
       <h2>{product.name}</h2>
+
       <p>₦{product.price}</p>
 
-      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginTop: "10px",
+        }}
+      >
         <button
           onClick={() => onAddToCart(product)}
           style={{
