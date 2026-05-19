@@ -1,10 +1,6 @@
 import { Link } from "react-router-dom";
 
 export default function ProductCard({ product, onAddToCart }) {
-  const handleAdd = () => {
-    if (onAddToCart) onAddToCart(product);
-  };
-
   return (
     <div
       style={{
@@ -15,42 +11,39 @@ export default function ProductCard({ product, onAddToCart }) {
       }}
     >
       <img
-        src={
-          product.images && product.images.length > 0
-            ? product.images[0]
-            : "/TechMart.png" // default placeholder
-        }
-        alt={product.name || "Product"}
+        src={product.images?.[0] || "/products/techmart.png"} // fallback image
+        alt={product.name}
         style={{ width: "100%", borderRadius: "10px" }}
       />
-
       <h2>{product.name}</h2>
       <p>₦{product.price}</p>
 
       <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
         <button
-          onClick={handleAdd}
+          onClick={() => onAddToCart(product)}
           style={{
-            padding: "10px",
             background: "black",
             color: "white",
+            padding: "10px",
             border: "none",
             borderRadius: "5px",
             cursor: "pointer",
+            flex: 1,
           }}
         >
           Add To Cart
         </button>
 
-        <Link to={`/product/${product._id}`}>
+        <Link to={`/product/${product._id || ""}`}>
           <button
             style={{
-              padding: "10px",
               background: "green",
               color: "white",
+              padding: "10px",
               border: "none",
               borderRadius: "5px",
               cursor: "pointer",
+              flex: 1,
             }}
           >
             View Product

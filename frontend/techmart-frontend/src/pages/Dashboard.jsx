@@ -1,144 +1,54 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
 
-const API =
-  "https://techmart-backend-ecbi.onrender.com";
-
 export default function Dashboard() {
-
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-
-    fetch(`${API}/api/products`)
+    // Fetch products from backend
+    fetch("https://techmart-backend-ecbi.onrender.com/api/products")
       .then((res) => res.json())
-      .then((data) => {
-
-        console.log("PRODUCTS:", data);
-
-        setProducts(data);
-
-      })
-      .catch((err) =>
-        console.error(err)
-      );
-
+      .then((data) => setProducts(data))
+      .catch((err) => console.error("Failed to fetch products:", err));
   }, []);
 
   const addToCart = (product) => {
-
-    let cart =
-      JSON.parse(
-        localStorage.getItem("cart")
-      ) || [];
-
-    const existing = cart.find(
-      (item) => item._id === product._id
-    );
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+    const existing = cart.find((item) => item._id === product._id);
 
     if (existing) {
-
       existing.quantity += 1;
-
     } else {
-
-      cart.push({
-        ...product,
-        quantity: 1,
-      });
-
+      cart.push({ ...product, quantity: 1 });
     }
 
-    localStorage.setItem(
-      "cart",
-      JSON.stringify(cart)
-    );
-
+    localStorage.setItem("cart", JSON.stringify(cart));
     alert("✅ Added to cart");
   };
 
   return (
-    <div
-      style={{
-        padding: "30px",
-      }}
-    >
-
+    <div style={{ padding: "20px" }}>
+      <h1>TechMart Products</h1>
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "30px",
           flexWrap: "wrap",
-          gap: "10px",
-        }}
-      >
-
-        <h1>🛍️ TechMart Store</h1>
-
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-          }}
-        >
-
-          <Link to="/cart">
-            <button
-              style={{
-                padding: "12px 18px",
-                background: "black",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-              }}
-            >
-              Cart
-            </button>
-          </Link>
-
-          <Link to="/login">
-            <button
-              style={{
-                padding: "12px 18px",
-                background: "green",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-              }}
-            >
-              Login
-            </button>
-          </Link>
-
-        </div>
-
-      </div>
-
-      <div
-        style={{
-          display: "flex",
           gap: "20px",
-          flexWrap: "wrap",
+          marginTop: "20px",
         }}
       >
-
-        {products.map((product) => (
-
-          <ProductCard
-            key={product._id}
-            product={product}
-            onAddToCart={addToCart}
-          />
-
-        ))}
-
+        {products.length === 0 ? (
+          <p>Loading products...</p>
+        ) : (
+          products.map((product) => (
+            <ProductCard
+              key={product._id || product.name} // fallback key
+              product={product}
+              onAddToCart={addToCart}
+            />
+          ))
+        )}
       </div>
-
     </div>
   );
 }
