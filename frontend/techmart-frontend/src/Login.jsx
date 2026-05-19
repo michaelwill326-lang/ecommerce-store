@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API =
@@ -6,17 +7,26 @@ const API =
 
 export default function Login() {
 
+  const navigate = useNavigate();
+
   const [email, setEmail] =
     useState("");
 
   const [password, setPassword] =
     useState("");
 
-  const handleLogin = async () => {
+  const [loading, setLoading] =
+    useState(false);
+
+  const handleLogin = async (e) => {
+
+    e.preventDefault();
 
     try {
 
-      const res = await axios.post(
+      setLoading(true);
+
+      const response = await axios.post(
         `${API}/api/auth/login`,
         {
           email,
@@ -26,90 +36,103 @@ export default function Login() {
 
       localStorage.setItem(
         "token",
-        res.data.token
+        response.data.token
       );
 
       localStorage.setItem(
         "user",
-        JSON.stringify(res.data.user)
+        JSON.stringify(response.data.user)
       );
 
       alert("✅ Login successful");
 
-      window.location.href = "/";
+      navigate("/");
 
     } catch (err) {
 
-      console.error(err);
+      console.log(err);
 
       alert(
-        err.response?.data?.message ||
+        err.response?.data?.error ||
         "Login failed"
       );
+
+    } finally {
+
+      setLoading(false);
+
     }
   };
 
   return (
     <div
       style={{
-        padding: "40px",
         maxWidth: "400px",
-        margin: "auto",
+        margin: "50px auto",
+        padding: "30px",
+        border: "1px solid #ddd",
+        borderRadius: "10px",
       }}
     >
 
       <h1>Login</h1>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) =>
-          setEmail(e.target.value)
-        }
-        style={{
-          width: "100%",
-          padding: "12px",
-          marginBottom: "15px",
-        }}
-      />
+      <form onSubmit={handleLogin}>
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) =>
-          setPassword(e.target.value)
-        }
-        style={{
-          width: "100%",
-          padding: "12px",
-          marginBottom: "20px",
-        }}
-      />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) =>
+            setEmail(e.target.value)
+          }
+          required
+          style={{
+            width: "100%",
+            padding: "12px",
+            marginBottom: "15px",
+          }}
+        />
 
-      <button
-        onClick={handleLogin}
-        style={{
-          width: "100%",
-          padding: "14px",
-          background: "green",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-      >
-        Login
-      </button>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+          required
+          style={{
+            width: "100%",
+            padding: "12px",
+            marginBottom: "15px",
+          }}
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: "black",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+          }}
+        >
+          {loading
+            ? "Logging in..."
+            : "Login"}
+        </button>
+
+      </form>
 
       <p style={{ marginTop: "20px" }}>
-        Don't have an account?
-        {" "}
-        <a href="/signup">
+        No account?{" "}
+        <Link to="/signup">
           Signup
-        </a>
+        </Link>
       </p>
 
     </div>
