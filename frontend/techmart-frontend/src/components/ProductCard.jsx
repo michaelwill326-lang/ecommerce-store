@@ -14,7 +14,7 @@ export default function ProductCard({ product, onAddToCart }) {
         src={
           product.images?.[0]?.startsWith("/products/")
             ? product.images[0]
-            : "/products/techmart.png"
+            : "https://cdn.openai.com/file/000000000d3071f4823d056f5f2e06f9" // fallback uploaded image
         }
         alt={product.name}
         style={{
@@ -24,18 +24,10 @@ export default function ProductCard({ product, onAddToCart }) {
           objectFit: "cover",
         }}
       />
-
       <h2>{product.name}</h2>
-
       <p>₦{product.price}</p>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginTop: "10px",
-        }}
-      >
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
         <button
           onClick={() => onAddToCart(product)}
           style={{
