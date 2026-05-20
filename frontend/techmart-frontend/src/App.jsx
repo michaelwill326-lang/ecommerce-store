@@ -1,8 +1,4 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
 import ProductDetail from "./pages/ProductDetail";
@@ -16,49 +12,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* HOME */}
-        <Route
-          path="/"
-          element={<Dashboard />}
-        />
-
-        {/* PRODUCT DETAILS */}
-        <Route
-          path="/product/:id"
-          element={<ProductDetail />}
-        />
-
-        {/* CART */}
-        <Route
-          path="/cart"
-          element={<Cart />}
-        />
-
-        {/* CHECKOUT */}
-        <Route
-          path="/checkout"
-          element={<Checkout />}
-        />
-
-        {/* LOGIN */}
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        {/* SIGNUP */}
-        <Route
-          path="/signup"
-          element={<Signup />}
-        />
-
-        {/* PAYMENT SUCCESS */}
-        <Route
-          path="/success"
-          element={<Success />}
-        />
-
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/success" element={<Success />} />
       </Routes>
     </BrowserRouter>
   );
