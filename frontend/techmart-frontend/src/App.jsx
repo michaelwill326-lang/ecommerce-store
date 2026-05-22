@@ -7,6 +7,7 @@ import Checkout from "./pages/Checkout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Success from "./pages/Success";
+import Chatbot from "./components/Chatbot";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/success" element={<Success />} />
       </Routes>
+      <Chatbot />
     </BrowserRouter>
   );
 }
