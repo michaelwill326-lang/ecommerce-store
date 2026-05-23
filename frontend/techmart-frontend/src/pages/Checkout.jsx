@@ -1,4 +1,3 @@
-cat > src/pages/Checkout.jsx << 'ENDOFFILE'
 import { useContext, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
@@ -8,16 +7,14 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 const FALLBACK_IMG = "https://placehold.co/80x80?text=No+Image";
 
 export default function Checkout() {
-  const { cart, clearCart } = useContext(CartContext);
+  const { cart } = useContext(CartContext);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("token");
-
-  const subtotal = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
-  const total = subtotal;
+  const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
 
   const handlePayment = async () => {
     setError("");
@@ -26,13 +23,13 @@ export default function Checkout() {
     try {
       setLoading(true);
       const response = await axios.post(
-        API + "/api/paystack/init",
+        `${API}/api/paystack/init`,
         { email: user.email, amount: total, cart },
-        { headers: { Authorization: "Bearer " + token } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       window.location.href = response.data.url;
     } catch (err) {
-      setError(err.response?.data?.error || "Payment failed. Please try again.");
+      setError(err.response?.data?.error || "Payment failed.");
     } finally {
       setLoading(false);
     }
@@ -52,7 +49,7 @@ export default function Checkout() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>💳 Checkout</h1>
-        <Link to="/cart"><button style={styles.backBtn}>Back to Cart</button></Link>
+        <Link to="/cart"><button style={styles.backBtn}>← Back to Cart</button></Link>
       </div>
       <div style={styles.layout}>
         <div style={styles.leftCol}>
@@ -70,8 +67,9 @@ export default function Checkout() {
           )}
           {!user && (
             <div style={styles.warningBox}>
-              You are not logged in.
-              <Link to="/login" style={{ color: "#f97316" }}> Login</Link> to complete your purchase.
+              ⚠️ Not logged in.{" "}
+              <Link to="/login" style={{ color: "#f97316" }}>Login</Link>{" "}
+              to complete purchase.
             </div>
           )}
           <div style={styles.itemsCard}>
@@ -88,7 +86,9 @@ export default function Checkout() {
                   <p style={styles.itemName}>{item.name}</p>
                   <p style={styles.itemQty}>Qty: {item.quantity || 1}</p>
                 </div>
-                <p style={styles.itemPrice}>₦{(item.price * (item.quantity || 1)).toLocaleString()}</p>
+                <p style={styles.itemPrice}>
+                  ₦{(item.price * (item.quantity || 1)).toLocaleString()}
+                </p>
               </div>
             ))}
           </div>
@@ -98,8 +98,12 @@ export default function Checkout() {
             <h3 style={styles.sectionTitle}>🧾 Order Summary</h3>
             {cart.map((item) => (
               <div key={item._id} style={styles.summaryRow}>
-                <span style={styles.summaryLabel}>{item.name} x {item.quantity || 1}</span>
-                <span style={styles.summaryValue}>₦{(item.price * (item.quantity || 1)).toLocaleString()}</span>
+                <span style={styles.summaryLabel}>
+                  {item.name} × {item.quantity || 1}
+                </span>
+                <span style={styles.summaryValue}>
+                  ₦{(item.price * (item.quantity || 1)).toLocaleString()}
+                </span>
               </div>
             ))}
             <div style={styles.divider} />
@@ -110,17 +114,24 @@ export default function Checkout() {
             <div style={styles.divider} />
             <div style={styles.summaryRow}>
               <span style={{ color: "#fff", fontWeight: "800", fontSize: "18px" }}>Total</span>
-              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "22px" }}>₦{total.toLocaleString()}</span>
+              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "22px" }}>
+                ₦{total.toLocaleString()}
+              </span>
             </div>
-            {error && <div style={styles.errorBox}>{error}</div>}
+            {error && <div style={styles.errorBox}>⚠️ {error}</div>}
             <button
               onClick={handlePayment}
               disabled={loading || !user}
               style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}
             >
-              {loading ? "Processing..." : "Pay ₦" + total.toLocaleString() + " →"}
+              {loading ? "Processing..." : `Pay ₦${total.toLocaleString()} →`}
             </button>
             <p style={styles.secureText}>🔒 Secured by Paystack</p>
+            <div style={styles.guaranteeRow}>
+              <span style={styles.guaranteeItem}>✅ Secure Payment</span>
+              <span style={styles.guaranteeItem}>📦 Free Delivery</span>
+              <span style={styles.guaranteeItem}>↩️ Easy Returns</span>
+            </div>
           </div>
         </div>
       </div>
@@ -157,8 +168,9 @@ const styles = {
   summaryLabel: { color: "#888", fontSize: "14px" },
   summaryValue: { color: "#fff", fontSize: "15px", fontWeight: "600" },
   divider: { borderTop: "1px solid #2a2a2a", margin: "16px 0" },
-  errorBox: { background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px", marginTop: "8px" },
+  errorBox: { background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginTop: "8px" },
   payBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "17px", fontWeight: "800", marginTop: "16px", cursor: "pointer" },
   secureText: { color: "#888", fontSize: "13px", textAlign: "center", marginTop: "12px" },
+  guaranteeRow: { display: "flex", justifyContent: "space-between", marginTop: "16px", flexWrap: "wrap", gap: "8px" },
+  guaranteeItem: { color: "#888", fontSize: "12px" },
 };
-ENDOFFILE
