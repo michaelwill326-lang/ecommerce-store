@@ -8,10 +8,12 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Success from "./pages/Success";
 import Chatbot from "./components/Chatbot";
+import Navbar from "./components/Navbar";
 
 export default function App() {
   return (
     <BrowserRouter>
+      <Navbar />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/product/:id" element={<ProductDetail />} />

@@ -1,7 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
-import Navbar from "../components/Navbar";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
@@ -10,7 +9,7 @@ const FALLBACK_IMG = "https://placehold.co/300x200?text=No+Image";
 const CATEGORIES = ["All", "Phones", "Laptops", "Accessories", "Audio", "Gaming"];
 
 export default function Dashboard() {
-  const { addToCart, cart } = useContext(CartContext);
+  const { addToCart } = useContext(CartContext);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,6 +41,7 @@ export default function Dashboard() {
 
   const handleAddToCart = (e, product) => {
     e.preventDefault();
+    e.stopPropagation();
     addToCart(product);
     setAddedId(product._id);
     setTimeout(() => setAddedId(null), 1500);
@@ -72,7 +72,6 @@ export default function Dashboard() {
 
   return (
     <div style={styles.page}>
-      <Navbar />
 
       {/* HERO */}
       <div style={styles.hero}>
@@ -161,10 +160,8 @@ export default function Dashboard() {
             <span style={styles.sectionSub}>{filtered.length} products</span>
           </div>
 
-          {/* SEARCH + FILTER + SORT */}
+          {/* SEARCH + SORT */}
           <div style={styles.controls}>
-
-            {/* SEARCH */}
             <input
               type="text"
               placeholder="🔍 Search products..."
@@ -172,8 +169,6 @@ export default function Dashboard() {
               onChange={(e) => setSearch(e.target.value)}
               style={styles.searchInput}
             />
-
-            {/* SORT */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -184,7 +179,6 @@ export default function Dashboard() {
               <option value="price_asc">Price: Low to High</option>
               <option value="price_desc">Price: High to Low</option>
             </select>
-
           </div>
 
           {/* CATEGORIES */}
@@ -228,7 +222,10 @@ export default function Dashboard() {
             <div style={styles.centered}>
               <p style={{ fontSize: "48px" }}>🔍</p>
               <p style={{ color: "#888" }}>No products found for "{search}"</p>
-              <button onClick={() => { setSearch(""); setCategory("All"); }} style={styles.retryBtn}>
+              <button
+                onClick={() => { setSearch(""); setCategory("All"); }}
+                style={styles.retryBtn}
+              >
                 Clear Filters
               </button>
             </div>
@@ -311,7 +308,10 @@ function ProductCard({ product: p, addedId, onAddToCart }) {
         {/* RATING */}
         {avgRating && (
           <div style={styles.ratingRow}>
-            <span style={styles.stars}>{"★".repeat(Math.round(avgRating))}{"☆".repeat(5 - Math.round(avgRating))}</span>
+            <span style={styles.stars}>
+              {"★".repeat(Math.round(avgRating))}
+              {"☆".repeat(5 - Math.round(avgRating))}
+            </span>
             <span style={styles.ratingText}>({p.reviews.length})</span>
           </div>
         )}
