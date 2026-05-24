@@ -2,15 +2,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useContext, useState } from "react";
 import { CartContext } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
-// Inside component:
-const { wishlist } = useWishlist();
-const wishlistCount = wishlist.length;
 
 export default function Navbar() {
   const { cart } = useContext(CartContext);
+  const { wishlist } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const wishlistCount = wishlist.length;
 
   const user = JSON.parse(localStorage.getItem("user"));
   const cartCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
