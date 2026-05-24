@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
+import ReviewSection from "../components/ReviewSection";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 const FALLBACK_IMG = "https://placehold.co/500x400?text=No+Image";
@@ -212,28 +213,10 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {/* REVIEWS */}
-      {product.reviews?.length > 0 && (
-        <div style={styles.reviewsSection}>
-          <h2 style={styles.reviewsTitle}>Customer Reviews</h2>
-          <div style={styles.reviewsGrid}>
-            {product.reviews.map((r, i) => (
-              <div key={i} style={styles.reviewCard}>
-                <div style={styles.reviewHeader}>
-                  <span style={styles.reviewUser}>👤 {r.user}</span>
-                  <span style={styles.reviewStars}>
-                    {"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}
-                  </span>
-                </div>
-                <p style={styles.reviewComment}>{r.comment}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <ReviewSection product={product} onRefresh={fetchProduct} />
 
-    </div>
-  );
+</div>
+);
 }
 
 const styles = {
