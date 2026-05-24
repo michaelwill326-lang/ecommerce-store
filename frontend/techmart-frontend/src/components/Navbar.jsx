@@ -44,8 +44,12 @@ export default function Navbar() {
         {/* DESKTOP LINKS */}
         <div style={styles.desktopLinks}>
           <Link to="/" style={linkStyle("/")}>Home</Link>
+          <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
 
-          {/* USER GREETING OR AUTH LINKS */}
+          {user?.role === "admin" && (
+            <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
+          )}
+
           {user ? (
             <div style={styles.userWrap}>
               <div style={styles.avatar}>
@@ -106,23 +110,25 @@ export default function Navbar() {
             </div>
           )}
 
-          <Link
-            to="/"
-            style={styles.mobileLink}
-            onClick={() => setMenuOpen(false)}
-          >
+          <Link to="/" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             🏠 Home
           </Link>
 
-          <Link
-            to="/cart"
-            style={styles.mobileLink}
-            onClick={() => setMenuOpen(false)}
-          >
+          <Link to="/tracking" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
+            📦 My Orders
+          </Link>
+
+          <Link to="/cart" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             🛒 Cart {cartCount > 0 && (
               <span style={styles.mobileBadge}>{cartCount}</span>
             )}
           </Link>
+
+          {user?.role === "admin" && (
+            <Link to="/admin" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
+              👑 Admin Dashboard
+            </Link>
+          )}
 
           {user ? (
             <button onClick={handleLogout} style={styles.mobileLogoutBtn}>
@@ -130,18 +136,10 @@ export default function Navbar() {
             </button>
           ) : (
             <>
-              <Link
-                to="/login"
-                style={styles.mobileLink}
-                onClick={() => setMenuOpen(false)}
-              >
+              <Link to="/login" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
                 🔑 Login
               </Link>
-              <Link
-                to="/signup"
-                style={styles.mobileLink}
-                onClick={() => setMenuOpen(false)}
-              >
+              <Link to="/signup" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
                 ✨ Sign Up
               </Link>
             </>
@@ -263,9 +261,6 @@ const styles = {
     padding: "8px 12px",
     borderRadius: "8px",
     cursor: "pointer",
-    "@media (max-width: 768px)": {
-      display: "flex",
-    },
   },
   mobileMenu: {
     position: "fixed",
