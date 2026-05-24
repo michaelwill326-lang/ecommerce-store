@@ -1,6 +1,10 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useContext, useState } from "react";
 import { CartContext } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
+// Inside component:
+const { wishlist } = useWishlist();
+const wishlistCount = wishlist.length;
 
 export default function Navbar() {
   const { cart } = useContext(CartContext);
@@ -49,7 +53,18 @@ export default function Navbar() {
           {user?.role === "admin" && (
             <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
           )}
-
+<Link to="/wishlist" style={{ ...linkStyle("/wishlist"), position: "relative" }}>
+  <div style={{
+    ...styles.cartWrap,
+    background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
+    border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
+  }}>
+    🤍
+    {wishlistCount > 0 && (
+      <span style={styles.cartBadge}>{wishlistCount}</span>
+    )}
+  </div>
+</Link>
           {user ? (
             <div style={styles.userWrap}>
               <div style={styles.avatar}>

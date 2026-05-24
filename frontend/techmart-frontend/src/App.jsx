@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
 import Dashboard from "./pages/Dashboard";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -9,6 +8,7 @@ import Signup from "./pages/Signup";
 import Success from "./pages/Success";
 import Admin from "./pages/Admin";
 import Tracking from "./pages/Tracking";
+import Wishlist from "./pages/Wishlist";
 import Chatbot from "./components/Chatbot";
 import Navbar from "./components/Navbar";
 
@@ -26,6 +26,7 @@ export default function App() {
         <Route path="/success" element={<Success />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/tracking" element={<Tracking />} />
+        <Route path="/wishlist" element={<Wishlist />} />
       </Routes>
       <Chatbot />
     </BrowserRouter>
