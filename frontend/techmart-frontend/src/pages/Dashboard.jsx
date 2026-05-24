@@ -47,7 +47,6 @@ export default function Dashboard() {
     setTimeout(() => setAddedId(null), 1500);
   };
 
-  // FILTER + SORT
   const filtered = products
     .filter((p) => {
       const matchSearch =
@@ -160,7 +159,6 @@ export default function Dashboard() {
             <span style={styles.sectionSub}>{filtered.length} products</span>
           </div>
 
-          {/* SEARCH + SORT */}
           <div style={styles.controls}>
             <input
               type="text"
@@ -181,7 +179,6 @@ export default function Dashboard() {
             </select>
           </div>
 
-          {/* CATEGORIES */}
           <div style={styles.categoryRow}>
             {CATEGORIES.map((cat) => (
               <button
@@ -201,7 +198,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* LOADING */}
           {loading && (
             <div style={styles.centered}>
               <div style={styles.spinner} />
@@ -209,7 +205,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ERROR */}
           {error && (
             <div style={styles.centered}>
               <p style={{ color: "#f97316", fontSize: "18px" }}>⚠️ {error}</p>
@@ -217,7 +212,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* EMPTY */}
           {!loading && !error && filtered.length === 0 && (
             <div style={styles.centered}>
               <p style={{ fontSize: "48px" }}>🔍</p>
@@ -231,7 +225,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* GRID */}
           {!loading && !error && filtered.length > 0 && (
             <div style={styles.grid}>
               {filtered.map((p) => (
@@ -258,8 +251,23 @@ export default function Dashboard() {
           <div style={styles.footerLinks}>
             <Link to="/" style={styles.footerLink}>Home</Link>
             <Link to="/cart" style={styles.footerLink}>Cart</Link>
-            <Link to="/login" style={styles.footerLink}>Login</Link>
-            <Link to="/signup" style={styles.footerLink}>Signup</Link>
+            <Link to="/tracking" style={styles.footerLink}>Orders</Link>
+            {user ? (
+              <span
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.href = "/login";
+                }}
+                style={{ ...styles.footerLink, cursor: "pointer" }}
+              >
+                Logout
+              </span>
+            ) : (
+              <>
+                <Link to="/login" style={styles.footerLink}>Login</Link>
+                <Link to="/signup" style={styles.footerLink}>Signup</Link>
+              </>
+            )}
           </div>
         </div>
         <div style={styles.footerBottom}>
@@ -283,8 +291,6 @@ function ProductCard({ product: p, addedId, onAddToCart }) {
 
   return (
     <Link to={`/product/${p._id}`} style={styles.card}>
-
-      {/* IMAGE */}
       <div style={styles.cardImgWrap}>
         <img
           src={p.images?.[0] || FALLBACK_IMG}
@@ -299,13 +305,9 @@ function ProductCard({ product: p, addedId, onAddToCart }) {
           <div style={styles.trendingBadge}>🔥 Trending</div>
         )}
       </div>
-
-      {/* DETAILS */}
       <div style={styles.cardBody}>
         <p style={styles.cardCategory}>{p.category}</p>
         <p style={styles.cardName}>{p.name}</p>
-
-        {/* RATING */}
         {avgRating && (
           <div style={styles.ratingRow}>
             <span style={styles.stars}>
@@ -315,7 +317,6 @@ function ProductCard({ product: p, addedId, onAddToCart }) {
             <span style={styles.ratingText}>({p.reviews.length})</span>
           </div>
         )}
-
         <div style={styles.cardFooter}>
           <p style={styles.cardPrice}>₦{p.price?.toLocaleString()}</p>
           <button
@@ -335,337 +336,59 @@ function ProductCard({ product: p, addedId, onAddToCart }) {
           </button>
         </div>
       </div>
-
     </Link>
   );
 }
 
 const styles = {
-  page: {
-    background: "#0a0a0a",
-    minHeight: "100vh",
-    color: "#fff",
-  },
-  hero: {
-    background: "linear-gradient(135deg, #111 0%, #1a0a00 50%, #111 100%)",
-    borderBottom: "1px solid #222",
-    padding: "80px 32px",
-    textAlign: "center",
-  },
-  heroContent: {
-    maxWidth: "700px",
-    margin: "0 auto",
-  },
-  heroTag: {
-    color: "#f97316",
-    fontSize: "14px",
-    fontWeight: "700",
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    marginBottom: "16px",
-  },
-  heroTitle: {
-    color: "#fff",
-    fontSize: "52px",
-    fontWeight: "900",
-    lineHeight: "1.2",
-    marginBottom: "16px",
-  },
-  heroOrange: {
-    color: "#f97316",
-  },
-  heroSubtitle: {
-    color: "#888",
-    fontSize: "18px",
-    marginBottom: "32px",
-    lineHeight: "1.6",
-  },
-  heroButtons: {
-    display: "flex",
-    gap: "16px",
-    justifyContent: "center",
-    flexWrap: "wrap",
-  },
-  heroBtn: {
-    padding: "16px 32px",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
-    color: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    fontSize: "16px",
-    fontWeight: "700",
-    cursor: "pointer",
-  },
-  heroOutlineBtn: {
-    padding: "16px 32px",
-    background: "transparent",
-    color: "#fff",
-    border: "1px solid #444",
-    borderRadius: "12px",
-    fontSize: "16px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  statsBar: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "48px",
-    padding: "24px 32px",
-    background: "#111",
-    borderBottom: "1px solid #222",
-    flexWrap: "wrap",
-  },
-  statItem: {
-    textAlign: "center",
-  },
-  statValue: {
-    color: "#f97316",
-    fontSize: "24px",
-    fontWeight: "800",
-    margin: 0,
-  },
-  statLabel: {
-    color: "#888",
-    fontSize: "13px",
-    margin: 0,
-  },
-  container: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "40px 16px",
-  },
-  section: {
-    marginBottom: "60px",
-  },
-  sectionHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "20px",
-  },
-  sectionTitle: {
-    color: "#fff",
-    fontSize: "22px",
-    fontWeight: "700",
-  },
-  sectionSub: {
-    color: "#888",
-    fontSize: "14px",
-  },
-  controls: {
-    display: "flex",
-    gap: "12px",
-    marginBottom: "16px",
-    flexWrap: "wrap",
-  },
-  searchInput: {
-    flex: 1,
-    minWidth: "200px",
-    padding: "12px 20px",
-    borderRadius: "999px",
-    border: "1px solid #333",
-    background: "#1a1a1a",
-    color: "#fff",
-    fontSize: "15px",
-    outline: "none",
-  },
-  select: {
-    padding: "12px 16px",
-    borderRadius: "10px",
-    border: "1px solid #333",
-    background: "#1a1a1a",
-    color: "#fff",
-    fontSize: "14px",
-    outline: "none",
-    cursor: "pointer",
-  },
-  categoryRow: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap",
-    marginBottom: "24px",
-  },
-  catBtn: {
-    padding: "8px 18px",
-    borderRadius: "999px",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-    gap: "20px",
-  },
-  card: {
-    background: "#1a1a1a",
-    border: "1px solid #2a2a2a",
-    borderRadius: "16px",
-    overflow: "hidden",
-    textDecoration: "none",
-    color: "#fff",
-    display: "block",
-    transition: "transform 0.2s, border-color 0.2s",
-  },
-  cardImgWrap: {
-    position: "relative",
-  },
-  cardImg: {
-    width: "100%",
-    height: "180px",
-    objectFit: "cover",
-    background: "#222",
-    display: "block",
-  },
-  outOfStock: {
-    position: "absolute",
-    top: "10px",
-    left: "10px",
-    background: "#dc2626",
-    color: "#fff",
-    padding: "4px 10px",
-    borderRadius: "999px",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-  trendingBadge: {
-    position: "absolute",
-    top: "10px",
-    right: "10px",
-    background: "#f97316",
-    color: "#fff",
-    padding: "4px 10px",
-    borderRadius: "999px",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-  cardBody: {
-    padding: "14px",
-  },
-  cardCategory: {
-    color: "#f97316",
-    fontSize: "11px",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-    marginBottom: "6px",
-  },
-  cardName: {
-    fontSize: "14px",
-    fontWeight: "600",
-    marginBottom: "6px",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  ratingRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    marginBottom: "8px",
-  },
-  stars: {
-    color: "#f97316",
-    fontSize: "12px",
-  },
-  ratingText: {
-    color: "#888",
-    fontSize: "12px",
-  },
-  cardFooter: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: "8px",
-  },
-  cardPrice: {
-    color: "#f97316",
-    fontWeight: "800",
-    fontSize: "16px",
-  },
-  addBtn: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "10px",
-    border: "none",
-    color: "#fff",
-    fontSize: "16px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "background 0.3s",
-  },
-  centered: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "60px 0",
-    gap: "16px",
-  },
-  spinner: {
-    width: "40px",
-    height: "40px",
-    border: "4px solid #333",
-    borderTop: "4px solid #f97316",
-    borderRadius: "50%",
-    animation: "spin 0.8s linear infinite",
-  },
-  retryBtn: {
-    padding: "10px 24px",
-    background: "#f97316",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  footer: {
-    background: "#111",
-    borderTop: "1px solid #222",
-    padding: "40px 32px 24px",
-    marginTop: "40px",
-  },
-  footerTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    flexWrap: "wrap",
-    gap: "24px",
-    marginBottom: "32px",
-  },
-  footerBrand: {
-    color: "#f97316",
-    fontSize: "22px",
-    fontWeight: "800",
-    marginBottom: "4px",
-  },
-  footerTagline: {
-    color: "#888",
-    fontSize: "13px",
-  },
-  footerLinks: {
-    display: "flex",
-    gap: "24px",
-    flexWrap: "wrap",
-  },
-  footerLink: {
-    color: "#888",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: "500",
-  },
-  footerBottom: {
-    borderTop: "1px solid #222",
-    paddingTop: "20px",
-    display: "flex",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: "8px",
-  },
-  footerCopy: {
-    color: "#555",
-    fontSize: "13px",
-  },
+  page: { background: "#0a0a0a", minHeight: "100vh", color: "#fff" },
+  hero: { background: "linear-gradient(135deg, #111 0%, #1a0a00 50%, #111 100%)", borderBottom: "1px solid #222", padding: "80px 32px", textAlign: "center" },
+  heroContent: { maxWidth: "700px", margin: "0 auto" },
+  heroTag: { color: "#f97316", fontSize: "14px", fontWeight: "700", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "16px" },
+  heroTitle: { color: "#fff", fontSize: "52px", fontWeight: "900", lineHeight: "1.2", marginBottom: "16px" },
+  heroOrange: { color: "#f97316" },
+  heroSubtitle: { color: "#888", fontSize: "18px", marginBottom: "32px", lineHeight: "1.6" },
+  heroButtons: { display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" },
+  heroBtn: { padding: "16px 32px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer" },
+  heroOutlineBtn: { padding: "16px 32px", background: "transparent", color: "#fff", border: "1px solid #444", borderRadius: "12px", fontSize: "16px", fontWeight: "600", cursor: "pointer" },
+  statsBar: { display: "flex", justifyContent: "center", gap: "48px", padding: "24px 32px", background: "#111", borderBottom: "1px solid #222", flexWrap: "wrap" },
+  statItem: { textAlign: "center" },
+  statValue: { color: "#f97316", fontSize: "24px", fontWeight: "800", margin: 0 },
+  statLabel: { color: "#888", fontSize: "13px", margin: 0 },
+  container: { maxWidth: "1200px", margin: "0 auto", padding: "40px 16px" },
+  section: { marginBottom: "60px" },
+  sectionHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" },
+  sectionTitle: { color: "#fff", fontSize: "22px", fontWeight: "700" },
+  sectionSub: { color: "#888", fontSize: "14px" },
+  controls: { display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" },
+  searchInput: { flex: 1, minWidth: "200px", padding: "12px 20px", borderRadius: "999px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "15px", outline: "none" },
+  select: { padding: "12px 16px", borderRadius: "10px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "14px", outline: "none", cursor: "pointer" },
+  categoryRow: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px" },
+  catBtn: { padding: "8px 18px", borderRadius: "999px", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" },
+  card: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", overflow: "hidden", textDecoration: "none", color: "#fff", display: "block", transition: "transform 0.2s, border-color 0.2s" },
+  cardImgWrap: { position: "relative" },
+  cardImg: { width: "100%", height: "180px", objectFit: "cover", background: "#222", display: "block" },
+  outOfStock: { position: "absolute", top: "10px", left: "10px", background: "#dc2626", color: "#fff", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: "700" },
+  trendingBadge: { position: "absolute", top: "10px", right: "10px", background: "#f97316", color: "#fff", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: "700" },
+  cardBody: { padding: "14px" },
+  cardCategory: { color: "#f97316", fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" },
+  cardName: { fontSize: "14px", fontWeight: "600", marginBottom: "6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  ratingRow: { display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" },
+  stars: { color: "#f97316", fontSize: "12px" },
+  ratingText: { color: "#888", fontSize: "12px" },
+  cardFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" },
+  cardPrice: { color: "#f97316", fontWeight: "800", fontSize: "16px" },
+  addBtn: { width: "36px", height: "36px", borderRadius: "10px", border: "none", color: "#fff", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.3s" },
+  centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 0", gap: "16px" },
+  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
+  retryBtn: { padding: "10px 24px", background: "#f97316", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
+  footer: { background: "#111", borderTop: "1px solid #222", padding: "40px 32px 24px", marginTop: "40px" },
+  footerTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "24px", marginBottom: "32px" },
+  footerBrand: { color: "#f97316", fontSize: "22px", fontWeight: "800", marginBottom: "4px" },
+  footerTagline: { color: "#888", fontSize: "13px" },
+  footerLinks: { display: "flex", gap: "24px", flexWrap: "wrap", alignItems: "center" },
+  footerLink: { color: "#888", textDecoration: "none", fontSize: "14px", fontWeight: "500" },
+  footerBottom: { borderTop: "1px solid #222", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" },
+  footerCopy: { color: "#555", fontSize: "13px" },
 };
