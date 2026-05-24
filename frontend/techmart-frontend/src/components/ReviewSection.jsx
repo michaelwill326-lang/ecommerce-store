@@ -9,23 +9,22 @@ export default function ReviewSection({ product, onRefresh }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [flagging, setFlagging] = useState(null);
 
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
 
+  const approvedReviews = product.reviews?.filter((r) => r.approved) || [];
+
+  const avgRating = approvedReviews.length
+    ? (approvedReviews.reduce((sum, r) => sum + r.stars, 0) / approvedReviews.length).toFixed(1)
+    : null;
+
   const submitReview = async () => {
     setError("");
     setSuccess("");
-
-    if (!token || !user) {
-      setError("Please login to leave a review");
-      return;
-    }
-
-    if (!comment.trim()) {
-      setError("Please write a comment");
-      return;
-    }
+    if (!token || !user) { setError("Please login to leave a review"); return; }
+    if (!comment.trim()) { setError("Please write a comment"); return; }
 
     try {
       setLoading(true);
@@ -37,19 +36,12 @@ export default function ReviewSection({ product, onRefresh }) {
         },
         body: JSON.stringify({ comment, stars }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to submit review");
-        return;
-      }
-
-      setSuccess("✅ Review submitted successfully!");
+      if (!res.ok) { setError(data.error || "Failed to submit review"); return; }
+      setSuccess("✅ Review submitted! It will appear after admin approval.");
       setComment("");
       setStars(5);
       if (onRefresh) onRefresh();
-
     } catch (err) {
       setError("Failed to submit review. Please try again.");
     } finally {
@@ -57,9 +49,39 @@ export default function ReviewSection({ product, onRefresh }) {
     }
   };
 
-  const avgRating = product.reviews?.length
-    ? (product.reviews.reduce((sum, r) => sum + r.stars, 0) / product.reviews.length).toFixed(1)
-    : null;
+  const flagReview = async (reviewId) => {
+    if (!token) { alert("Please login to flag a review"); return; }
+    try {
+      setFlagging(reviewId);
+      await fetch(`${API}/api/products/${product._id}/review/${reviewId}/flag`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("⚠️ Review flagged for moderation. Thank you!");
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      alert("Failed to flag review");
+    } finally {
+      setFlagging(null);
+    }
+  };
+
+  const getSentimentEmoji = (sentiment) => {
+    if (sentiment === "positive") return "😊";
+    if (sentiment === "negative") return "😞";
+    return "😐";
+  };
+
+  const getSentimentColor = (sentiment) => {
+    if (sentiment === "positive") return "#22c55e";
+    if (sentiment === "negative") return "#dc2626";
+    return "#888";
+  };
+
+  const ratingCounts = [5, 4, 3, 2, 1].map((s) => ({
+    star: s,
+    count: approvedReviews.filter((r) => r.stars === s).length,
+  }));
 
   return (
     <div style={styles.wrap}>
@@ -72,20 +94,57 @@ export default function ReviewSection({ product, onRefresh }) {
             <span style={styles.avgNumber}>{avgRating}</span>
             <div>
               <div style={styles.starsRow}>
-                {[1,2,3,4,5].map(i => (
-                  <span key={i} style={{
-                    color: i <= Math.round(avgRating) ? "#f97316" : "#333",
-                    fontSize: "18px"
-                  }}>★</span>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <span key={i} style={{ color: i <= Math.round(avgRating) ? "#f97316" : "#333", fontSize: "18px" }}>★</span>
                 ))}
               </div>
-              <p style={styles.reviewCount}>
-                {product.reviews.length} review{product.reviews.length !== 1 ? "s" : ""}
-              </p>
+              <p style={styles.reviewCount}>{approvedReviews.length} verified review{approvedReviews.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
         )}
       </div>
+
+      {/* RATING BREAKDOWN */}
+      {approvedReviews.length > 0 && (
+        <div style={styles.breakdownCard}>
+          <h3 style={styles.breakdownTitle}>Rating Breakdown</h3>
+          {ratingCounts.map(({ star, count }) => (
+            <div key={star} style={styles.breakdownRow}>
+              <span style={styles.breakdownLabel}>{star} ★</span>
+              <div style={styles.barTrack}>
+                <div style={{
+                  ...styles.barFill,
+                  width: approvedReviews.length > 0 ? `${(count / approvedReviews.length) * 100}%` : "0%",
+                  background: star >= 4 ? "#22c55e" : star === 3 ? "#f97316" : "#dc2626",
+                }} />
+              </div>
+              <span style={styles.breakdownCount}>{count}</span>
+            </div>
+          ))}
+
+          {/* SENTIMENT SUMMARY */}
+          <div style={styles.sentimentRow}>
+            <div style={styles.sentimentItem}>
+              <span style={{ fontSize: "20px" }}>😊</span>
+              <span style={{ color: "#22c55e", fontWeight: "700" }}>
+                {approvedReviews.filter((r) => r.sentiment === "positive").length} Positive
+              </span>
+            </div>
+            <div style={styles.sentimentItem}>
+              <span style={{ fontSize: "20px" }}>😐</span>
+              <span style={{ color: "#888", fontWeight: "700" }}>
+                {approvedReviews.filter((r) => r.sentiment === "neutral").length} Neutral
+              </span>
+            </div>
+            <div style={styles.sentimentItem}>
+              <span style={{ fontSize: "20px" }}>😞</span>
+              <span style={{ color: "#dc2626", fontWeight: "700" }}>
+                {approvedReviews.filter((r) => r.sentiment === "negative").length} Negative
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ADD REVIEW FORM */}
       <div style={styles.formCard}>
@@ -93,11 +152,18 @@ export default function ReviewSection({ product, onRefresh }) {
           {user ? "✍️ Write a Review" : "🔐 Login to Review"}
         </h3>
 
+        {/* VERIFIED BUYER NOTICE */}
+        {user && (
+          <div style={styles.verifiedNotice}>
+            ℹ️ Reviews are verified against purchase history and require admin approval before appearing.
+          </div>
+        )}
+
         {/* STAR SELECTOR */}
         <div style={styles.starSelector}>
           <p style={styles.label}>Your Rating</p>
           <div style={styles.starsRow}>
-            {[1,2,3,4,5].map(i => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <span
                 key={i}
                 onClick={() => setStars(i)}
@@ -133,13 +199,14 @@ export default function ReviewSection({ product, onRefresh }) {
               cursor: !user ? "not-allowed" : "text",
             }}
           />
+          <p style={{ color: "#555", fontSize: "12px", marginTop: "4px" }}>
+            {comment.length}/500 characters
+          </p>
         </div>
 
-        {/* ERROR / SUCCESS */}
         {error && <div style={styles.errorBox}>⚠️ {error}</div>}
         {success && <div style={styles.successBox}>{success}</div>}
 
-        {/* SUBMIT */}
         <button
           onClick={submitReview}
           disabled={loading || !user}
@@ -154,32 +221,56 @@ export default function ReviewSection({ product, onRefresh }) {
       </div>
 
       {/* REVIEWS LIST */}
-      {product.reviews?.length > 0 ? (
+      {approvedReviews.length > 0 ? (
         <div style={styles.reviewsList}>
-          {product.reviews.map((r, i) => (
+          <h3 style={{ color: "#fff", fontSize: "16px", fontWeight: "700", marginBottom: "16px" }}>
+            {approvedReviews.length} Review{approvedReviews.length !== 1 ? "s" : ""}
+          </h3>
+          {approvedReviews.map((r, i) => (
             <div key={i} style={styles.reviewCard}>
               <div style={styles.reviewHeader}>
                 <div style={styles.reviewAvatar}>
                   {r.user?.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={styles.reviewUser}>{r.user}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <p style={styles.reviewUser}>{r.user}</p>
+                    {r.verified && (
+                      <span style={styles.verifiedBadge}>✅ Verified Buyer</span>
+                    )}
+                  </div>
                   <p style={styles.reviewDate}>
                     {new Date(r.createdAt).toLocaleDateString("en-NG", {
                       year: "numeric", month: "long", day: "numeric"
                     })}
                   </p>
                 </div>
-                <div style={styles.reviewStars}>
-                  {[1,2,3,4,5].map(i => (
-                    <span key={i} style={{
-                      color: i <= r.stars ? "#f97316" : "#333",
-                      fontSize: "16px"
-                    }}>★</span>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                  <div style={styles.reviewStars}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <span key={i} style={{ color: i <= r.stars ? "#f97316" : "#333", fontSize: "16px" }}>★</span>
+                    ))}
+                  </div>
+                  {r.sentiment && (
+                    <span style={{ color: getSentimentColor(r.sentiment), fontSize: "12px", fontWeight: "600" }}>
+                      {getSentimentEmoji(r.sentiment)} {r.sentiment}
+                    </span>
+                  )}
                 </div>
               </div>
+
               <p style={styles.reviewComment}>{r.comment}</p>
+
+              {/* FLAG BUTTON */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button
+                  onClick={() => flagReview(r._id)}
+                  disabled={flagging === r._id}
+                  style={styles.flagBtn}
+                >
+                  {flagging === r._id ? "Flagging..." : "⚑ Flag"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -187,7 +278,7 @@ export default function ReviewSection({ product, onRefresh }) {
         <div style={styles.noReviews}>
           <span style={{ fontSize: "48px" }}>💬</span>
           <p style={{ color: "#888", marginTop: "12px" }}>
-            No reviews yet. Be the first to review!
+            No approved reviews yet. Be the first to review!
           </p>
         </div>
       )}
@@ -204,8 +295,18 @@ const styles = {
   avgNumber: { color: "#f97316", fontSize: "36px", fontWeight: "900" },
   starsRow: { display: "flex", alignItems: "center", gap: "2px" },
   reviewCount: { color: "#888", fontSize: "12px", margin: "4px 0 0" },
+  breakdownCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px", marginBottom: "24px" },
+  breakdownTitle: { color: "#fff", fontSize: "15px", fontWeight: "700", marginBottom: "16px" },
+  breakdownRow: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" },
+  breakdownLabel: { color: "#888", fontSize: "13px", minWidth: "30px" },
+  barTrack: { flex: 1, height: "8px", background: "#222", borderRadius: "999px", overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: "999px", transition: "width 0.3s" },
+  breakdownCount: { color: "#888", fontSize: "13px", minWidth: "20px", textAlign: "right" },
+  sentimentRow: { display: "flex", justifyContent: "space-around", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #222" },
+  sentimentItem: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" },
   formCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
-  formTitle: { color: "#fff", fontSize: "16px", fontWeight: "700", marginBottom: "20px" },
+  formTitle: { color: "#fff", fontSize: "16px", fontWeight: "700", marginBottom: "16px" },
+  verifiedNotice: { background: "#0a1a2a", border: "1px solid #3b82f6", color: "#93c5fd", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", marginBottom: "16px" },
   starSelector: { marginBottom: "20px" },
   label: { color: "#aaa", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" },
   textarea: { width: "100%", minHeight: "100px", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" },
@@ -218,7 +319,9 @@ const styles = {
   reviewAvatar: { width: "40px", height: "40px", borderRadius: "50%", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", fontSize: "16px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   reviewUser: { color: "#fff", fontWeight: "600", fontSize: "14px", margin: 0 },
   reviewDate: { color: "#888", fontSize: "12px", margin: "2px 0 0" },
-  reviewStars: { display: "flex", gap: "2px", marginLeft: "auto" },
+  reviewStars: { display: "flex", gap: "2px" },
   reviewComment: { color: "#aaa", fontSize: "14px", lineHeight: "1.6", margin: 0 },
+  verifiedBadge: { background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: "600" },
+  flagBtn: { background: "transparent", border: "1px solid #333", color: "#888", padding: "4px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
   noReviews: { textAlign: "center", padding: "40px 0" },
 };

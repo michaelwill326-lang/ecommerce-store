@@ -8,7 +8,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -24,9 +24,14 @@ export default function Admin() {
   const [newProduct, setNewProduct] = useState({
     name: "", price: "", description: "", category: "", stock: "", images: [""]
   });
+  const [pendingReviews, setPendingReviews] = useState([]);
+  const [flaggedReviews, setFlaggedReviews] = useState([]);
+  const [sentiment, setSentiment] = useState(null);
+  const [reviewTab, setReviewTab] = useState("pending");
 
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
+  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     if (!token || user?.role !== "admin") {
@@ -36,21 +41,25 @@ export default function Admin() {
     fetchAll();
   }, []);
 
-  const headers = { Authorization: `Bearer ${token}` };
-
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
         axios.get(`${API}/api/admin/users`, { headers }),
+        axios.get(`${API}/api/admin/reviews/sentiment`, { headers }),
+        axios.get(`${API}/api/admin/reviews/pending`, { headers }),
+        axios.get(`${API}/api/admin/reviews/flagged`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
       setProducts(productsRes.data);
       setUsers(usersRes.data);
+      setSentiment(sentimentRes.data);
+      setPendingReviews(pendingRes.data);
+      setFlaggedReviews(flaggedRes.data);
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -103,6 +112,29 @@ export default function Admin() {
       category: p.category, stock: p.stock, images: p.images || [""]
     });
     setShowAddProduct(true);
+  };
+
+  const approveReview = async (productId, reviewId) => {
+    try {
+      await axios.put(`${API}/api/products/${productId}/review/${reviewId}/approve`, {}, { headers });
+      setPendingReviews(pendingReviews.filter(r => r._id !== reviewId));
+      setFlaggedReviews(flaggedReviews.filter(r => r._id !== reviewId));
+      alert("✅ Review approved!");
+    } catch (err) {
+      alert("Failed to approve review");
+    }
+  };
+
+  const deleteReview = async (productId, reviewId) => {
+    if (!window.confirm("Delete this review?")) return;
+    try {
+      await axios.delete(`${API}/api/products/${productId}/review/${reviewId}`, { headers });
+      setPendingReviews(pendingReviews.filter(r => r._id !== reviewId));
+      setFlaggedReviews(flaggedReviews.filter(r => r._id !== reviewId));
+      alert("🗑️ Review deleted!");
+    } catch (err) {
+      alert("Failed to delete review");
+    }
   };
 
   const chartData = analytics?.revenueByDate
@@ -162,6 +194,7 @@ export default function Admin() {
             {t === "Orders" && "📦 "}
             {t === "Products" && "🛍️ "}
             {t === "Users" && "👥 "}
+            {t === "Reviews" && "⭐ "}
             {t}
           </button>
         ))}
@@ -172,7 +205,6 @@ export default function Admin() {
       ===================== */}
       {tab === "Dashboard" && (
         <div>
-          {/* STATS */}
           <div style={styles.statsGrid}>
             {[
               { label: "Total Revenue", value: `₦${analytics?.totalRevenue?.toLocaleString() || 0}`, icon: "💰", color: "#22c55e" },
@@ -190,7 +222,6 @@ export default function Admin() {
             ))}
           </div>
 
-          {/* REVENUE CHART */}
           {chartData.length > 0 && (
             <div style={styles.chartCard}>
               <h2 style={styles.sectionTitle}>📈 Revenue Over Time</h2>
@@ -210,7 +241,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* RECENT ORDERS */}
           <div style={styles.tableCard}>
             <h2 style={styles.sectionTitle}>🕐 Recent Orders</h2>
             <table style={styles.table}>
@@ -300,7 +330,6 @@ export default function Admin() {
               </button>
             </div>
 
-            {/* ADD/EDIT FORM */}
             {showAddProduct && (
               <div style={styles.formCard}>
                 <h3 style={{ color: "#fff", marginBottom: "16px" }}>
@@ -425,6 +454,167 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* =====================
+          REVIEWS TAB
+      ===================== */}
+      {tab === "Reviews" && (
+        <div>
+
+          {/* SENTIMENT OVERVIEW */}
+          {sentiment && (
+            <div style={styles.tableCard}>
+              <h2 style={styles.sectionTitle}>🧠 Sentiment Analysis</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+                {[
+                  { label: "Positive", value: sentiment.stats.positive, color: "#22c55e", emoji: "😊" },
+                  { label: "Neutral", value: sentiment.stats.neutral, color: "#888", emoji: "😐" },
+                  { label: "Negative", value: sentiment.stats.negative, color: "#dc2626", emoji: "😞" },
+                  { label: "Total Reviews", value: sentiment.stats.total, color: "#f97316", emoji: "⭐" },
+                ].map(s => (
+                  <div key={s.label} style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ fontSize: "28px", margin: 0 }}>{s.emoji}</p>
+                    <p style={{ color: s.color, fontSize: "24px", fontWeight: "800", margin: "8px 0 4px" }}>{s.value}</p>
+                    <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {sentiment.productSentiments.length > 0 && (
+                <>
+                  <h3 style={{ color: "#fff", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}>
+                    Product Sentiment Rankings
+                  </h3>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        {["Product", "😊 Positive", "😐 Neutral", "😞 Negative", "Score", "Total"].map(h => (
+                          <th key={h} style={styles.th}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sentiment.productSentiments.map((p, i) => (
+                        <tr key={i} style={styles.tr}>
+                          <td style={styles.td}>{p.name}</td>
+                          <td style={{ ...styles.td, color: "#22c55e" }}>{p.positive}</td>
+                          <td style={{ ...styles.td, color: "#888" }}>{p.neutral}</td>
+                          <td style={{ ...styles.td, color: "#dc2626" }}>{p.negative}</td>
+                          <td style={styles.td}>
+                            <span style={{
+                              ...styles.badge,
+                              background: p.score > 0 ? "#22c55e" : p.score < 0 ? "#dc2626" : "#333"
+                            }}>
+                              {p.score > 0 ? "+" : ""}{p.score}%
+                            </span>
+                          </td>
+                          <td style={styles.td}>{p.total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* MODERATION */}
+          <div style={styles.tableCard}>
+            <h2 style={styles.sectionTitle}>🛡️ Review Moderation</h2>
+            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+              {["pending", "flagged"].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setReviewTab(t)}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    background: reviewTab === t ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a",
+                    color: reviewTab === t ? "#fff" : "#888",
+                    border: reviewTab === t ? "none" : "1px solid #333",
+                  }}
+                >
+                  {t === "pending" ? `⏳ Pending (${pendingReviews.length})` : `⚑ Flagged (${flaggedReviews.length})`}
+                </button>
+              ))}
+            </div>
+
+            {/* PENDING */}
+            {reviewTab === "pending" && (
+              pendingReviews.length === 0 ? (
+                <p style={{ color: "#888", textAlign: "center", padding: "40px 0" }}>✅ No pending reviews!</p>
+              ) : (
+                pendingReviews.map((r, i) => (
+                  <div key={i} style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{r.productName}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                          <p style={{ color: "#fff", fontWeight: "600", fontSize: "13px", margin: 0 }}>{r.user}</p>
+                          {r.verified && <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", padding: "2px 8px", borderRadius: "999px", fontSize: "11px" }}>✅ Verified</span>}
+                        </div>
+                        <div style={{ display: "flex", gap: "2px", marginBottom: "8px" }}>
+                          {[1,2,3,4,5].map(s => (
+                            <span key={s} style={{ color: s <= r.stars ? "#f97316" : "#333", fontSize: "14px" }}>★</span>
+                          ))}
+                        </div>
+                        <p style={{ color: "#aaa", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
+                        <span style={{
+                          color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888",
+                          fontSize: "12px", fontWeight: "600"
+                        }}>
+                          🧠 {r.sentiment}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                        <button onClick={() => approveReview(r.productId, r._id)} style={styles.editBtn}>✅ Approve</button>
+                        <button onClick={() => deleteReview(r.productId, r._id)} style={styles.deleteBtn}>🗑️ Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
+
+            {/* FLAGGED */}
+            {reviewTab === "flagged" && (
+              flaggedReviews.length === 0 ? (
+                <p style={{ color: "#888", textAlign: "center", padding: "40px 0" }}>✅ No flagged reviews!</p>
+              ) : (
+                flaggedReviews.map((r, i) => (
+                  <div key={i} style={{ background: "#2a1010", border: "1px solid #dc2626", borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{r.productName}</p>
+                        <p style={{ color: "#fff", fontWeight: "600", fontSize: "13px", margin: "0 0 8px" }}>{r.user}</p>
+                        <div style={{ display: "flex", gap: "2px", marginBottom: "8px" }}>
+                          {[1,2,3,4,5].map(s => (
+                            <span key={s} style={{ color: s <= r.stars ? "#f97316" : "#333", fontSize: "14px" }}>★</span>
+                          ))}
+                        </div>
+                        <p style={{ color: "#aaa", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
+                        <span style={{
+                          color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888",
+                          fontSize: "12px", fontWeight: "600"
+                        }}>
+                          🧠 {r.sentiment}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                        <button onClick={() => approveReview(r.productId, r._id)} style={styles.editBtn}>✅ Approve</button>
+                        <button onClick={() => deleteReview(r.productId, r._id)} style={styles.deleteBtn}>🗑️ Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
+          </div>
         </div>
       )}
 
