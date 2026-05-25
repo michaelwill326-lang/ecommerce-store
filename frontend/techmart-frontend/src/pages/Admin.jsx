@@ -28,6 +28,8 @@ export default function Admin() {
   const [flaggedReviews, setFlaggedReviews] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [reviewTab, setReviewTab] = useState("pending");
+  const [uploading, setUploading] = useState(false);
+  const [uploadPreview, setUploadPreview] = useState(null);
 
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
@@ -69,6 +71,35 @@ export default function Admin() {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => setUploadPreview(e.target.result);
+    reader.readAsDataURL(file);
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await axios.post(`${API}/api/upload`, formData, {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setNewProduct({ ...newProduct, images: [res.data.url] });
+    } catch (err) {
+      alert("Image upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const updateOrderStatus = async (id, status) => {
     try {
       await axios.put(`${API}/api/admin/orders/${id}`, { status }, { headers });
@@ -99,6 +130,7 @@ export default function Admin() {
       }
       setShowAddProduct(false);
       setEditProduct(null);
+      setUploadPreview(null);
       setNewProduct({ name: "", price: "", description: "", category: "", stock: "", images: [""] });
     } catch (err) {
       alert("Failed to save product");
@@ -107,6 +139,7 @@ export default function Admin() {
 
   const openEdit = (p) => {
     setEditProduct(p);
+    setUploadPreview(p.images?.[0] || null);
     setNewProduct({
       name: p.name, price: p.price, description: p.description,
       category: p.category, stock: p.stock, images: p.images || [""]
@@ -323,13 +356,19 @@ export default function Admin() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <h2 style={styles.sectionTitle}>🛍️ Products ({products.length})</h2>
               <button
-                onClick={() => { setShowAddProduct(true); setEditProduct(null); setNewProduct({ name: "", price: "", description: "", category: "", stock: "", images: [""] }); }}
+                onClick={() => {
+                  setShowAddProduct(true);
+                  setEditProduct(null);
+                  setUploadPreview(null);
+                  setNewProduct({ name: "", price: "", description: "", category: "", stock: "", images: [""] });
+                }}
                 style={styles.orangeBtn}
               >
                 + Add Product
               </button>
             </div>
 
+            {/* ADD/EDIT FORM */}
             {showAddProduct && (
               <div style={styles.formCard}>
                 <h3 style={{ color: "#fff", marginBottom: "16px" }}>
@@ -358,18 +397,66 @@ export default function Admin() {
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                   style={{ ...styles.input, width: "100%", height: "80px", resize: "vertical", marginBottom: "12px" }}
                 />
-                <input
-                  type="text"
-                  placeholder="Image URL"
-                  value={newProduct.images[0]}
-                  onChange={(e) => setNewProduct({ ...newProduct, images: [e.target.value] })}
-                  style={{ ...styles.input, width: "100%", marginBottom: "16px" }}
-                />
+
+                {/* IMAGE UPLOAD */}
+                <div style={styles.uploadWrap}>
+                  <p style={styles.uploadLabel}>🖼️ Product Image</p>
+
+                  {/* PREVIEW */}
+                  {uploadPreview && (
+                    <div style={styles.previewWrap}>
+                      <img
+                        src={uploadPreview}
+                        alt="Preview"
+                        style={styles.previewImg}
+                      />
+                      {uploading && (
+                        <div style={styles.uploadingOverlay}>
+                          <div style={styles.spinner} />
+                          <p style={{ color: "#fff", fontSize: "12px", marginTop: "8px" }}>Uploading...</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* UPLOAD BUTTON */}
+                  <label style={styles.uploadBtn}>
+                    {uploading ? "⏳ Uploading..." : uploadPreview ? "🔄 Change Image" : "📁 Upload Image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: "none" }}
+                      disabled={uploading}
+                    />
+                  </label>
+
+                  {/* OR URL */}
+                  <p style={{ color: "#555", fontSize: "12px", margin: "8px 0" }}>or paste image URL:</p>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={newProduct.images[0]}
+                    onChange={(e) => {
+                      setNewProduct({ ...newProduct, images: [e.target.value] });
+                      setUploadPreview(e.target.value);
+                    }}
+                    style={{ ...styles.input, width: "100%", marginBottom: "16px" }}
+                  />
+                </div>
+
                 <div style={{ display: "flex", gap: "12px" }}>
-                  <button onClick={saveProduct} style={styles.orangeBtn}>
+                  <button
+                    onClick={saveProduct}
+                    disabled={uploading}
+                    style={{ ...styles.orangeBtn, opacity: uploading ? 0.7 : 1 }}
+                  >
                     {editProduct ? "Save Changes" : "Add Product"}
                   </button>
-                  <button onClick={() => { setShowAddProduct(false); setEditProduct(null); }} style={styles.backBtn}>
+                  <button
+                    onClick={() => { setShowAddProduct(false); setEditProduct(null); setUploadPreview(null); }}
+                    style={styles.backBtn}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -462,8 +549,6 @@ export default function Admin() {
       ===================== */}
       {tab === "Reviews" && (
         <div>
-
-          {/* SENTIMENT OVERVIEW */}
           {sentiment && (
             <div style={styles.tableCard}>
               <h2 style={styles.sectionTitle}>🧠 Sentiment Analysis</h2>
@@ -481,12 +566,9 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
-
               {sentiment.productSentiments.length > 0 && (
                 <>
-                  <h3 style={{ color: "#fff", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}>
-                    Product Sentiment Rankings
-                  </h3>
+                  <h3 style={{ color: "#fff", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}>Product Sentiment Rankings</h3>
                   <table style={styles.table}>
                     <thead>
                       <tr>
@@ -503,10 +585,7 @@ export default function Admin() {
                           <td style={{ ...styles.td, color: "#888" }}>{p.neutral}</td>
                           <td style={{ ...styles.td, color: "#dc2626" }}>{p.negative}</td>
                           <td style={styles.td}>
-                            <span style={{
-                              ...styles.badge,
-                              background: p.score > 0 ? "#22c55e" : p.score < 0 ? "#dc2626" : "#333"
-                            }}>
+                            <span style={{ ...styles.badge, background: p.score > 0 ? "#22c55e" : p.score < 0 ? "#dc2626" : "#333" }}>
                               {p.score > 0 ? "+" : ""}{p.score}%
                             </span>
                           </td>
@@ -520,7 +599,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* MODERATION */}
           <div style={styles.tableCard}>
             <h2 style={styles.sectionTitle}>🛡️ Review Moderation</h2>
             <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
@@ -529,11 +607,7 @@ export default function Admin() {
                   key={t}
                   onClick={() => setReviewTab(t)}
                   style={{
-                    padding: "8px 18px",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer",
+                    padding: "8px 18px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
                     background: reviewTab === t ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a",
                     color: reviewTab === t ? "#fff" : "#888",
                     border: reviewTab === t ? "none" : "1px solid #333",
@@ -544,7 +618,6 @@ export default function Admin() {
               ))}
             </div>
 
-            {/* PENDING */}
             {reviewTab === "pending" && (
               pendingReviews.length === 0 ? (
                 <p style={{ color: "#888", textAlign: "center", padding: "40px 0" }}>✅ No pending reviews!</p>
@@ -564,10 +637,7 @@ export default function Admin() {
                           ))}
                         </div>
                         <p style={{ color: "#aaa", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
-                        <span style={{
-                          color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888",
-                          fontSize: "12px", fontWeight: "600"
-                        }}>
+                        <span style={{ color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888", fontSize: "12px", fontWeight: "600" }}>
                           🧠 {r.sentiment}
                         </span>
                       </div>
@@ -581,7 +651,6 @@ export default function Admin() {
               )
             )}
 
-            {/* FLAGGED */}
             {reviewTab === "flagged" && (
               flaggedReviews.length === 0 ? (
                 <p style={{ color: "#888", textAlign: "center", padding: "40px 0" }}>✅ No flagged reviews!</p>
@@ -598,10 +667,7 @@ export default function Admin() {
                           ))}
                         </div>
                         <p style={{ color: "#aaa", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
-                        <span style={{
-                          color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888",
-                          fontSize: "12px", fontWeight: "600"
-                        }}>
+                        <span style={{ color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888", fontSize: "12px", fontWeight: "600" }}>
                           🧠 {r.sentiment}
                         </span>
                       </div>
@@ -647,6 +713,12 @@ const styles = {
   formCard: { background: "#111", border: "1px solid #333", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
   formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" },
   input: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
+  uploadWrap: { marginBottom: "16px" },
+  uploadLabel: { color: "#aaa", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" },
+  previewWrap: { position: "relative", width: "120px", height: "120px", marginBottom: "12px", borderRadius: "12px", overflow: "hidden" },
+  previewImg: { width: "100%", height: "100%", objectFit: "cover" },
+  uploadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" },
+  uploadBtn: { display: "inline-block", padding: "10px 20px", background: "#1a1a1a", border: "1px solid #f97316", color: "#f97316", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600" },
   orangeBtn: { padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
   editBtn: { padding: "6px 12px", background: "#1e3a5f", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
   deleteBtn: { padding: "6px 12px", background: "#3f0f0f", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
