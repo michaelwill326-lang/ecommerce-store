@@ -8,6 +8,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState(""); // 📱 Track phone number state
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,10 @@ export default function Signup() {
       return setError("Name must be at least 2 characters");
     }
 
+    if (!phone.trim()) {
+      return setError("Phone number is required for dispatch updates");
+    }
+
     if (password.length < 6) {
       return setError("Password must be at least 6 characters");
     }
@@ -38,6 +43,7 @@ export default function Signup() {
       const response = await axios.post(`${API}/api/auth/signup`, {
         name: name.trim(),
         email: email.trim(),
+        phone: phone.trim(), // 📦 Added payload parameter for our updated backend
         password: password.trim(),
       });
 
@@ -112,6 +118,19 @@ export default function Signup() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+            />
+          </div>
+
+          {/* PHONE NUMBER FIELD */}
+          <div style={styles.fieldWrap}>
+            <label style={styles.label}>Phone Number (For Delivery Updates)</label>
+            <input
+              type="tel"
+              placeholder="e.g. 2348031234567"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               required
               style={styles.input}
             />

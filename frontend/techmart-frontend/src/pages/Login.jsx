@@ -6,34 +6,73 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 
 export default function Login() {
   const navigate = useNavigate();
+  
+  // Auth view switcher state: "login" | "forgot" | "reset"
+  const [view, setView] = useState("login"); 
+  
+  // Shared Form inputs
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [token, setToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  
+  // Status states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // 1. Core Login Handler
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-
     try {
       setLoading(true);
-
-      const response = await axios.post(`${API}/api/auth/login`, {
-        email,
-        password,
-      });
-
+      const response = await axios.post(`${API}/api/auth/login`, { email, password });
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
-
       navigate("/");
-
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.error || "Invalid email or password"
-      );
+      setError(err.response?.data?.error || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Request Recovery Token Handler
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMessage("");
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API}/api/auth/forgot-password`, { email });
+      setSuccessMessage("A 6-digit recovery code has been generated if the account exists.");
+      setView("reset"); // Push them over to the verification window
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to issue password recovery request");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Reset Password Using Token Handler
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMessage("");
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API}/api/auth/reset-password`, { 
+        token: token.trim(), 
+        newPassword: newPassword.trim() 
+      });
+      setSuccessMessage("Password reset successful! You can now log in.");
+      setView("login");
+      setPassword("");
+    } catch (err) {
+      setError(err.response?.data?.error || "Invalid or expired verification token.");
     } finally {
       setLoading(false);
     }
@@ -54,67 +93,140 @@ export default function Login() {
           <h1 style={styles.brand}>TechMart</h1>
         </div>
 
-        <h2 style={styles.title}>Welcome back 👋</h2>
-        <p style={styles.subtitle}>Login to your account</p>
+        {/* CONDITIONALLY RENDER INTERFACES BASED ON ACTIVE STATE */}
+        {view === "login" && (
+          <>
+            <h2 style={styles.title}>Welcome back 👋</h2>
+            <p style={styles.subtitle}>Login to your account</p>
 
-        {/* ERROR */}
-        {error && (
-          <div style={styles.errorBox}>
-            ⚠️ {error}
-          </div>
+            {error && <div style={styles.errorBox}>⚠️ {error}</div>}
+            {successMessage && <div style={styles.successBox}>✅ {successMessage}</div>}
+
+            <form onSubmit={handleLogin}>
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>Email</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.fieldWrap}>
+                <div style={{ display: "flex", justifyContent: "between", alignItems: "center", marginBottom: "8px" }}>
+                  <label style={{ ...styles.label, margin: 0, flex: 1 }}>Password</label>
+                  <button 
+                    type="button" 
+                    onClick={() => { setError(""); setSuccessMessage(""); setView("forgot"); }} 
+                    style={styles.forgotBtn}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+                <div style={styles.passwordWrap}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    style={{ ...styles.input, marginBottom: 0 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={styles.eyeBtn}
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" disabled={loading} style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Logging in..." : "Login →"}
+              </button>
+            </form>
+          </>
         )}
 
-        {/* FORM */}
-        <form onSubmit={handleLogin}>
+        {view === "forgot" && (
+          <>
+            <h2 style={styles.title}>Recover Password 🔑</h2>
+            <p style={styles.subtitle}>Enter your account email to receive a password reset token</p>
 
-          {/* EMAIL */}
-          <div style={styles.fieldWrap}>
-            <label style={styles.label}>Email</label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={styles.input}
-            />
-          </div>
+            {error && <div style={styles.errorBox}>⚠️ {error}</div>}
 
-          {/* PASSWORD */}
-          <div style={styles.fieldWrap}>
-            <label style={styles.label}>Password</label>
-            <div style={styles.passwordWrap}>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ ...styles.input, marginBottom: 0 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={styles.eyeBtn}
-              >
-                {showPassword ? "🙈" : "👁️"}
+            <form onSubmit={handleForgotPassword}>
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>Account Email Address</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <button type="submit" disabled={loading} style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Generating token..." : "Send Reset Code →"}
               </button>
-            </div>
-          </div>
 
-          {/* SUBMIT */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              ...styles.submitBtn,
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? "Logging in..." : "Login →"}
-          </button>
+              <button type="button" onClick={() => setView("login")} style={styles.backBtn}>
+                ← Back to Login
+              </button>
+            </form>
+          </>
+        )}
 
-        </form>
+        {view === "reset" && (
+          <>
+            <h2 style={styles.title}>Set New Password 🔒</h2>
+            <p style={styles.subtitle}>Type in the recovery verification token issued to your account</p>
+
+            {error && <div style={styles.errorBox}>⚠️ {error}</div>}
+            {successMessage && <div style={styles.successBox}>✅ {successMessage}</div>}
+
+            <form onSubmit={handleResetPassword}>
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>6-Digit Recovery Code</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 123456"
+                  maxLength={6}
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>New Secure Password</label>
+                <input
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <button type="submit" disabled={loading} style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Updating password..." : "Change Password & Login →"}
+              </button>
+
+              <button type="button" onClick={() => setView("login")} style={styles.backBtn}>
+                Cancel and return
+              </button>
+            </form>
+          </>
+        )}
 
         {/* DIVIDER */}
         <div style={styles.divider}>
@@ -189,6 +301,15 @@ const styles = {
     fontSize: "14px",
     marginBottom: "20px",
   },
+  successBox: {
+    background: "#102a18",
+    border: "1px solid #22c55e",
+    color: "#4ade80",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    fontSize: "14px",
+    marginBottom: "20px",
+  },
   fieldWrap: {
     marginBottom: "18px",
   },
@@ -224,6 +345,27 @@ const styles = {
     border: "none",
     cursor: "pointer",
     fontSize: "16px",
+  },
+  forgotBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#f97316",
+    fontSize: "12px",
+    fontWeight: "600",
+    cursor: "pointer",
+    outline: "none",
+    padding: 0,
+  },
+  backBtn: {
+    width: "100%",
+    background: "transparent",
+    border: "none",
+    color: "#888",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    marginTop: "16px",
+    textAlign: "center",
   },
   submitBtn: {
     width: "100%",
