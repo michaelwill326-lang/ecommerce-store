@@ -14,9 +14,6 @@ import Navbar from "./components/Navbar";
 import AdminAddProduct from "./components/AdminAddProduct";
 import Policy from "./pages/Policy";
 
-// Inside Routes:
-<Route path="/policy" element={<Policy />} />
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -31,6 +28,7 @@ export default function App() {
         <Route path="/success" element={<Success />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin/add-product" element={<AdminAddProduct />} />
+        <Route path="/policy" element={<Policy />} />
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/wishlist" element={<Wishlist />} />
       </Routes>
