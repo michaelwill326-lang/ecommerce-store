@@ -1,38 +1,44 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Success from "./pages/Success";
-import Admin from "./pages/Admin";
-import Tracking from "./pages/Tracking";
-import Wishlist from "./pages/Wishlist";
-import Chatbot from "./components/Chatbot";
-import Navbar from "./components/Navbar";
-import AdminAddProduct from "./components/AdminAddProduct";
-import Policy from "./pages/Policy";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import ProductDetail from './pages/ProductDetail';
+import Tracking from './pages/Tracking';
+import Verify from './pages/Verify';
+import Wishlist from './pages/Wishlist';
+import Admin from './pages/Admin';
+import RequireAdmin from './utils/RequireAdmin';
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/success" element={<Success />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/admin/add-product" element={<AdminAddProduct />} />
-        <Route path="/policy" element={<Policy />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/tracking" element={<Tracking />} />
+        <Route path="/verify" element={<Verify />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        
+        {/* Protected Admin Route */}
+        <Route path="/admin" element={
+          <RequireAdmin>
+            <Admin />
+          </RequireAdmin>
+        } />
       </Routes>
-      <Chatbot />
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;
