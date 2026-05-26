@@ -252,6 +252,7 @@ export default function Dashboard() {
             <Link to="/" style={styles.footerLink}>Home</Link>
             <Link to="/cart" style={styles.footerLink}>Cart</Link>
             <Link to="/tracking" style={styles.footerLink}>Orders</Link>
+            <Link to="/policy" style={styles.footerLink}>Policies</Link>
             {user ? (
               <span
                 onClick={() => {

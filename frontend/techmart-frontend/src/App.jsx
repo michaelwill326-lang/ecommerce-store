@@ -11,6 +11,11 @@ import Tracking from "./pages/Tracking";
 import Wishlist from "./pages/Wishlist";
 import Chatbot from "./components/Chatbot";
 import Navbar from "./components/Navbar";
+import AdminAddProduct from "./components/AdminAddProduct";
+import Policy from "./pages/Policy";
+
+// Inside Routes:
+<Route path="/policy" element={<Policy />} />
 
 export default function App() {
   return (
@@ -25,6 +30,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/success" element={<Success />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/add-product" element={<AdminAddProduct />} />
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/wishlist" element={<Wishlist />} />
       </Routes>
