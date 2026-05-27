@@ -464,67 +464,39 @@ app.post("/api/paystack/init", async (req, res) => {
 
 /* 2. SECURE & IDEMPOTENT WEBHOOK RECEIVER */
 app.post("/api/paystack/webhook", async (req, res) => {
-  try {
-    const crypto = require("crypto");
-    const hash = crypto
-      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(JSON.stringify(req.body))
-      .digest("hex");
-
-    if (hash !== req.headers["x-paystack-signature"]) {
-      return res.status(401).json({ error: "Invalid webhook signature token" });
-    }
-
+  console.log("🔔 WEBHOOK RECEIVED:", req.body.event);  try {
     const event = req.body;
 
     if (event.event === "charge.success") {
-      const { reference, customer } = event.data;
+      const { reference } = event.data;
+      
+      const order = await Order.findOneAndUpdate(
+        { reference: reference },
+        { status: "paid" },
+        { new: true }
+      );
 
-      console.log(`📦 Processing webhook for Reference: ${reference}`);
+      if (order) {
+        console.log(`✅ Order ${order._id} marked as paid.`);
+        
+        try {
+          await sendOrderConfirmation(order);
+        } catch (e) {
+          console.error("Order confirmation email failed:", e.message);
+        }
 
-// ENFORCE IDEMPOTENCY VIA MONGOOSE CONDITIONAL UPDATE
-const updatedOrder = await Order.findOneAndUpdate(
-  {
-    reference: reference,
-    status: "Pending"
-  },
-  {
-    $set: { status: "Paid" }
-  },
-  { new: true }
-);
+        if (io) {
+          io.emit("paymentConfirmed", { reference, email: order.email });
+        }
+      }
+    }
 
-if (!updatedOrder) {
-  console.log(`⚠️ Webhook Ignored: Reference ${reference} was already marked as Paid or doesn't exist.`);
-  return res.status(200).json({ status: "success", message: "Already processed" });
-}
+    return res.status(200).json({ status: "success" });
 
-console.log(`✅ Order ${reference} successfully confirmed and updated via webhook.`);
-
-// 📧 SEND CONFIRMATION EMAIL AFTER PAYMENT CONFIRMED
-try {
-    email: customer.email,
-    items: updatedOrder.items,
-    amount: updatedOrder.amount,
-    reference: updatedOrder.reference,
-  });
-} catch (e) {
-  console.log("Order confirmation email failed:", e.message);
-}
-
-// 🔔 NOTIFY FRONTEND VIA SOCKET
-if (io) {
-  io.emit("paymentConfirmed", { reference, email: customer.email });
-}
-
-}
-
-return res.status(200).json({ status: "success" });
-
-} catch (err) {
-console.error("❌ WEBHOOK ERROR:", err.message);
-return res.status(500).json({ error: "Webhook system processing failed" });
-}
+  } catch (err) {
+    console.error("❌ WEBHOOK ERROR:", err.message);
+    return res.status(500).json({ error: "Webhook system processing failed" });
+  }
 });
 
 /* ===========================
