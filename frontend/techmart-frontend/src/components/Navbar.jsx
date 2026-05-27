@@ -48,22 +48,26 @@ export default function Navbar() {
         <div style={styles.desktopLinks}>
           <Link to="/" style={linkStyle("/")}>Home</Link>
           <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
+          {/* New Desktop Link */}
+          <Link to="/policy" style={linkStyle("/policy")}>Policy</Link>
 
           {user?.role === "admin" && (
             <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
           )}
-<Link to="/wishlist" style={{ ...linkStyle("/wishlist"), position: "relative" }}>
-  <div style={{
-    ...styles.cartWrap,
-    background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
-    border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
-  }}>
-    🤍
-    {wishlistCount > 0 && (
-      <span style={styles.cartBadge}>{wishlistCount}</span>
-    )}
-  </div>
-</Link>
+
+          <Link to="/wishlist" style={{ ...linkStyle("/wishlist"), position: "relative" }}>
+            <div style={{
+              ...styles.cartWrap,
+              background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
+              border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
+            }}>
+              🤍
+              {wishlistCount > 0 && (
+                <span style={styles.cartBadge}>{wishlistCount}</span>
+              )}
+            </div>
+          </Link>
+
           {user ? (
             <div style={styles.userWrap}>
               <div style={styles.avatar}>
@@ -130,6 +134,11 @@ export default function Navbar() {
 
           <Link to="/tracking" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             📦 My Orders
+          </Link>
+
+          {/* New Responsive Mobile Dropdown Link */}
+          <Link to="/policy" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
+            📜 Privacy & Refund Policy
           </Link>
 
           <Link to="/cart" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
