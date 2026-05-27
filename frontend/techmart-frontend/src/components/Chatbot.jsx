@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
+const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
