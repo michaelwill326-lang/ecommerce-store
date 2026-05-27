@@ -3,36 +3,47 @@
 =========================== */
 .pdp {
   display: flex;
-  flex-direction: column;
-  gap: 30px;
-  padding: 20px;
+  flex-direction: column; /* Mobile first: Single vertical stack */
+  gap: 24px;
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/* 📋 TABLET & DESKTOP SCALE (768px and up) */
 @media (min-width: 768px) {
   .pdp {
-    flex-direction: row;
+    flex-direction: row; /* Safe side-by-side split for larger screens */
+    gap: 40px;
+    padding: 30px;
   }
 }
 
 /* GALLERY */
 .gallery {
   flex: 1;
+  width: 100%;
 }
 
 .main-img {
   width: 100%;
+  height: auto;
   border-radius: 12px;
+  object-fit: cover;
 }
 
 .thumbs {
   display: flex;
   gap: 10px;
   margin-top: 10px;
+  overflow-x: auto; /* Allow side-scrolling thumbs if they exceed mobile screen widths */
+  padding-bottom: 4px;
 }
 
 .thumbs img {
   width: 60px;
   height: 60px;
+  flex-shrink: 0; /* Stop mobile from squishing thumbnail boxes */
   cursor: pointer;
   border-radius: 8px;
   object-fit: cover;
@@ -45,103 +56,163 @@
 /* DETAILS */
 .details {
   flex: 1;
+  width: 100%;
 }
 
 .price {
-  font-size: 22px;
+  font-size: 24px;
   color: #27ae60;
   font-weight: bold;
 }
 
 .desc {
-  margin: 10px 0;
+  margin: 16px 0;
   color: #555;
+  line-height: 1.6;
 }
 
+/* ACTION BUTTONS */
 .actions {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  flex-direction: column; /* Mobile first: Stack buttons vertically so text doesn't overflow */
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.add-btn, .buy-btn {
+  width: 100%; /* Take full width on mobile devices */
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
 }
 
 .add-btn {
   background: #ff9900;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
+  color: #111;
 }
 
 .buy-btn {
   background: #007bff;
   color: white;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
+}
+
+/* 📋 BUTTON BREAKPOINT (Tablets and larger screens) */
+@media (min-width: 480px) {
+  .actions {
+    flex-direction: row; /* Puts buttons side-by-side once there is enough screen room */
+  }
+  .add-btn, .buy-btn {
+    flex: 1;
+  }
 }
 
 .extra {
-  margin-top: 20px;
+  margin-top: 24px;
   color: #444;
 }
 
 /* REVIEWS */
 .reviews {
   width: 100%;
+  margin-top: 30px;
 }
 
 .review-box textarea {
   width: 100%;
-  padding: 10px;
-  margin: 10px 0;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #ddd;
   border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .review-box button {
   background: black;
   color: white;
-  padding: 8px 12px;
+  padding: 10px 20px;
   border-radius: 6px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  width: 100%; /* Full width submit button on mobile */
+}
+
+@media (min-width: 480px) {
+  .review-box button {
+    width: auto; /* Auto width on larger screens */
+  }
 }
 
 .review {
   background: white;
-  padding: 10px;
-  margin: 10px 0;
+  padding: 16px;
+  margin: 12px 0;
   border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }
 
 /* RECOMMENDATIONS */
 .recommend {
   width: 100%;
-}
-/* ADMIN DASHBOARD */
-.admin-container {
-  padding: 20px;
+  margin-top: 40px;
 }
 
+/* ===========================
+   ADMIN DASHBOARD
+=========================== */
+.admin-container {
+  padding: 16px;
+}
+
+@media (min-width: 768px) {
+  .admin-container {
+    padding: 30px;
+  }
+}
+
+/* STATS GRID FIXED */
 .stats {
   display: flex;
-  gap: 20px;
+  flex-direction: column; /* Force vertical stacking on mobile */
+  gap: 16px;
   margin-bottom: 30px;
 }
 
-.stats .card {
+/* 📋 TABLET & DESKTOP GRID */
+@media (min-width: 600px) {
+  .stats {
+    flex-direction: row; /* Allow side-by-side metric layouts once window width is safe */
+    gap: 20px;
+  }
+}
+
+.card {
   background: white;
   padding: 20px;
   border-radius: 12px;
   flex: 1;
   box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  box-sizing: border-box;
 }
 
+/* CHART ACCESSIBILITY QUICK FIX */
 .chart {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   height: 200px;
+  width: 100%;
+  overflow-x: auto; /* Prevent chart columns from breaking containers on small screens */
+  padding-bottom: 8px;
 }
 
 .bar {
   flex: 1;
+  min-width: 30px; /* Keep bars readable even on narrow screens */
   text-align: center;
 }
 
@@ -150,26 +221,25 @@
   width: 100%;
   border-radius: 6px 6px 0 0;
 }
-.live-notification{
-  position:fixed;
-  top:20px;
-  right:20px;
-  background:black;
-  color:white;
-  padding:15px;
-  border-radius:10px;
-  z-index:9999;
+
+/* LIVE NOTIFICATION OVERLAY */
+.live-notification {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  left: 16px; /* Spans across mobile view widths automatically */
+  background: rgba(0, 0, 0, 0.95);
+  color: white;
+  padding: 15px;
+  border-radius: 10px;
+  z-index: 9999;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
-.stats{
-  display:flex;
-  gap:20px;
-  margin-bottom:30px;
-}
-
-.card{
-  background:white;
-  padding:20px;
-  border-radius:12px;
-  flex:1;
+@media (min-width: 480px) {
+  .live-notification {
+    left: auto;
+    width: 350px; /* Snaps to a neat desktop pop-up notification window */
+  }
 }
