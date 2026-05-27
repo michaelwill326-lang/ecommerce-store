@@ -13,5 +13,13 @@ export default defineConfig({
       // Directs the bundler to transform internal dependencies seamlessly
       include: [/recharts/, /node_modules/],
     },
+    rollupOptions: {
+      output: {
+        // Generates completely unique filenames using a live timestamp to smash Render and Chrome's edge cache
+        entryFileNames: `assets/[name]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-${Date.now()}.[ext]`,
+      },
+    },
   },
 });
