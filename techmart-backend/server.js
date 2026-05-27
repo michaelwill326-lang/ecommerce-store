@@ -440,13 +440,6 @@ app.post("/api/paystack/init", async (req, res) => {
     // Create pending database record since items are locked down securely
     await Order.create({ email, items: cart, amount, reference, status: "Pending" });
 
-    // 📧 SEND ORDER CONFIRMATION EMAIL
-    try {
-      await sendOrderConfirmation({ email, items: cart, amount, reference });
-    } catch (e) {
-      console.log("Order confirmation email failed:", e.message);
-    }
-
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
@@ -489,36 +482,50 @@ app.post("/api/paystack/webhook", async (req, res) => {
 
       console.log(`📦 Processing webhook for Reference: ${reference}`);
 
-      // ENFORCE IDEMPOTENCY VIA MONGOOSE CONDITIONAL UPDATE
-      const updatedOrder = await Order.findOneAndUpdate(
-        { 
-          reference: reference,
-          status: "Pending" 
-        },
-        { 
-          $set: { status: "Paid" } 
-        },
-        { new: true }
-      );
+// ENFORCE IDEMPOTENCY VIA MONGOOSE CONDITIONAL UPDATE
+const updatedOrder = await Order.findOneAndUpdate(
+  {
+    reference: reference,
+    status: "Pending"
+  },
+  {
+    $set: { status: "Paid" }
+  },
+  { new: true }
+);
 
-      if (!updatedOrder) {
-        console.log(`⚠️ Webhook Ignored: Reference ${reference} was already marked as Paid or doesn't exist.`);
-        return res.status(200).json({ status: "success", message: "Already processed" });
-      }
+if (!updatedOrder) {
+  console.log(`⚠️ Webhook Ignored: Reference ${reference} was already marked as Paid or doesn't exist.`);
+  return res.status(200).json({ status: "success", message: "Already processed" });
+}
 
-      console.log(`✅ Order ${reference} successfully confirmed and updated via webhook.`);
-      
-      if (io) {
-        io.emit("paymentConfirmed", { reference, email: customer.email });
-      }
-    }
+console.log(`✅ Order ${reference} successfully confirmed and updated via webhook.`);
 
-    return res.status(200).json({ status: "success" });
+// 📧 SEND CONFIRMATION EMAIL AFTER PAYMENT CONFIRMED
+try {
+  await sendOrderConfirmation({
+    email: customer.email,
+    items: updatedOrder.items,
+    amount: updatedOrder.amount,
+    reference: updatedOrder.reference,
+  });
+} catch (e) {
+  console.log("Order confirmation email failed:", e.message);
+}
 
-  } catch (err) {
-    console.error("❌ WEBHOOK ERROR:", err.message);
-    return res.status(500).json({ error: "Webhook system processing failed" });
-  }
+// 🔔 NOTIFY FRONTEND VIA SOCKET
+if (io) {
+  io.emit("paymentConfirmed", { reference, email: customer.email });
+}
+
+}
+
+return res.status(200).json({ status: "success" });
+
+} catch (err) {
+console.error("❌ WEBHOOK ERROR:", err.message);
+return res.status(500).json({ error: "Webhook system processing failed" });
+}
 });
 
 /* ===========================
