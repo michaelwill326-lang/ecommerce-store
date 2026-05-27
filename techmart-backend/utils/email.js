@@ -19,7 +19,7 @@ const FROM = { email: "michaelwill326@gmail.com", name: "TechMart" };
    💳 ORDER CONFIRMATION EMAIL (WITH NAIRA CALCULATIONS)
 ========================================================================= */
 const sendOrderConfirmation = async (order) => {
-  try {
+  console.log("📧 SENDING EMAIL TRIGGERED AT:", new Date().toISOString());  try {
     // Generate HTML table rows dynamically for each cart item
     const itemRows = order.items.map(item => `
       <tr>
