@@ -48,8 +48,6 @@ export default function Navbar() {
         <div style={styles.desktopLinks}>
           <Link to="/" style={linkStyle("/")}>Home</Link>
           <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
-          {/* New Desktop Link */}
-          <Link to="/policy" style={linkStyle("/policy")}>Policy</Link>
 
           {user?.role === "admin" && (
             <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
@@ -134,11 +132,6 @@ export default function Navbar() {
 
           <Link to="/tracking" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             📦 My Orders
-          </Link>
-
-          {/* New Responsive Mobile Dropdown Link */}
-          <Link to="/policy" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-            📜 Privacy & Refund Policy
           </Link>
 
           <Link to="/cart" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>

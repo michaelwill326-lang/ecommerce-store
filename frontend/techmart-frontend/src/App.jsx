@@ -1,8 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar"; 
+import Footer from "./components/Footer"; // Imported here
 import Chatbot from "./components/Chatbot";
 
-// Import your exact pages based on your directory listing
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -41,6 +41,9 @@ export default function App() {
           <Route path="/policy" element={<Policy />} />
         </Routes>
       </main>
+
+      {/* Professional Legal Footer */}
+      <Footer />
 
       {/* 🤖 GLOBAL AI CHATBOT SYSTEM */}
       <Chatbot />
