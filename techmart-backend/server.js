@@ -503,7 +503,6 @@ console.log(`✅ Order ${reference} successfully confirmed and updated via webho
 
 // 📧 SEND CONFIRMATION EMAIL AFTER PAYMENT CONFIRMED
 try {
-  await sendOrderConfirmation({
     email: customer.email,
     items: updatedOrder.items,
     amount: updatedOrder.amount,
