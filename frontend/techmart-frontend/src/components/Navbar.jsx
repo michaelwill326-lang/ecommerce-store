@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 
@@ -9,10 +9,22 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 992); // Tablet and Mobile Breakpoint
   const wishlistCount = wishlist.length;
 
   const user = JSON.parse(localStorage.getItem("user"));
   const cartCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+
+  // Automatically track viewport adjustments so elements adapt seamlessly
+  useEffect(() => {
+    const handleResize = () => {
+      const mobileView = window.innerWidth <= 992;
+      setIsMobile(mobileView);
+      if (!mobileView) setMenuOpen(false); // Autoclose dropdown if screen widens
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -31,10 +43,19 @@ export default function Navbar() {
 
   return (
     <>
-      <nav style={styles.nav}>
+      {/* Universal safety wrapper prevents header elements from bleeding off canvas */}
+      <style>{`
+        body { overflow-x: hidden !important; width: 100% !important; margin: 0; padding: 0; }
+        #root { width: 100% !important; overflow-x: hidden !important; }
+      `}</style>
+
+      <nav style={{
+        ...styles.nav,
+        padding: isMobile ? "14px 16px" : "14px 32px" // Leaner padding layout for mobile devices
+      }}>
 
         {/* LOGO */}
-        <Link to="/" style={styles.logoWrap}>
+        <Link to="/" style={styles.logoWrap} onClick={() => setMenuOpen(false)}>
           <img
             src="/techmart.png"
             alt="TechMart"
@@ -44,74 +65,81 @@ export default function Navbar() {
           <span style={styles.logoText}>TechMart</span>
         </Link>
 
-        {/* DESKTOP LINKS */}
-        <div style={styles.desktopLinks}>
-          <Link to="/" style={linkStyle("/")}>Home</Link>
-          <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
+        {/* DESKTOP LINKS (Conditionally completely removed from the DOM on mobile viewports) */}
+        {!isMobile && (
+          <div style={styles.desktopLinks}>
+            <Link to="/" style={linkStyle("/")}>Home</Link>
+            <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
 
-          {user?.role === "admin" && (
-            <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
-          )}
+            {user?.role === "admin" && (
+              <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
+            )}
 
-          <Link to="/wishlist" style={{ ...linkStyle("/wishlist"), position: "relative" }}>
-            <div style={{
-              ...styles.cartWrap,
-              background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
-              border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
-            }}>
-              🤍
-              {wishlistCount > 0 && (
-                <span style={styles.cartBadge}>{wishlistCount}</span>
-              )}
-            </div>
-          </Link>
-
-          {user ? (
-            <div style={styles.userWrap}>
-              <div style={styles.avatar}>
-                {user.name?.charAt(0).toUpperCase()}
+            <Link to="/wishlist" style={{ ...linkStyle("/wishlist"), position: "relative" }}>
+              <div style={{
+                ...styles.cartWrap,
+                background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
+                border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
+              }}>
+                🤍
+                {wishlistCount > 0 && (
+                  <span style={styles.cartBadge}>{wishlistCount}</span>
+                )}
               </div>
-              <span style={styles.userName}>Hi, {user.name?.split(" ")[0]}</span>
-              <button onClick={handleLogout} style={styles.logoutBtn}>
-                Logout
-              </button>
-            </div>
-          ) : (
-            <>
-              <Link to="/login" style={linkStyle("/login")}>Login</Link>
-              <Link to="/signup">
-                <button style={styles.signupBtn}>Sign Up</button>
-              </Link>
-            </>
-          )}
+            </Link>
 
-          {/* CART */}
-          <Link to="/cart" style={{ ...linkStyle("/cart"), position: "relative" }}>
-            <div style={{
-              ...styles.cartWrap,
-              background: location.pathname === "/cart" ? "#1a1a1a" : "transparent",
-              border: location.pathname === "/cart" ? "1px solid #f97316" : "1px solid #333",
-            }}>
-              🛒
-              {cartCount > 0 && (
-                <span style={styles.cartBadge}>{cartCount}</span>
-              )}
-            </div>
-          </Link>
-        </div>
+            {user ? (
+              <div style={styles.userWrap}>
+                <div style={styles.avatar}>
+                  {user.name?.charAt(0).toUpperCase()}
+                </div>
+                <span style={styles.userName}>Hi, {user.name?.split(" ")[0]}</span>
+                <button onClick={handleLogout} style={styles.logoutBtn}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login" style={linkStyle("/login")}>Login</Link>
+                <Link to="/signup">
+                  <button style={styles.signupBtn}>Sign Up</button>
+                </Link>
+              </>
+            )}
 
-        {/* MOBILE HAMBURGER */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          style={styles.hamburger}
-        >
-          {menuOpen ? "✕" : "☰"}
-        </button>
+            {/* CART */}
+            <Link to="/cart" style={{ ...linkStyle("/cart"), position: "relative" }}>
+              <div style={{
+                ...styles.cartWrap,
+                background: location.pathname === "/cart" ? "#1a1a1a" : "transparent",
+                border: location.pathname === "/cart" ? "1px solid #f97316" : "1px solid #333",
+              }}>
+                🛒
+                {cartCount > 0 && (
+                  <span style={styles.cartBadge}>{cartCount}</span>
+                )}
+              </div>
+            </Link>
+          </div>
+        )}
+
+        {/* MOBILE HAMBURGER BUTTON */}
+        {isMobile && (
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{
+              ...styles.hamburger,
+              display: "block" // Toggles view visible instantly on mobile
+            }}
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        )}
 
       </nav>
 
-      {/* MOBILE MENU */}
-      {menuOpen && (
+      {/* MOBILE EXPANDED MENU DRAWER */}
+      {isMobile && menuOpen && (
         <div style={styles.mobileMenu}>
 
           {user && (
@@ -134,6 +162,12 @@ export default function Navbar() {
             📦 My Orders
           </Link>
 
+          <Link to="/wishlist" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
+            🤍 Wishlist {wishlistCount > 0 && (
+              <span style={styles.mobileBadge}>{wishlistCount}</span>
+            )}
+          </Link>
+
           <Link to="/cart" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             🛒 Cart {cartCount > 0 && (
               <span style={styles.mobileBadge}>{cartCount}</span>
@@ -151,14 +185,14 @@ export default function Navbar() {
               🚪 Logout
             </button>
           ) : (
-            <>
-              <Link to="/login" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-                🔑 Login
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+              <Link to="/login" style={{ textDecoration: "none" }} onClick={() => setMenuOpen(false)}>
+                <button style={{ ...styles.logoutBtn, width: "100%", padding: "12px" }}>🔑 Login</button>
               </Link>
-              <Link to="/signup" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-                ✨ Sign Up
+              <Link to="/signup" style={{ textDecoration: "none" }} onClick={() => setMenuOpen(false)}>
+                <button style={{ ...styles.signupBtn, width: "100%", padding: "12px" }}>✨ Sign Up</button>
               </Link>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -177,6 +211,8 @@ const styles = {
     position: "sticky",
     top: 0,
     zIndex: 1000,
+    width: "100%",
+    boxSizing: "border-box",
   },
   logoWrap: {
     textDecoration: "none",
@@ -269,7 +305,6 @@ const styles = {
     justifyContent: "center",
   },
   hamburger: {
-    display: "none",
     background: "transparent",
     border: "1px solid #333",
     color: "#fff",
