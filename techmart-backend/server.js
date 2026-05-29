@@ -472,7 +472,7 @@ app.post("/api/paystack/webhook", async (req, res) => {
       
       const order = await Order.findOneAndUpdate(
         { reference: reference },
-        { status: "paid" },
+        { status: "Paid" },
         { new: true }
       );
 
