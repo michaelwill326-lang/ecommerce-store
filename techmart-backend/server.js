@@ -464,50 +464,57 @@ app.post("/api/paystack/init", async (req, res) => {
 
 /* 2. SECURE & IDEMPOTENT WEBHOOK RECEIVER */
 app.post("/api/paystack/webhook", async (req, res) => {
-  console.log("🔔 WEBHOOK RECEIVED:", req.body.event);  try {
-    const event = req.body;
+  const event = req.body;
 
-    if (event.event === "charge.success") {
-      const { reference } = event.data;
-    
-      // ✅ VERIFY PAYMENT WITH PAYSTACK BEFORE PROCESSING
-      const verify = await axios.get(
-        `https://api.paystack.co/transaction/verify/${reference}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-          }
-        }
-      );
-    
-      const paymentData = verify.data.data;
-    
-      if (paymentData.status !== "success") {
-        console.log(`⚠️ Payment verification failed for ${reference}. Status: ${paymentData.status}`);
-        return res.status(200).json({ status: "ignored", message: "Payment not successful" });
-      }
-    
-      console.log(`✅ Payment verified for ${reference}`);
-    
-      const order = await Order.findOneAndUpdate(
-        { reference: reference, status: "Pending" },
-        { status: "Paid" },
-        { new: true }
-      );
+  // 1. Only process successful charges
+  if (event.event !== 'charge.success') {
+    return res.status(200).send("Event ignored");
+  }
 
-      if (order) {
-        console.log(`✅ Order ${order._id} marked as paid.`);
-        
-        try {
-          await sendOrderConfirmation(order);
-        } catch (e) {
-          console.error("Order confirmation email failed:", e.message);
-        }
+  const reference = event.data.reference;
 
-        if (io) {
-          io.emit("paymentConfirmed", { reference, email: order.email });
+  try {
+    // 2. VERIFY PAYMENT WITH PAYSTACK (Security layer)
+    const verify = await axios.get(
+      `https://api.paystack.co/transaction/verify/${reference}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
         }
       }
+    );
+
+    const paymentData = verify.data.data;
+
+    if (paymentData.status !== "success") {
+      console.log(`⚠️ Payment verification failed for ${reference}. Status: ${paymentData.status}`);
+      return res.status(200).json({ status: "ignored", message: "Payment not successful" });
+    }
+
+    console.log(`✅ Payment verified for ${reference}`);
+
+    // 3. Update order and use the result to check for existing status
+    const order = await Order.findOneAndUpdate(
+      { reference: reference, status: { $ne: "Paid" } }, // Only update if not already paid
+      { status: "Paid" },
+      { new: true }
+    );
+
+    if (order) {
+      console.log(`✅ Order ${order._id} marked as paid.`);
+      
+      try {
+        await sendOrderConfirmation(order);
+        console.log(`📧 Order confirmation email sent to ${order.email}`);
+      } catch (e) {
+        console.error("Order confirmation email failed:", e.message);
+      }
+
+      if (io) {
+        io.emit("paymentConfirmed", { reference, email: order.email });
+      }
+    } else {
+      console.log(`ℹ️ Order ${reference} already processed or not found.`);
     }
 
     return res.status(200).json({ status: "success" });
@@ -517,7 +524,6 @@ app.post("/api/paystack/webhook", async (req, res) => {
     return res.status(500).json({ error: "Webhook system processing failed" });
   }
 });
-
 /* ===========================
    👑 ADMIN
 =========================== */
