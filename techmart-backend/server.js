@@ -469,9 +469,28 @@ app.post("/api/paystack/webhook", async (req, res) => {
 
     if (event.event === "charge.success") {
       const { reference } = event.data;
-      
+    
+      // ✅ VERIFY PAYMENT WITH PAYSTACK BEFORE PROCESSING
+      const verify = await axios.get(
+        `https://api.paystack.co/transaction/verify/${reference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+          }
+        }
+      );
+    
+      const paymentData = verify.data.data;
+    
+      if (paymentData.status !== "success") {
+        console.log(`⚠️ Payment verification failed for ${reference}. Status: ${paymentData.status}`);
+        return res.status(200).json({ status: "ignored", message: "Payment not successful" });
+      }
+    
+      console.log(`✅ Payment verified for ${reference}`);
+    
       const order = await Order.findOneAndUpdate(
-        { reference: reference },
+        { reference: reference, status: "Pending" },
         { status: "Paid" },
         { new: true }
       );
