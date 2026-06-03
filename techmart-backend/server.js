@@ -463,62 +463,82 @@ app.post("/api/paystack/init", async (req, res) => {
 });
 
 /* 2. SECURE & IDEMPOTENT WEBHOOK RECEIVER */
-app.post("/api/paystack/webhook", async (req, res) => {
-  const event = req.body;
-
-  // 1. ALWAYS acknowledge the request immediately so Paystack stops retrying
-  if (!event || event.event !== 'charge.success') {
-    console.log(`ℹ️ Received non-success or empty webhook event: ${event?.event}`);
-    return res.status(200).send("Event ignored");
-  }
-
-  const reference = event.data.reference;
-
+app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    // 2. VERIFY PAYMENT WITH PAYSTACK (Security layer)
+    // 1. VERIFY SIGNATURE
+    const crypto = require("crypto");
+    const hash = crypto
+      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+      .update(JSON.stringify(req.body))
+      .digest("hex");
+
+    if (hash !== req.headers["x-paystack-signature"]) {
+      console.log("❌ Invalid webhook signature");
+      return res.status(401).send("Invalid signature");
+    }
+
+    const event = req.body;
+
+    if (!event || event.event !== "charge.success") {
+      return res.status(200).send("Event ignored");
+    }
+
+    const reference = event.data.reference;
+
+    // 2. VERIFY WITH PAYSTACK API
     const verify = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
-        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        }
       }
     );
 
-    if (verify.data.data.status !== "success") {
-      console.log(`⚠️ Payment verification failed for ${reference}.`);
-      return res.status(200).send("Verification failed");
+    const paymentData = verify.data.data;
+
+    if (paymentData.status !== "success") {
+      console.log(`⚠️ Payment not successful for ${reference}: ${paymentData.status}`);
+      return res.status(200).send("Payment not verified");
     }
 
-    // 3. Find order and ensure idempotency (don't process twice)
-    const order = await Order.findOne({ reference });
+    console.log(`✅ Payment verified for ${reference}`);
 
-    if (order && order.status !== 'Paid') {
-      order.status = 'Paid';
-      await order.save();
+    // 3. UPDATE ORDER ONLY IF PENDING
+    const order = await Order.findOneAndUpdate(
+      { reference, status: "Pending" },
+      { status: "Paid" },
+      { new: true }
+    );
 
-      console.log(`✅ Order ${order._id} verified and marked as paid.`);
-      
-      try {
-        await sendOrderConfirmation(order);
-        console.log(`📧 Confirmation email successfully sent to ${order.email}`);
-      } catch (e) {
-        console.error("❌ Email failed:", e.message);
-      }
-
-      if (io) {
-        io.emit("paymentConfirmed", { reference, email: order.email });
-      }
-    } else {
-      console.log(`ℹ️ Order ${reference} already processed or not found.`);
+    if (!order) {
+      console.log(`ℹ️ Order ${reference} already processed or not found`);
+      return res.status(200).send("Already processed");
     }
+
+    console.log(`✅ Order ${order._id} marked as Paid`);
+
+    // 4. SEND CONFIRMATION EMAIL
+    try {
+      await sendOrderConfirmation(order);
+      console.log(`📧 Confirmation email sent to ${order.email}`);
+    } catch (e) {
+      console.error("❌ Email failed:", e.message);
+    }
+
+    // 5. NOTIFY FRONTEND
+    if (io) {
+      io.emit("paymentConfirmed", { reference, email: order.email });
+    }
+
+    return res.status(200).json({ status: "success" });
 
   } catch (err) {
-    console.error("❌ Webhook processing error:", err.message);
-    return res.status(500).send("Internal server error");
+    console.error("❌ Webhook error:", err.message);
+    return res.status(500).send("Webhook error");
   }
-
-  // Final 200 OK
-  return res.status(200).send("Webhook processed");
 });
+
 /* ===========================
    👑 ADMIN
 =========================== */
