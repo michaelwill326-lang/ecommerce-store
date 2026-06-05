@@ -518,6 +518,14 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
 
     console.log(`✅ Order ${order._id} marked as Paid`);
 
+    // PAYMENT DEBUG
+    console.log("========== PAYMENT DEBUG ==========");
+    console.log("Reference:", reference);
+    console.log("Paystack Status:", paymentData.status);
+    console.log("Order Status Before Update:", order?.status);
+    console.log("Order Email:", order?.email);
+    console.log("==================================");
+    
     // 4. SEND CONFIRMATION EMAIL
     try {
       await sendOrderConfirmation(order);
