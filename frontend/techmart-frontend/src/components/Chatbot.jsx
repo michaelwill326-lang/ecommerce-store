@@ -11,8 +11,17 @@ export default function Chatbot() {
   const [typing, setTyping] = useState(false);
   const [userEmail, setUserEmail] = useState("Guest");
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user?.email) setUserEmail(user.email);
+    const syncUser = () => {
+      const user = JSON.parse(localStorage.getItem("user"));
+      setUserEmail(user?.email || "Guest");
+    };
+    syncUser();
+    window.addEventListener("storage", syncUser);
+    window.addEventListener("focus", syncUser);
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("focus", syncUser);
+    };
   }, []);
   const messagesEndRef = useRef(null);
 
