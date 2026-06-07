@@ -124,7 +124,7 @@ const styles = {
   container: {
     maxWidth: "1200px",
     margin: "0 auto",
-    padding: "24px 16px",
+    padding: "16px 12px", boxSizing: "border-box", width: "100%",
   },
   centered: {
     display: "flex",
