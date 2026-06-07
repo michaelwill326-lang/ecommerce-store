@@ -4,6 +4,11 @@ const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const handleOpen = () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    setUserEmail(user?.email || "Guest");
+    setIsOpen(true);
+  };
   const [messages, setMessages] = useState([
     { text: "👋 Hello! I'm your AI shopping assistant.", sender: "bot" },
   ]);
@@ -72,7 +77,7 @@ export default function Chatbot() {
     <>
       {/* FLOATING BUTTON */}
       <button
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
         style={styles.toggleBtn}
       >
         🤖
