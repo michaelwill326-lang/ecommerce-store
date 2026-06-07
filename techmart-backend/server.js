@@ -13,7 +13,7 @@ const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 
 const aiRoutes = require("./routes/ai");
-const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate } = require("./utils/email");
+const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail } = require("./utils/email");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
