@@ -9,6 +9,11 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [userEmail, setUserEmail] = useState("Guest");
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user?.email) setUserEmail(user.email);
+  }, []);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -31,7 +36,7 @@ export default function Chatbot() {
       const response = await fetch(`${API}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, userEmail }),
       });
 
       const data = await response.json();

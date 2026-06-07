@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import Navbar from "./components/Navbar"; 
 import Footer from "./components/Footer"; // Imported here
 import Chatbot from "./components/Chatbot";
@@ -18,6 +19,24 @@ import Wishlist from "./pages/Wishlist";
 import Policy from "./pages/Policy";
 
 export default function App() {
+  useEffect(() => {
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }, 5 * 60 * 1000);
+    };
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, resetTimer));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, []);
   return (
     <div style={styles.appContainer}>
       {/* Navigation Bar across all views */}
