@@ -397,7 +397,7 @@ const styles = {
   cardTitle: { color: "#fff", fontSize: "20px", fontWeight: "700", marginBottom: "8px" },
   cardSubtitle: { color: "#888", fontSize: "14px", marginBottom: "24px" },
   searchRow: { display: "flex", gap: "12px", flexWrap: "wrap" },
-  input: { flex: 1, minWidth: "200px", padding: "12px 20px", borderRadius: "10px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "15px", outline: "none" },
+  input: { flex: 1, minWidth: "0", padding: "12px 20px", borderRadius: "10px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "15px", outline: "none" },
   orangeBtn: { padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" },
   errorBox: { background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginTop: "16px" },
   orderResult: { marginTop: "32px", display: "flex", flexDirection: "column", gap: "24px" },

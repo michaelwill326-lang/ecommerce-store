@@ -264,7 +264,7 @@ const styles = {
   layout: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" },
   imageCol: { display: "flex", flexDirection: "column", gap: "12px" },
   mainImgWrap: { position: "relative", borderRadius: "16px", overflow: "hidden", background: "#1a1a1a" },
-  mainImg: { width: "100%", height: "400px", objectFit: "cover", display: "block" },
+  mainImg: { width: "100%", height: "260px", objectFit: "cover", display: "block" },
   outOfStockBadge: { position: "absolute", top: "16px", left: "16px", background: "#dc2626", color: "#fff", padding: "6px 14px", borderRadius: "999px", fontSize: "13px", fontWeight: "700" },
   heartBtn: { position: "absolute", top: "16px", right: "16px", width: "40px", height: "40px", borderRadius: "50%", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
   thumbRow: { display: "flex", gap: "10px", flexWrap: "wrap" },

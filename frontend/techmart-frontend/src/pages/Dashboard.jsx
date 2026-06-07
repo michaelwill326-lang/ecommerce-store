@@ -362,7 +362,7 @@ const styles = {
   sectionTitle: { color: "#fff", fontSize: "22px", fontWeight: "700" },
   sectionSub: { color: "#888", fontSize: "14px" },
   controls: { display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" },
-  searchInput: { flex: 1, minWidth: "200px", padding: "12px 20px", borderRadius: "999px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "15px", outline: "none" },
+  searchInput: { flex: 1, minWidth: "0", padding: "12px 20px", borderRadius: "999px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "15px", outline: "none" },
   select: { padding: "12px 16px", borderRadius: "10px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "14px", outline: "none", cursor: "pointer" },
   categoryRow: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px" },
   catBtn: { padding: "8px 18px", borderRadius: "999px", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" },
