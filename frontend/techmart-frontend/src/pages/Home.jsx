@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Home() {
+  const isMobile = window.innerWidth < 480;
   const [products, setProducts] = useState([]);
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +157,7 @@ const styles = {
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gridTemplateColumns: window.innerWidth < 480 ? "1fr" : window.innerWidth < 768 ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(200px, 1fr))",
     gap: "20px",
     marginBottom: "40px",
   },
