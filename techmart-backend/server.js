@@ -286,7 +286,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
     if (!token || !newPassword) return res.status(400).json({ error: "Token and new password are required" });
 
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: token.trim(),
       resetPasswordExpires: { $gt: Date.now() } // Checks if token is still valid
     });
 
