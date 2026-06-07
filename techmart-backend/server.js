@@ -98,6 +98,8 @@ const User = mongoose.model(
     referredBy: { type: String, default: null },
     referralCount: { type: Number, default: 0 },
     referralCredits: { type: Number, default: 0 },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now }
   })
 );
