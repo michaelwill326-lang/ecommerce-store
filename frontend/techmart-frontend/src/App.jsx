@@ -68,6 +68,7 @@ export default function App() {
       <Chatbot />
 
       {/* 💬 WHATSAPP FLOATING BUTTON */}
+      <a
       
         href="https://wa.me/2349032657217"
         target="_blank"
