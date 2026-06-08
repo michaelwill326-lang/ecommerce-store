@@ -9,6 +9,20 @@ const FALLBACK_IMG = "https://placehold.co/80x80?text=No+Image";
 export default function Checkout() {
   const { cart } = useContext(CartContext);
   const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState(JSON.parse(localStorage.getItem("user"))?.phone || "");
+
+  const addressRef = (input) => {
+    if (!input || !window.google) return;
+    const autocomplete = new window.google.maps.places.Autocomplete(input, {
+      componentRestrictions: { country: "ng" },
+      fields: ["formatted_address"],
+    });
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      setAddress(place.formatted_address || "");
+    });
+  };
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -20,11 +34,13 @@ export default function Checkout() {
     setError("");
     if (!token || !user) { navigate("/login"); return; }
     if (cart.length === 0) { setError("Your cart is empty"); return; }
+    if (!address.trim()) { setError("Please enter your delivery address"); return; }
+    if (!phone.trim()) { setError("Please enter your phone number"); return; }
     try {
       setLoading(true);
       const response = await axios.post(
         `${API}/api/paystack/init`,
-        { email: user.email, amount: total, cart },
+        { email: user.email, amount: total, cart, deliveryAddress: address, phone },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       window.location.href = response.data.url;
@@ -46,7 +62,9 @@ export default function Checkout() {
   }
 
   return (
-    <div style={styles.page}>
+    <>
+      <script src={`https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&libraries=places`} async />
+      <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>💳 Checkout</h1>
         <Link to="/cart"><button style={styles.backBtn}>← Back to Cart</button></Link>
@@ -72,6 +90,31 @@ export default function Checkout() {
               to complete purchase.
             </div>
           )}
+          <div style={styles.addressCard}>
+            <h3 style={styles.sectionTitle}>📍 Delivery Details</h3>
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Delivery Address</label>
+              <input
+                ref={addressRef}
+                type="text"
+                placeholder="Start typing your address in Nigeria..."
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                style={styles.input}
+              />
+              <p style={{color:"#888",fontSize:"12px",marginTop:"6px"}}>🔍 Google will suggest your address automatically</p>
+            </div>
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Phone Number</label>
+              <input
+                type="tel"
+                placeholder="e.g. 08012345678"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+          </div>
           <div style={styles.itemsCard}>
             <h3 style={styles.sectionTitle}>🛍️ Order Items ({cart.length})</h3>
             {cart.map((item) => (
@@ -136,6 +179,7 @@ export default function Checkout() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -163,6 +207,10 @@ const styles = {
   itemQty: { color: "#aaa", fontSize: "13px", margin: 0 },
   itemPrice: { color: "#f97316", fontWeight: "700", fontSize: "16px" },
   rightCol: { position: "sticky", top: "90px" },
+  addressCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px" },
+  fieldWrap: { marginBottom: "16px" },
+  label: { display: "block", color: "#aaa", fontSize: "13px", fontWeight: "600", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" },
+  input: { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "15px", outline: "none", boxSizing: "border-box" },
   summaryCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px" },
   summaryRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
   summaryLabel: { color: "#888", fontSize: "14px" },
