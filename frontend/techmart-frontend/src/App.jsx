@@ -66,33 +66,10 @@ export default function App() {
 
       {/* 🤖 GLOBAL AI CHATBOT SYSTEM */}
       <Chatbot />
-
-      {/* 💬 WHATSAPP FLOATING BUTTON */}
-      <a
-      
-        href="https://wa.me/2349032657217"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          position: "fixed",
-          bottom: "90px",
-          left: "24px",
-          width: "56px",
-          height: "56px",
-          borderRadius: "50%",
-          background: "#25D366",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 4px 20px rgba(37,211,102,0.5)",
-          zIndex: 9999,
-          textDecoration: "none",
-          fontSize: "28px",
-        }}
-        title="Chat with us on WhatsApp"
-      >
-        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{width:"32px",height:"32px"}} />
-      </a>
+    {/* 💬 WHATSAPP FLOATING BUTTON */}
+    <a href="https://wa.me/2349032657217" target="_blank" rel="noopener noreferrer" title="Chat with us on WhatsApp" style={{position:"fixed",bottom:"90px",left:"24px",width:"56px",height:"56px",borderRadius:"50%",background:"#25D366",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(37,211,102,0.5)",zIndex:9999,textDecoration:"none"}}>
+      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{width:"32px",height:"32px"}} />
+    </a>
     </div>
   );
 }
