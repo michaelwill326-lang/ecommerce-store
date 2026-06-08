@@ -150,6 +150,8 @@ const Order = mongoose.model(
     status: { type: String, default: "Pending" },
     reference: String,
     trackingNumber: String,
+    deliveryAddress: { type: String, default: "" },
+    phone: { type: String, default: "" },
     createdAt: { type: Date, default: Date.now }
   })
 );
@@ -408,7 +410,7 @@ app.get("/api/orders/me", auth, async (req, res) => {
 /* 1. INITIALIZE TRANSACTION & LOCK STOCK */
 app.post("/api/paystack/init", async (req, res) => {
   try {
-    const { email, amount, cart } = req.body;
+    const { email, amount, cart, deliveryAddress, phone } = req.body;
     if (!email || !amount || !cart || cart.length === 0) {
       return res.status(400).json({ error: "Missing checkout payload information" });
     }
@@ -453,7 +455,7 @@ app.post("/api/paystack/init", async (req, res) => {
     }
 
     // Create pending database record since items are locked down securely
-    await Order.create({ email, items: cart, amount, reference, status: "Pending" });
+    await Order.create({ email, items: cart, amount, reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
