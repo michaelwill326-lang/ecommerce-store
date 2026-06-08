@@ -15,10 +15,12 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [userEmail, setUserEmail] = useState("Guest");
+  const [userName, setUserName] = useState("Guest");
   useEffect(() => {
     const syncUser = () => {
       const user = JSON.parse(localStorage.getItem("user"));
       setUserEmail(user?.email || "Guest");
+      setUserName(user?.name?.split(" ")[0] || "Guest");
     };
     syncUser();
     window.addEventListener("storage", syncUser);
@@ -50,7 +52,7 @@ export default function Chatbot() {
       const response = await fetch(`${API}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, userEmail }),
+        body: JSON.stringify({ message, userEmail, userName }),
       });
 
       const data = await response.json();
