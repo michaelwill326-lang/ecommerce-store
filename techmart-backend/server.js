@@ -43,6 +43,15 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many attempts, please try again in 15 minutes." }
+});
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/signup", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
+
 /* ===========================
    🌐 CORS CONFIG
 =========================== */
@@ -196,6 +205,10 @@ app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password || !req.body.phone) return res.status(400).json({ error: "Name, email, password, and phone number are required" });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return res.status(400).json({ error: "Invalid email address" });
+    if (password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters" });
+    if (name.trim().length < 2) return res.status(400).json({ error: "Name must be at least 2 characters" });
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "User already exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
