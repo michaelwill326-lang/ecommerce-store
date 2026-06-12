@@ -312,7 +312,7 @@ export default function Admin() {
           <table style={styles.table}>
             <thead>
               <tr>
-                {["Email", "Amount", "Items", "Status", "Date", "Action"].map(h => (
+                {["Email", "Address", "Phone", "Amount", "Items", "Status", "Date", "Action"].map(h => (
                   <th key={h} style={styles.th}>{h}</th>
                 ))}
               </tr>
@@ -321,6 +321,8 @@ export default function Admin() {
               {orders.map(o => (
                 <tr key={o._id} style={styles.tr}>
                   <td style={styles.td}>{o.email}</td>
+                  <td style={styles.td}>{o.deliveryAddress || "—"}</td>
+                  <td style={styles.td}>{o.phone || "—"}</td>
                   <td style={styles.td}>₦{o.amount?.toLocaleString()}</td>
                   <td style={styles.td}>{o.items?.length || 0} items</td>
                   <td style={styles.td}>
