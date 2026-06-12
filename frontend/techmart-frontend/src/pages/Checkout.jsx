@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
@@ -11,24 +11,40 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(JSON.parse(localStorage.getItem("user"))?.phone || "");
-
-  const addressRef = (input) => {
-    if (!input || !window.google) return;
-    const autocomplete = new window.google.maps.places.Autocomplete(input, {
-      componentRestrictions: { country: "ng" },
-      fields: ["formatted_address"],
-    });
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      setAddress(place.formatted_address || "");
-    });
-  };
   const [error, setError] = useState("");
+  const inputRef = useRef(null);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("token");
   const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
+
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleAddressChange = (e) => {
+    const value = e.target.value;
+    setAddress(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 3) { setSuggestions([]); setShowSuggestions(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value + ", Nigeria")}&format=json&limit=5&countrycodes=ng`);
+        const data = await res.json();
+        setSuggestions(data);
+        setShowSuggestions(true);
+      } catch (err) {
+        console.error("Address lookup failed", err);
+      }
+    }, 400);
+  };
+
+  const selectSuggestion = (display_name) => {
+    setAddress(display_name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   const handlePayment = async () => {
     setError("");
@@ -62,9 +78,7 @@ export default function Checkout() {
   }
 
   return (
-    <>
-      <script src={`https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&libraries=places`} async />
-      <div style={styles.page}>
+    <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>💳 Checkout</h1>
         <Link to="/cart"><button style={styles.backBtn}>← Back to Cart</button></Link>
@@ -94,14 +108,26 @@ export default function Checkout() {
             <h3 style={styles.sectionTitle}>📍 Delivery Details</h3>
             <div style={styles.fieldWrap}>
               <label style={styles.label}>Delivery Address</label>
-              <input
-                ref={addressRef}
-                type="text"
-                placeholder="Start typing your address in Nigeria..."
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                style={styles.input}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Start typing your address in Nigeria..."
+                  value={address}
+                  onChange={handleAddressChange}
+                  style={styles.input}
+                  autoComplete="off"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div style={styles.dropdown}>
+                    {suggestions.map((s, i) => (
+                      <div key={i} style={styles.dropdownItem} onClick={() => selectSuggestion(s.display_name)}>
+                        📍 {s.display_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <p style={{color:"#888",fontSize:"12px",marginTop:"6px"}}>🔍 Google will suggest your address automatically</p>
             </div>
             <div style={styles.fieldWrap}>
@@ -179,7 +205,6 @@ export default function Checkout() {
         </div>
       </div>
     </div>
-    </>
   );
 }
 
@@ -221,4 +246,6 @@ const styles = {
   secureText: { color: "#888", fontSize: "13px", textAlign: "center", marginTop: "12px" },
   guaranteeRow: { display: "flex", justifyContent: "space-between", marginTop: "16px", flexWrap: "wrap", gap: "8px" },
   guaranteeItem: { color: "#888", fontSize: "12px" },
+  dropdown: { position: "absolute", top: "100%", left: 0, right: 0, background: "#1a1a1a", border: "1px solid #444", borderRadius: "10px", zIndex: 1000, maxHeight: "200px", overflowY: "auto", marginTop: "4px" },
+  dropdownItem: { padding: "12px 16px", color: "#fff", fontSize: "13px", cursor: "pointer", borderBottom: "1px solid #222", lineHeight: "1.4" },
 };
