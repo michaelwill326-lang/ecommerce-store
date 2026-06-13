@@ -21,6 +21,8 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recLoading, setRecLoading] = useState(false);
 
   const inCart = cart.some((item) => item._id === id);
   const wishlisted = isInWishlist(id);
@@ -35,6 +37,7 @@ export default function ProductDetail() {
       const res = await axios.get(`${API}/api/products/${id}`);
       setProduct(res.data);
       setError("");
+      fetchRecommendations(res.data);
 
       // SAVE TO RECENTLY VIEWED
       const recent = JSON.parse(localStorage.getItem("recent")) || [];
@@ -46,6 +49,21 @@ export default function ProductDetail() {
       setError("Product not found");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRecommendations = async (currentProduct) => {
+    try {
+      setRecLoading(true);
+      const res = await axios.get(`${API}/api/products`);
+      const all = res.data.products || res.data;
+      const same = all.filter(p => p._id !== currentProduct._id && p.category === currentProduct.category);
+      const others = same.length >= 2 ? same : all.filter(p => p._id !== currentProduct._id);
+      setRecommendations(others.slice(0, 4));
+    } catch (err) {
+      console.error("Recommendations failed", err);
+    } finally {
+      setRecLoading(false);
     }
   };
 
@@ -252,6 +270,33 @@ export default function ProductDetail() {
 
       <ReviewSection product={product} onRefresh={fetchProduct} />
 
+      {/* YOU MAY ALSO LIKE */}
+      {recommendations.length > 0 && (
+        <div style={styles.recSection}>
+          <h2 style={styles.recTitle}>✨ You May Also Like</h2>
+          <div style={styles.recGrid}>
+            {recommendations.map(rec => (
+              <div
+                key={rec._id}
+                style={styles.recCard}
+                onClick={() => navigate(`/product/${rec._id}`)}
+              >
+                <img
+                  src={rec.images?.[0] || "https://placehold.co/300x200?text=No+Image"}
+                  alt={rec.name}
+                  onError={e => { e.target.src = "https://placehold.co/300x200?text=No+Image"; }}
+                  style={styles.recImg}
+                />
+                <div style={styles.recInfo}>
+                  <p style={styles.recName}>{rec.name}</p>
+                  <p style={styles.recPrice}>₦{rec.price?.toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -287,4 +332,12 @@ const styles = {
   addBtn: { padding: "16px", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", transition: "background 0.3s" },
   wishlistBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" },
   viewCartBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", color: "#f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer" },
+  recSection: { marginTop: "48px", paddingTop: "32px", borderTop: "1px solid #222" },
+  recTitle: { color: "#fff", fontSize: "22px", fontWeight: "800", marginBottom: "24px" },
+  recGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" },
+  recCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", overflow: "hidden", cursor: "pointer", transition: "border 0.2s, transform 0.2s" },
+  recImg: { width: "100%", height: "150px", objectFit: "cover", display: "block" },
+  recInfo: { padding: "12px" },
+  recName: { color: "#fff", fontSize: "13px", fontWeight: "600", margin: "0 0 6px", lineHeight: "1.4" },
+  recPrice: { color: "#f97316", fontSize: "15px", fontWeight: "700", margin: 0 },
 };
