@@ -8,7 +8,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -28,6 +28,9 @@ export default function Admin() {
   const [flaggedReviews, setFlaggedReviews] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [reviewTab, setReviewTab] = useState("pending");
+  const [coupons, setCoupons] = useState([]);
+  const [newCoupon, setNewCoupon] = useState({ code: "", type: "percent", value: "", minOrder: "", expiresAt: "" });
+  const [couponMsg, setCouponMsg] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadPreview, setUploadPreview] = useState(null);
 
@@ -46,7 +49,7 @@ export default function Admin() {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
@@ -54,6 +57,7 @@ export default function Admin() {
         axios.get(`${API}/api/admin/reviews/sentiment`, { headers }),
         axios.get(`${API}/api/admin/reviews/pending`, { headers }),
         axios.get(`${API}/api/admin/reviews/flagged`, { headers }),
+        axios.get(`${API}/api/admin/coupons`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
@@ -62,6 +66,7 @@ export default function Admin() {
       setSentiment(sentimentRes.data);
       setPendingReviews(pendingRes.data);
       setFlaggedReviews(flaggedRes.data);
+      setCoupons(couponsRes?.data || []);
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -533,6 +538,79 @@ export default function Admin() {
       {/* =====================
           REVIEWS TAB
       ===================== */}
+      {tab === "Coupons" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Coupon Codes</h2>
+          {/* Create Coupon Form */}
+          <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Create New Coupon</h3>
+            {couponMsg && <p style={{ color: couponMsg.startsWith("Error") ? "red" : "green", marginBottom: "12px" }}>{couponMsg}</p>}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+              <input placeholder="Code (e.g. WELCOME10)" value={newCoupon.code}
+                onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                style={{ ...styles.input, flex: "1", minWidth: "140px" }} />
+              <select value={newCoupon.type} onChange={e => setNewCoupon({ ...newCoupon, type: e.target.value })}
+                style={{ ...styles.input, flex: "1", minWidth: "120px" }}>
+                <option value="percent">Percent (%)</option>
+                <option value="fixed">Fixed (₦)</option>
+              </select>
+              <input placeholder={newCoupon.type === "percent" ? "Value (e.g. 10)" : "Value in ₦"} value={newCoupon.value}
+                onChange={e => setNewCoupon({ ...newCoupon, value: e.target.value })}
+                type="number" style={{ ...styles.input, flex: "1", minWidth: "120px" }} />
+              <input placeholder="Min order (₦)" value={newCoupon.minOrder}
+                onChange={e => setNewCoupon({ ...newCoupon, minOrder: e.target.value })}
+                type="number" style={{ ...styles.input, flex: "1", minWidth: "120px" }} />
+              <input placeholder="Expires (optional)" value={newCoupon.expiresAt}
+                onChange={e => setNewCoupon({ ...newCoupon, expiresAt: e.target.value })}
+                type="date" style={{ ...styles.input, flex: "1", minWidth: "140px" }} />
+            </div>
+            <button onClick={async () => {
+              setCouponMsg("");
+              if (!newCoupon.code || !newCoupon.value) { setCouponMsg("Error: Code and value are required"); return; }
+              try {
+                const res = await axios.post(`${API}/api/admin/coupons`, { ...newCoupon, value: Number(newCoupon.value), minOrder: Number(newCoupon.minOrder) || 0 }, { headers });
+                setCoupons([res.data.data, ...coupons]);
+                setNewCoupon({ code: "", type: "percent", value: "", minOrder: "", expiresAt: "" });
+                setCouponMsg("Coupon created successfully!");
+              } catch (err) { setCouponMsg("Error: " + (err.response?.data?.error || "Failed to create coupon")); }
+            }} style={styles.orangeBtn}>Create Coupon</button>
+          </div>
+          {/* Coupons Table */}
+          <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "20px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Active Coupons</h3>
+            {coupons.length === 0 ? <p style={{ color: "#888" }}>No coupons yet.</p> : (
+              <table style={styles.table}>
+                <thead><tr>
+                  <th style={styles.th}>Code</th>
+                  <th style={styles.th}>Type</th>
+                  <th style={styles.th}>Value</th>
+                  <th style={styles.th}>Min Order</th>
+                  <th style={styles.th}>Expires</th>
+                  <th style={styles.th}>Action</th>
+                </tr></thead>
+                <tbody>
+                  {coupons.map(c => (
+                    <tr key={c._id}>
+                      <td style={styles.td}><strong style={{ color: "#f97316" }}>{c.code}</strong></td>
+                      <td style={styles.td}>{c.type === "percent" ? "%" : "₦"}</td>
+                      <td style={styles.td}>{c.type === "percent" ? `${c.value}%` : `₦${c.value.toLocaleString()}`}</td>
+                      <td style={styles.td}>₦{(c.minOrder || 0).toLocaleString()}</td>
+                      <td style={styles.td}>{c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : "Never"}</td>
+                      <td style={styles.td}>
+                        <button onClick={async () => {
+                          if (!window.confirm("Delete this coupon?")) return;
+                          await axios.delete(`${API}/api/admin/coupons/${c._id}`, { headers });
+                          setCoupons(coupons.filter(x => x._id !== c._id));
+                        }} style={{ background: "red", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 10px", cursor: "pointer" }}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
       {tab === "Reviews" && (
         <div>
           {sentiment && (

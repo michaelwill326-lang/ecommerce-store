@@ -18,6 +18,10 @@ export default function Checkout() {
   const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("token");
   const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState(null); // { discount, message, error }
+  const [couponLoading, setCouponLoading] = useState(false);
+  const finalTotal = couponStatus?.discount ? total - couponStatus.discount : total;
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -46,6 +50,20 @@ export default function Checkout() {
     setShowSuggestions(false);
   };
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponStatus(null);
+    try {
+      const res = await axios.post(`${API}/api/coupons/validate`, { code: couponCode, orderTotal: total });
+      setCouponStatus({ discount: res.data.discount, message: `Coupon applied! You save ₦${res.data.discount.toLocaleString()}` });
+    } catch (err) {
+      setCouponStatus({ error: err.response?.data?.error || "Invalid coupon code" });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
   const handlePayment = async () => {
     setError("");
     if (!token || !user) { navigate("/login"); return; }
@@ -56,7 +74,7 @@ export default function Checkout() {
       setLoading(true);
       const response = await axios.post(
         `${API}/api/paystack/init`,
-        { email: user.email, amount: total, cart, deliveryAddress: address, phone },
+        { email: user.email, amount: finalTotal, cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       window.location.href = response.data.url;
@@ -184,7 +202,14 @@ export default function Checkout() {
             <div style={styles.summaryRow}>
               <span style={{ color: "#fff", fontWeight: "800", fontSize: "18px" }}>Total</span>
               <span style={{ color: "#f97316", fontWeight: "800", fontSize: "22px" }}>
-                ₦{total.toLocaleString()}
+                {couponStatus?.discount ? (
+                  <>
+                    <span style={{ textDecoration: "line-through", color: "#999", fontSize: "14px" }}>₦{total.toLocaleString()}</span>
+                    {" "}₦{finalTotal.toLocaleString()}
+                  </>
+                ) : (
+                  <>₦{total.toLocaleString()}</>
+                )}
               </span>
             </div>
             {error && <div style={styles.errorBox}>⚠️ {error}</div>}
@@ -193,7 +218,26 @@ export default function Checkout() {
               disabled={loading || !user}
               style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}
             >
-              {loading ? "Processing..." : `Pay ₦${total.toLocaleString()} →`}
+              {/* COUPON CODE */}
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                <input
+                  type="text"
+                  placeholder="Coupon code"
+                  value={couponCode}
+                  onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponStatus(null); }}
+                  style={{ flex: 1, padding: "10px 12px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px" }}
+                />
+                <button
+                  onClick={applyCoupon}
+                  disabled={couponLoading || !couponCode.trim()}
+                  style={{ padding: "10px 16px", background: "#333", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px" }}
+                >
+                  {couponLoading ? "..." : "Apply"}
+                </button>
+              </div>
+              {couponStatus?.message && <p style={{ color: "green", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.message}</p>}
+              {couponStatus?.error && <p style={{ color: "red", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.error}</p>}
+              {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} →`}
             </button>
             <p style={styles.secureText}>🔒 Secured by Paystack</p>
             <div style={styles.guaranteeRow}>
