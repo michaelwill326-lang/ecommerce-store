@@ -950,6 +950,33 @@ app.post("/api/upload", adminOnly, upload.single("image"), async (req, res) => {
     res.status(500).json({ error: "Image upload failed" });
   }
 });
+const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/uploader");
+
+/* ===========================
+   MULTI-IMAGE UPLOAD
+=========================== */
+app.post("/api/admin/products/upload-images", adminOnly, adminUploader.array("images", 5), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: "No images provided" });
+    const urls = [];
+    for (const file of req.files) {
+      const result = await cloudinaryCloud.uploader.upload(file.path, {
+        folder: "techmart_products",
+        transformation: [
+          { width: 800, height: 800, crop: "limit" },
+          { quality: "auto" },
+          { fetch_format: "auto" }
+        ]
+      });
+      urls.push(result.secure_url);
+    }
+    res.json({ success: true, urls });
+  } catch (err) {
+    console.error("Multi-upload error:", err);
+    res.status(500).json({ error: "Image upload failed" });
+  }
+});
+
 /* ===========================
    ⚡ SOCKET.IO
 =========================== */
@@ -996,37 +1023,35 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 // --- ADMIN FILE UPLOAD ROUTE INTEGRATION ---
-const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/uploader");
 // Product model already imported above
 
-app.post("/api/admin/products/add", adminUploader.single("image"), async (req, res) => {
+app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req, res) => {
   try {
-    let imageUrl = "";
-
-    if (req.file) {
-      console.log(`📡 Inbound binary stream detected: ${req.file.originalname}`);
-      const result = await cloudinaryCloud.uploader.upload(req.file.path, {
-        folder: "techmart_products"
-      });
-      imageUrl = result.secure_url;
-      console.log(`✅ Asset successfully deployed to Cloudinary: ${imageUrl}`);
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const result = await cloudinaryCloud.uploader.upload(file.path, {
+          folder: "techmart_products"
+        });
+        imageUrls.push(result.secure_url);
+      }
+    } else if (req.body.images) {
+      imageUrls = Array.isArray(req.body.images) ? req.body.images : [req.body.images];
     } else {
       return res.status(400).json({ message: "Product image asset is required." });
     }
-
     const newProduct = new Product({
       name: req.body.name,
       price: Number(req.body.price),
       description: req.body.description,
       stock: Number(req.body.stock),
-      image: imageUrl
+      category: req.body.category || "",
+      images: imageUrls
     });
-
     await newProduct.save();
-    console.log(`📦 Database updated! Created inventory item: ${newProduct.name}`);
     res.status(201).json({ success: true, data: newProduct });
   } catch (error) {
-    console.error("❌ UPLOAD EXCEPTION:", error);
+    console.error("UPLOAD EXCEPTION:", error);
     res.status(500).json({ message: error.message });
   }
 });
