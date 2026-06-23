@@ -142,6 +142,17 @@ const Product = mongoose.model(
 );
 
 const Order = mongoose.model(
+
+// Coupon Model
+const CouponSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+  type: { type: String, enum: ["percent", "fixed"], default: "percent" },
+  value: { type: Number, required: true },
+  minOrder: { type: Number, default: 0 },
+  expiresAt: { type: Date, default: null },
+  active: { type: Boolean, default: true }
+}, { timestamps: true });
+const Coupon = mongoose.model("Coupon", CouponSchema);
   "Order",
   new mongoose.Schema({
     email: String,
@@ -408,11 +419,81 @@ app.get("/api/orders/me", auth, async (req, res) => {
 ========================================================================= */
 
 /* 1. INITIALIZE TRANSACTION & LOCK STOCK */
+
+/* ===========================
+   COUPON ENDPOINTS
+=========================== */
+// Validate coupon
+app.post("/api/coupons/validate", async (req, res) => {
+  try {
+    const { code, orderTotal } = req.body;
+    const coupon = await Coupon.findOne({ code: code.toUpperCase(), active: true });
+    if (!coupon) return res.status(404).json({ error: "Invalid or expired coupon code" });
+    if (coupon.expiresAt && new Date() > coupon.expiresAt) {
+      return res.status(400).json({ error: "This coupon has expired" });
+    }
+    if (orderTotal < coupon.minOrder) {
+      return res.status(400).json({ error: `Minimum order of ₦${coupon.minOrder.toLocaleString()} required` });
+    }
+    const discount = coupon.type === "percent"
+      ? Math.round((coupon.value / 100) * orderTotal)
+      : Math.min(coupon.value, orderTotal);
+    res.json({ success: true, code: coupon.code, type: coupon.type, value: coupon.value, discount });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to validate coupon" });
+  }
+});
+
+// Create coupon (admin only)
+app.post("/api/admin/coupons", adminOnly, async (req, res) => {
+  try {
+    const { code, type, value, minOrder, expiresAt } = req.body;
+    const coupon = await Coupon.create({ code, type, value, minOrder, expiresAt: expiresAt || null });
+    res.status(201).json({ success: true, data: coupon });
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ error: "Coupon code already exists" });
+    res.status(500).json({ error: "Failed to create coupon" });
+  }
+});
+
+// Get all coupons (admin only)
+app.get("/api/admin/coupons", adminOnly, async (req, res) => {
+  try {
+    const coupons = await Coupon.find().sort({ createdAt: -1 });
+    res.json(coupons);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch coupons" });
+  }
+});
+
+// Delete coupon (admin only)
+app.delete("/api/admin/coupons/:id", adminOnly, async (req, res) => {
+  try {
+    await Coupon.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete coupon" });
+  }
+});
+
 app.post("/api/paystack/init", async (req, res) => {
   try {
-    const { email, amount, cart, deliveryAddress, phone } = req.body;
+    const { email, amount, cart, deliveryAddress, phone, couponCode } = req.body;
     if (!email || !amount || !cart || cart.length === 0) {
       return res.status(400).json({ error: "Missing checkout payload information" });
+    }
+    // Apply coupon discount if provided
+    let finalAmount = amount;
+    let appliedCoupon = null;
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), active: true });
+      if (coupon && (!coupon.expiresAt || new Date() <= coupon.expiresAt) && amount >= coupon.minOrder) {
+        const discount = coupon.type === "percent"
+          ? Math.round((coupon.value / 100) * amount)
+          : Math.min(coupon.value, amount);
+        finalAmount = amount - discount;
+        appliedCoupon = couponCode.toUpperCase();
+      }
     }
 
     const reference = "TX-" + Date.now();
@@ -455,13 +536,13 @@ app.post("/api/paystack/init", async (req, res) => {
     }
 
     // Create pending database record since items are locked down securely
-    await Order.create({ email, items: cart, amount, reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
+    await Order.create({ email, items: cart, amount: finalAmount, originalAmount: amount, couponCode: appliedCoupon, reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: amount * 100,
+        amount: finalAmount * 100,
         reference,
         callback_url: `${process.env.FRONTEND_URL}/success`
       },
