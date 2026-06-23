@@ -142,6 +142,21 @@ const Product = mongoose.model(
 );
 
 const Order = mongoose.model(
+  "Order",
+  new mongoose.Schema({
+    email: String,
+    items: Array,
+    amount: Number,
+    status: { type: String, default: "Pending" },
+    reference: String,
+    trackingNumber: String,
+    deliveryAddress: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    originalAmount: Number,
+    couponCode: String,
+    createdAt: { type: Date, default: Date.now }
+  })
+);
 
 // Coupon Model
 const CouponSchema = new mongoose.Schema({
@@ -153,19 +168,6 @@ const CouponSchema = new mongoose.Schema({
   active: { type: Boolean, default: true }
 }, { timestamps: true });
 const Coupon = mongoose.model("Coupon", CouponSchema);
-  "Order",
-  new mongoose.Schema({
-    email: String,
-    items: Array,
-    amount: Number,
-    status: { type: String, default: "Pending" },
-    reference: String,
-    trackingNumber: String,
-    deliveryAddress: { type: String, default: "" },
-    phone: { type: String, default: "" },
-    createdAt: { type: Date, default: Date.now }
-  })
-);
 
 /* ===========================
    🎁 REFERRAL CODE GENERATOR
