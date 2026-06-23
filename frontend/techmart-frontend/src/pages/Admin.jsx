@@ -430,33 +430,6 @@ export default function Admin() {
                     style={{ ...styles.input, width: "100%", marginBottom: "16px" }}
                   />
                 </div>
-                  )}
-
-                  {/* UPLOAD BUTTON */}
-                  <label style={styles.uploadBtn}>
-                    {uploading ? "⏳ Uploading..." : uploadPreview ? "🔄 Change Image" : "📁 Upload Image"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      style={{ display: "none" }}
-                      disabled={uploading}
-                    />
-                  </label>
-
-                  {/* OR URL */}
-                  <p style={{ color: "#555", fontSize: "12px", margin: "8px 0" }}>or paste image URL:</p>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={newProduct.images[0]}
-                    onChange={(e) => {
-                      setNewProduct({ ...newProduct, images: [e.target.value] });
-                      setUploadPreview(e.target.value);
-                    }}
-                    style={{ ...styles.input, width: "100%", marginBottom: "16px" }}
-                  />
-                </div>
 
                 <div style={{ display: "flex", gap: "12px" }}>
                   <button
