@@ -72,27 +72,18 @@ export default function Admin() {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (e) => setUploadPreview(e.target.result);
-    reader.readAsDataURL(file);
-
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("image", file);
-
-      const res = await axios.post(`${API}/api/upload`, formData, {
-        headers: {
-          ...headers,
-          "Content-Type": "multipart/form-data",
-        },
+      files.forEach(file => formData.append("images", file));
+      const res = await axios.post(`${API}/api/admin/products/upload-images`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" },
       });
-
-      setNewProduct({ ...newProduct, images: [res.data.url] });
+      const urls = res.data.urls;
+      setNewProduct(prev => ({ ...prev, images: [...(prev.images.filter(u => u)), ...urls] }));
+      setUploadPreview(urls[0]);
     } catch (err) {
       alert("Image upload failed. Please try again.");
     } finally {
@@ -400,25 +391,45 @@ export default function Admin() {
                   style={{ ...styles.input, width: "100%", height: "80px", resize: "vertical", marginBottom: "12px" }}
                 />
 
-                {/* IMAGE UPLOAD */}
+                                {/* IMAGE UPLOAD */}
                 <div style={styles.uploadWrap}>
-                  <p style={styles.uploadLabel}>🖼️ Product Image</p>
-
-                  {/* PREVIEW */}
-                  {uploadPreview && (
-                    <div style={styles.previewWrap}>
-                      <img
-                        src={uploadPreview}
-                        alt="Preview"
-                        style={styles.previewImg}
-                      />
-                      {uploading && (
-                        <div style={styles.uploadingOverlay}>
-                          <div style={styles.spinner} />
-                          <p style={{ color: "#fff", fontSize: "12px", marginTop: "8px" }}>Uploading...</p>
+                  <p style={styles.uploadLabel}>Product Images (up to 5)</p>
+                  {newProduct.images.filter(u => u).length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                      {newProduct.images.filter(u => u).map((url, idx) => (
+                        <div key={idx} style={{ position: "relative" }}>
+                          <img src={url} alt={`Preview ${idx + 1}`} style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "2px solid #ddd" }} />
+                          <button
+                            onClick={() => setNewProduct(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                            style={{ position: "absolute", top: "-6px", right: "-6px", background: "red", color: "#fff", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", fontSize: "12px", lineHeight: "20px", textAlign: "center", padding: 0 }}
+                          >x</button>
                         </div>
-                      )}
+                      ))}
                     </div>
+                  )}
+                  <label style={styles.uploadBtn}>
+                    {uploading ? "Uploading..." : "Upload Images"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      style={{ display: "none" }}
+                      disabled={uploading}
+                    />
+                  </label>
+                  <p style={{ color: "#555", fontSize: "12px", margin: "8px 0" }}>or paste image URL:</p>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) setNewProduct(prev => ({ ...prev, images: [...prev.images.filter(u => u), e.target.value] }));
+                    }}
+                    onBlur={(e) => { e.target.value = ""; }}
+                    style={{ ...styles.input, width: "100%", marginBottom: "16px" }}
+                  />
+                </div>
                   )}
 
                   {/* UPLOAD BUTTON */}
