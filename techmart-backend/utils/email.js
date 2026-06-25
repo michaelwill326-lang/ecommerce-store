@@ -256,9 +256,92 @@ const sendPasswordResetEmail = async (email, token) => {
   }
 };
 
+
+/* =========================================================================
+   ADMIN ORDER NOTIFICATION EMAIL
+========================================================================= */
+const sendAdminOrderNotification = async (order) => {
+  try {
+    const itemRows = order.items.map(item => `
+      <tr>
+        <td style="color: #aaa; font-size: 14px; padding: 8px 0;">${item.name} (x${item.quantity || 1})</td>
+        <td style="color: #fff; font-size: 14px; font-weight: 600; text-align: right;">₦${(item.price * (item.quantity || 1)).toLocaleString()}</td>
+      </tr>
+    `).join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="margin: 0; padding: 0; background: #0a0a0a; font-family: Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 32px 16px;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #f97316; font-size: 28px; font-weight: 900; margin: 0;">TechMart</h1>
+            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">New Order Alert</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #f97316, #dc2626); border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
+            <p style="font-size: 48px; margin: 0;">🛒</p>
+            <h2 style="color: #fff; font-size: 24px; font-weight: 800; margin: 16px 0 8px;">New Order Received!</h2>
+            <p style="color: rgba(255,255,255,0.9); font-size: 15px; margin: 0;">Reference: ${order.reference}</p>
+          </div>
+          <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+            <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin: 0 0 16px;">Customer Details</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="color: #888; font-size: 14px; padding: 6px 0;">Email</td>
+                <td style="color: #fff; font-size: 14px; font-weight: 600; text-align: right;">${order.email}</td>
+              </tr>
+              <tr>
+                <td style="color: #888; font-size: 14px; padding: 6px 0;">Phone</td>
+                <td style="color: #fff; font-size: 14px; font-weight: 600; text-align: right;">${order.phone || "N/A"}</td>
+              </tr>
+              <tr>
+                <td style="color: #888; font-size: 14px; padding: 6px 0;">Delivery Address</td>
+                <td style="color: #fff; font-size: 14px; font-weight: 600; text-align: right;">${order.deliveryAddress || "N/A"}</td>
+              </tr>
+            </table>
+          </div>
+          <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+            <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin: 0 0 16px;">Order Items</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              ${itemRows}
+              <tr><td colspan="2" style="border-top: 1px solid #222; padding: 8px 0;"></td></tr>
+              <tr>
+                <td style="color: #fff; font-size: 16px; font-weight: 700; padding: 8px 0;">Total Amount</td>
+                <td style="color: #f97316; font-size: 18px; font-weight: 800; text-align: right;">₦${order.amount.toLocaleString()}</td>
+              </tr>
+              ${order.couponCode ? `<tr><td style="color: #888; font-size: 13px;">Coupon Used</td><td style="color: #10b981; font-size: 13px; text-align: right;">${order.couponCode}</td></tr>` : ""}
+            </table>
+          </div>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${process.env.FRONTEND_URL}/admin" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
+              View in Admin Dashboard
+            </a>
+          </div>
+          <div style="text-align: center; border-top: 1px solid #222; padding-top: 24px;">
+            <p style="color: #f97316; font-weight: 800; font-size: 18px; margin: 0 0 4px;">TechMart</p>
+            <p style="color: #555; font-size: 12px; margin: 0;">Built with love in Nigeria</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await brevo.transactionalEmails.sendTransacEmail({
+      sender: FROM,
+      to: [{ email: "michaelwill326@gmail.com" }],
+      subject: `New Order: ${order.reference} - ₦${order.amount.toLocaleString()}`,
+      htmlContent: html,
+    });
+    console.log("Admin order notification sent");
+  } catch (err) {
+    console.error("Admin notification error:", err.message);
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendWelcomeEmail,
   sendShippingUpdate,
   sendPasswordResetEmail,
+  sendAdminOrderNotification,
 };

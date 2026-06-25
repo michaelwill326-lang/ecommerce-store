@@ -13,7 +13,7 @@ const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 
 const aiRoutes = require("./routes/ai");
-const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail } = require("./utils/email");
+const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification } = require("./utils/email");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
@@ -632,6 +632,12 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
       console.log(`📧 Confirmation email sent to ${order.email}`);
     } catch (e) {
       console.error("❌ Email failed:", e.message);
+    }
+    // 5. NOTIFY ADMIN
+    try {
+      await sendAdminOrderNotification(order);
+    } catch (e) {
+      console.error("❌ Admin notification failed:", e.message);
     }
 
     // 5. NOTIFY FRONTEND
