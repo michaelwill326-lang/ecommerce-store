@@ -213,37 +213,70 @@ export default function Checkout() {
               </span>
             </div>
             {error && <div style={styles.errorBox}>⚠️ {error}</div>}
+            {/* COUPON CODE */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+              <input
+                type="text"
+                placeholder="Coupon code"
+                value={couponCode}
+                onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponStatus(null); }}
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "8px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "14px" }}
+              />
+              <button
+                onClick={applyCoupon}
+                disabled={couponLoading || !couponCode.trim()}
+                style={{ padding: "10px 16px", background: "#333", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px" }}
+              >
+                {couponLoading ? "..." : "Apply"}
+              </button>
+            </div>
+            {couponStatus?.message && <p style={{ color: "#22c55e", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.message}</p>}
+            {couponStatus?.error && <p style={{ color: "#ef4444", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.error}</p>}
             <button
               onClick={handlePayment}
               disabled={loading || !user}
               style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}
             >
-              {/* COUPON CODE */}
-              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-                <input
-                  type="text"
-                  placeholder="Coupon code"
-                  value={couponCode}
-                  onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponStatus(null); }}
-                  style={{ flex: 1, padding: "10px 12px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px" }}
-                />
-                <button
-                  onClick={applyCoupon}
-                  disabled={couponLoading || !couponCode.trim()}
-                  style={{ padding: "10px 16px", background: "#333", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px" }}
-                >
-                  {couponLoading ? "..." : "Apply"}
-                </button>
-              </div>
-              {couponStatus?.message && <p style={{ color: "green", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.message}</p>}
-              {couponStatus?.error && <p style={{ color: "red", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.error}</p>}
               {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} →`}
             </button>
-            <p style={styles.secureText}>🔒 Secured by Paystack</p>
-            <div style={styles.guaranteeRow}>
-              <span style={styles.guaranteeItem}>✅ Secure Payment</span>
-              <span style={styles.guaranteeItem}>📦 Free Delivery</span>
-              <span style={styles.guaranteeItem}>↩️ Easy Returns</span>
+            {/* TRUST BADGES */}
+            <div style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", marginTop: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "12px" }}>
+                <span style={{ fontSize: "18px" }}>🔒</span>
+                <span style={{ color: "#fff", fontWeight: "700", fontSize: "14px" }}>100% Secure Checkout</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+                <div style={{ background: "#1a1a1a", border: "1px solid #00c3e3", borderRadius: "8px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ color: "#00c3e3", fontWeight: "800", fontSize: "13px" }}>Paystack</span>
+                  <span style={{ color: "#888", fontSize: "11px" }}>Secured</span>
+                </div>
+                <div style={{ background: "#1a1a1a", border: "1px solid #22c55e", borderRadius: "8px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "14px" }}>🔐</span>
+                  <span style={{ color: "#22c55e", fontSize: "13px", fontWeight: "700" }}>SSL Encrypted</span>
+                </div>
+                <div style={{ background: "#1a1a1a", border: "1px solid #f97316", borderRadius: "8px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "14px" }}>🇳🇬</span>
+                  <span style={{ color: "#f97316", fontSize: "13px", fontWeight: "700" }}>Made in Nigeria</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-around", borderTop: "1px solid #222", paddingTop: "12px" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px" }}>✅</div>
+                  <div style={{ color: "#888", fontSize: "11px", marginTop: "4px" }}>Safe Payment</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px" }}>📦</div>
+                  <div style={{ color: "#888", fontSize: "11px", marginTop: "4px" }}>Free Delivery</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px" }}>↩️</div>
+                  <div style={{ color: "#888", fontSize: "11px", marginTop: "4px" }}>Easy Returns</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px" }}>🎧</div>
+                  <div style={{ color: "#888", fontSize: "11px", marginTop: "4px" }}>24/7 Support</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
