@@ -13,7 +13,7 @@ const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 
 const aiRoutes = require("./routes/ai");
-const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification } = require("./utils/email");
+const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert } = require("./utils/email");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
@@ -526,6 +526,10 @@ app.post("/api/paystack/init", async (req, res) => {
           productId: item._id || item.productId,
           quantity: item.quantity || 1
         });
+        // Send low stock alert if stock drops to 5 or below
+        if (updatedProduct.stock <= 5) {
+          sendLowStockAlert(updatedProduct).catch(err => console.error("Low stock alert failed:", err.message));
+        }
       }
     } catch (stockError) {
       // 🔄 ROLLBACK COMPLETED DECREMENTS IF THE TRANSACTION CALL ABORTS MID-LOOP

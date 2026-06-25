@@ -338,10 +338,75 @@ const sendAdminOrderNotification = async (order) => {
   }
 };
 
+
+/* =========================================================================
+   LOW STOCK ALERT EMAIL
+========================================================================= */
+const sendLowStockAlert = async (product) => {
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="margin: 0; padding: 0; background: #0a0a0a; font-family: Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 32px 16px;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #f97316; font-size: 28px; font-weight: 900; margin: 0;">TechMart</h1>
+            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">Stock Alert</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #dc2626, #991b1b); border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
+            <p style="font-size: 48px; margin: 0;">⚠️</p>
+            <h2 style="color: #fff; font-size: 24px; font-weight: 800; margin: 16px 0 8px;">Low Stock Warning!</h2>
+            <p style="color: rgba(255,255,255,0.9); font-size: 15px; margin: 0;">A product is running low on stock.</p>
+          </div>
+          <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="color: #888; font-size: 14px; padding: 8px 0;">Product</td>
+                <td style="color: #fff; font-size: 14px; font-weight: 700; text-align: right;">${product.name}</td>
+              </tr>
+              <tr><td colspan="2" style="border-top: 1px solid #222;"></td></tr>
+              <tr>
+                <td style="color: #888; font-size: 14px; padding: 8px 0;">Remaining Stock</td>
+                <td style="color: #dc2626; font-size: 20px; font-weight: 900; text-align: right;">${product.stock} units</td>
+              </tr>
+              <tr><td colspan="2" style="border-top: 1px solid #222;"></td></tr>
+              <tr>
+                <td style="color: #888; font-size: 14px; padding: 8px 0;">Price</td>
+                <td style="color: #fff; font-size: 14px; font-weight: 700; text-align: right;">₦${product.price.toLocaleString()}</td>
+              </tr>
+            </table>
+          </div>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${process.env.FRONTEND_URL}/admin" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
+              Update Stock in Admin
+            </a>
+          </div>
+          <div style="text-align: center; border-top: 1px solid #222; padding-top: 24px;">
+            <p style="color: #f97316; font-weight: 800; font-size: 18px; margin: 0 0 4px;">TechMart</p>
+            <p style="color: #555; font-size: 12px; margin: 0;">Built with love in Nigeria</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await brevo.transactionalEmails.sendTransacEmail({
+      sender: FROM,
+      to: [{ email: "michaelwill326@gmail.com" }],
+      subject: `Low Stock Alert: ${product.name} (${product.stock} left)`,
+      htmlContent: html,
+    });
+    console.log(`Low stock alert sent for ${product.name}`);
+  } catch (err) {
+    console.error("Low stock alert error:", err.message);
+  }
+};
+
 module.exports = {
   sendOrderConfirmation,
   sendWelcomeEmail,
   sendShippingUpdate,
   sendPasswordResetEmail,
   sendAdminOrderNotification,
+  sendLowStockAlert,
 };
