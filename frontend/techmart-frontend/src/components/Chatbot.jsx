@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
+  const isMobile = window.innerWidth <= 768;
   const [isOpen, setIsOpen] = useState(false);
   const handleOpen = () => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -148,7 +149,7 @@ const styles = {
   toggleBtn: {
     position: "fixed",
     bottom: "24px",
-    right: "24px",
+    right: "80px",
     width: "56px",
     height: "56px",
     borderRadius: "50%",
@@ -163,9 +164,10 @@ const styles = {
   container: {
     position: "fixed",
     bottom: "90px",
-    right: "24px",
-    width: "340px",
-    height: "480px",
+    right: window.innerWidth <= 768 ? "0" : "24px",
+    left: window.innerWidth <= 768 ? "0" : "auto",
+    width: window.innerWidth <= 768 ? "100%" : "340px",
+    height: window.innerWidth <= 768 ? "70vh" : "480px",
     background: "#111",
     borderRadius: "16px",
     border: "1px solid #222",
