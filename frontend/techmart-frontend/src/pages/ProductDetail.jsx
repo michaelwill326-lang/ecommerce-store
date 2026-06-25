@@ -19,6 +19,12 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [recommendations, setRecommendations] = useState([]);
@@ -114,7 +120,7 @@ export default function ProductDetail() {
         ← Back
       </button>
 
-      <div style={styles.layout}>
+      <div style={isMobile ? styles.layoutMobile : styles.layout}>
 
         {/* LEFT — IMAGES */}
         <div style={styles.imageCol}>
@@ -302,25 +308,26 @@ export default function ProductDetail() {
 }
 
 const styles = {
-  page: { maxWidth: "1100px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
+  page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
   spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
-  backBtn: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px", marginBottom: "24px" },
+  backBtn: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", marginBottom: "16px" },
   layout: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" },
+  layoutMobile: { display: "flex", flexDirection: "column", gap: "20px" },
   imageCol: { display: "flex", flexDirection: "column", gap: "12px" },
   mainImgWrap: { position: "relative", borderRadius: "16px", overflow: "hidden", background: "#1a1a1a" },
-  mainImg: { width: "100%", height: "260px", objectFit: "cover", display: "block" },
+  mainImg: { width: "100%", height: "300px", objectFit: "contain", display: "block", background: "#fff" },
   outOfStockBadge: { position: "absolute", top: "16px", left: "16px", background: "#dc2626", color: "#fff", padding: "6px 14px", borderRadius: "999px", fontSize: "13px", fontWeight: "700" },
   heartBtn: { position: "absolute", top: "16px", right: "16px", width: "40px", height: "40px", borderRadius: "50%", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
   thumbRow: { display: "flex", gap: "10px", flexWrap: "wrap" },
   thumb: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "8px", cursor: "pointer", transition: "border 0.2s" },
   detailsCol: { display: "flex", flexDirection: "column", gap: "12px" },
   categoryBadge: { background: "#1a1a1a", border: "1px solid #333", color: "#f97316", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", alignSelf: "flex-start" },
-  productName: { color: "#fff", fontSize: "28px", fontWeight: "800", lineHeight: "1.3" },
+  productName: { color: "#fff", fontSize: "22px", fontWeight: "800", lineHeight: "1.3" },
   ratingRow: { display: "flex", alignItems: "center", gap: "8px" },
   stars: { color: "#f97316", fontSize: "18px" },
   ratingText: { color: "#888", fontSize: "14px" },
-  price: { color: "#f97316", fontSize: "32px", fontWeight: "800" },
+  price: { color: "#f97316", fontSize: "28px", fontWeight: "800" },
   stockText: { fontSize: "14px", fontWeight: "600" },
   description: { color: "#aaa", fontSize: "15px", lineHeight: "1.7" },
   divider: { borderTop: "1px solid #222", margin: "8px 0" },
@@ -334,7 +341,7 @@ const styles = {
   viewCartBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", color: "#f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer" },
   recSection: { marginTop: "48px", paddingTop: "32px", borderTop: "1px solid #222" },
   recTitle: { color: "#fff", fontSize: "22px", fontWeight: "800", marginBottom: "24px" },
-  recGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" },
+  recGrid: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" },
   recCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", overflow: "hidden", cursor: "pointer", transition: "border 0.2s, transform 0.2s" },
   recImg: { width: "100%", height: "150px", objectFit: "cover", display: "block" },
   recInfo: { padding: "12px" },
