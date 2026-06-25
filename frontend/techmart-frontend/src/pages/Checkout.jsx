@@ -95,13 +95,47 @@ export default function Checkout() {
     );
   }
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
     <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>💳 Checkout</h1>
         <Link to="/cart"><button style={styles.backBtn}>← Back to Cart</button></Link>
       </div>
-      <div style={styles.layout}>
+      <div style={isMobile ? styles.layoutMobile : styles.layout}>
+        {isMobile && (
+          <div style={styles.rightColMobile}>
+            <div style={styles.summaryCard}>
+              <h3 style={styles.sectionTitle}>Order Summary</h3>
+              {cart.map((item) => (
+                <div key={item._id} style={styles.summaryRow}>
+                  <span style={styles.summaryLabel}>{item.name} x{item.quantity || 1}</span>
+                  <span style={styles.summaryValue}>₦{(item.price * (item.quantity || 1)).toLocaleString()}</span>
+                </div>
+              ))}
+              <div style={styles.divider} />
+              <div style={styles.summaryRow}>
+                <span style={styles.summaryLabel}>Delivery</span>
+                <span style={{ color: "#22c55e" }}>Free</span>
+              </div>
+              <div style={styles.divider} />
+              <div style={styles.summaryRow}>
+                <span style={{ color: "#fff", fontWeight: "800", fontSize: "16px" }}>Total</span>
+                <span style={{ color: "#f97316", fontWeight: "800", fontSize: "18px" }}>
+                  {couponStatus?.discount ? (
+                    <><span style={{ textDecoration: "line-through", color: "#999", fontSize: "13px" }}>₦{total.toLocaleString()}</span>{" "}₦{finalTotal.toLocaleString()}</>
+                  ) : <>₦{total.toLocaleString()}</>}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         <div style={styles.leftCol}>
           {user && (
             <div style={styles.userCard}>
@@ -180,7 +214,7 @@ export default function Checkout() {
             ))}
           </div>
         </div>
-        <div style={styles.rightCol}>
+        <div style={isMobile ? styles.rightColMobile : styles.rightCol}>
           <div style={styles.summaryCard}>
             <h3 style={styles.sectionTitle}>🧾 Order Summary</h3>
             {cart.map((item) => (
@@ -286,40 +320,40 @@ export default function Checkout() {
 }
 
 const styles = {
-  page: { maxWidth: "1100px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
+  page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", textAlign: "center" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: "wrap", gap: "12px" },
-  title: { color: "#fff", fontSize: "28px", fontWeight: "800" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
+  title: { color: "#fff", fontSize: "22px", fontWeight: "800" },
   backBtn: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
   orangeBtn: { padding: "14px 28px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px", marginTop: "16px" },
-  layout: { display: "grid", gridTemplateColumns: "1fr 380px", gap: "32px", alignItems: "start" },
+  layout: { display: "grid", gridTemplateColumns: "1fr 380px", gap: "32px", alignItems: "start" }, layoutMobile: { display: "flex", flexDirection: "column", gap: "16px" },
   leftCol: { display: "flex", flexDirection: "column", gap: "20px" },
-  userCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px" },
+  userCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
   userRow: { display: "flex", alignItems: "center", gap: "16px", marginTop: "12px" },
   avatar: { width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" },
   userName: { color: "#fff", fontWeight: "700", fontSize: "16px", margin: 0 },
   userEmail: { color: "#888", fontSize: "14px", margin: 0 },
   warningBox: { background: "#2a1a0a", border: "1px solid #f97316", color: "#fed7aa", padding: "14px 16px", borderRadius: "12px", fontSize: "14px" },
-  itemsCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px" },
-  sectionTitle: { color: "#fff", fontSize: "16px", fontWeight: "700", marginBottom: "16px" },
+  itemsCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
+  sectionTitle: { color: "#fff", fontSize: "15px", fontWeight: "700", marginBottom: "12px" },
   itemRow: { display: "flex", alignItems: "center", gap: "16px", paddingBottom: "16px", marginBottom: "16px", borderBottom: "1px solid #222" },
   itemImg: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "10px", background: "#222", flexShrink: 0 },
   itemDetails: { flex: 1 },
   itemName: { color: "#fff", fontWeight: "600", fontSize: "15px", margin: "0 0 4px" },
   itemQty: { color: "#aaa", fontSize: "13px", margin: 0 },
   itemPrice: { color: "#f97316", fontWeight: "700", fontSize: "16px" },
-  rightCol: { position: "sticky", top: "90px" },
-  addressCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px" },
+  rightCol: { position: "sticky", top: "90px" }, rightColMobile: { position: "static" },
+  addressCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
   fieldWrap: { marginBottom: "16px" },
   label: { display: "block", color: "#aaa", fontSize: "13px", fontWeight: "600", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" },
   input: { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "15px", outline: "none", boxSizing: "border-box" },
-  summaryCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px" },
+  summaryCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
   summaryRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
   summaryLabel: { color: "#888", fontSize: "14px" },
   summaryValue: { color: "#fff", fontSize: "15px", fontWeight: "600" },
   divider: { borderTop: "1px solid #2a2a2a", margin: "16px 0" },
   errorBox: { background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginTop: "8px" },
-  payBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "17px", fontWeight: "800", marginTop: "16px", cursor: "pointer" },
+  payBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "800", marginTop: "16px", cursor: "pointer", marginBottom: "12px" },
   secureText: { color: "#888", fontSize: "13px", textAlign: "center", marginTop: "12px" },
   guaranteeRow: { display: "flex", justifyContent: "space-between", marginTop: "16px", flexWrap: "wrap", gap: "8px" },
   guaranteeItem: { color: "#888", fontSize: "12px" },
