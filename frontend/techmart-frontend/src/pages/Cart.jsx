@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 
@@ -10,6 +10,12 @@ export default function Cart() {
   const total = cart.reduce(
     (sum, item) => sum + item.price * (item.quantity || 1), 0
   );
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   if (cart.length === 0) {
     return (
@@ -32,7 +38,22 @@ export default function Cart() {
         <Link to="/"><button style={styles.blackBtn}>← Continue Shopping</button></Link>
       </div>
 
-      <div style={styles.layout}>
+      <div style={isMobile ? styles.layoutMobile : styles.layout}>
+        {isMobile && (
+          <div style={styles.summaryMobile}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <span style={{ color: "#888", fontSize: "14px" }}>Total ({cart.length} item{cart.length !== 1 ? "s" : ""})</span>
+              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+              <span style={{ color: "#888", fontSize: "13px" }}>Delivery</span>
+              <span style={{ color: "#22c55e", fontSize: "13px" }}>Free</span>
+            </div>
+            <Link to="/checkout" style={{ display: "block" }}>
+              <button style={styles.checkoutBtn}>Proceed to Payment →</button>
+            </Link>
+          </div>
+        )}
         <div style={styles.itemsCol}>
           {cart.map((item) => (
             <div key={item._id} style={styles.card}>
@@ -61,42 +82,46 @@ export default function Cart() {
           <button onClick={clearCart} style={styles.clearBtn}>🗑️ Clear Cart</button>
         </div>
 
-        <div style={styles.summary}>
-          <h2 style={styles.summaryTitle}>Order Summary</h2>
-          <div style={styles.summaryRow}>
-            <span style={{ color: "#888" }}>Subtotal ({cart.length} items)</span>
-            <span style={{ color: "#fff" }}>₦{total.toLocaleString()}</span>
+        {!isMobile && (
+          <div style={styles.summary}>
+            <h2 style={styles.summaryTitle}>Order Summary</h2>
+            <div style={styles.summaryRow}>
+              <span style={{ color: "#888" }}>Subtotal ({cart.length} items)</span>
+              <span style={{ color: "#fff" }}>₦{total.toLocaleString()}</span>
+            </div>
+            <div style={styles.summaryRow}>
+              <span style={{ color: "#888" }}>Delivery</span>
+              <span style={{ color: "#86efac" }}>Free</span>
+            </div>
+            <div style={styles.divider} />
+            <div style={styles.summaryRow}>
+              <span style={{ color: "#fff", fontWeight: "700", fontSize: "18px" }}>Total</span>
+              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
+            </div>
+            <Link to="/checkout" style={{ display: "block", marginTop: "24px" }}>
+              <button style={styles.checkoutBtn}>Proceed to Payment →</button>
+            </Link>
+            <Link to="/" style={{ display: "block", marginTop: "12px", textAlign: "center" }}>
+              <span style={{ color: "#888", fontSize: "13px" }}>or continue shopping</span>
+            </Link>
           </div>
-          <div style={styles.summaryRow}>
-            <span style={{ color: "#888" }}>Delivery</span>
-            <span style={{ color: "#86efac" }}>Free</span>
-          </div>
-          <div style={styles.divider} />
-          <div style={styles.summaryRow}>
-            <span style={{ color: "#fff", fontWeight: "700", fontSize: "18px" }}>Total</span>
-            <span style={{ color: "#f97316", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
-          </div>
-          <Link to="/checkout" style={{ display: "block", marginTop: "24px" }}>
-            <button style={styles.checkoutBtn}>Proceed to Payment →</button>
-          </Link>
-          <Link to="/" style={{ display: "block", marginTop: "12px", textAlign: "center" }}>
-            <span style={{ color: "#888", fontSize: "13px" }}>or continue shopping</span>
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
 const styles = {
-  container: { maxWidth: "1100px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: "wrap", gap: "12px" },
-  title: { color: "#fff", fontSize: "28px", fontWeight: "800", display: "flex", alignItems: "center", gap: "12px" },
-  badge: { background: "#f97316", color: "#fff", fontSize: "13px", fontWeight: "600", padding: "4px 10px", borderRadius: "999px" },
+  container: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
+  title: { color: "#fff", fontSize: "22px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px" },
+  badge: { background: "#f97316", color: "#fff", fontSize: "12px", fontWeight: "600", padding: "3px 8px", borderRadius: "999px" },
   layout: { display: "grid", gridTemplateColumns: "1fr 340px", gap: "32px", alignItems: "start" },
-  itemsCol: { display: "flex", flexDirection: "column", gap: "16px" },
-  card: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px", display: "flex", gap: "20px", alignItems: "center", flexWrap: "wrap" },
-  img: { width: "80px", height: "80px", objectFit: "cover", borderRadius: "12px", background: "#222", flexShrink: 0 },
+  layoutMobile: { display: "flex", flexDirection: "column", gap: "12px" },
+  summaryMobile: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
+  itemsCol: { display: "flex", flexDirection: "column", gap: "12px" },
+  card: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "12px", display: "flex", gap: "12px", alignItems: "center" },
+  img: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "10px", background: "#222", flexShrink: 0 },
   details: { flex: 1, minWidth: "0" },
   itemName: { color: "#fff", fontSize: "16px", fontWeight: "700", marginBottom: "4px" },
   itemCategory: { color: "#888", fontSize: "12px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" },
