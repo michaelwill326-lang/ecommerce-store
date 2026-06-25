@@ -308,7 +308,7 @@ export default function ProductDetail() {
 }
 
 const styles = {
-  page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh" },
+  page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh", paddingBottom: "80px" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
   spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
   backBtn: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", marginBottom: "16px" },
@@ -321,7 +321,7 @@ const styles = {
   heartBtn: { position: "absolute", top: "16px", right: "16px", width: "40px", height: "40px", borderRadius: "50%", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
   thumbRow: { display: "flex", gap: "10px", flexWrap: "wrap" },
   thumb: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "8px", cursor: "pointer", transition: "border 0.2s" },
-  detailsCol: { display: "flex", flexDirection: "column", gap: "12px" },
+  detailsCol: { display: "flex", flexDirection: "column", gap: "8px" },
   categoryBadge: { background: "#1a1a1a", border: "1px solid #333", color: "#f97316", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", alignSelf: "flex-start" },
   productName: { color: "#fff", fontSize: "22px", fontWeight: "800", lineHeight: "1.3" },
   ratingRow: { display: "flex", alignItems: "center", gap: "8px" },
@@ -329,7 +329,7 @@ const styles = {
   ratingText: { color: "#888", fontSize: "14px" },
   price: { color: "#f97316", fontSize: "28px", fontWeight: "800" },
   stockText: { fontSize: "14px", fontWeight: "600" },
-  description: { color: "#aaa", fontSize: "15px", lineHeight: "1.7" },
+  description: { color: "#aaa", fontSize: "14px", lineHeight: "1.6", marginTop: "4px" },
   divider: { borderTop: "1px solid #222", margin: "8px 0" },
   label: { color: "#aaa", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" },
   qtyRow: { display: "flex", alignItems: "center", gap: "16px" },

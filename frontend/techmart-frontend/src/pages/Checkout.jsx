@@ -320,7 +320,7 @@ export default function Checkout() {
 }
 
 const styles = {
-  page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh" },
+  page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", paddingBottom: "80px", minHeight: "100vh" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
   title: { color: "#fff", fontSize: "22px", fontWeight: "800" },

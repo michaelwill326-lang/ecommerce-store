@@ -112,7 +112,7 @@ export default function Cart() {
 }
 
 const styles = {
-  container: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh" },
+  container: { maxWidth: "1100px", margin: "0 auto", padding: "16px", paddingBottom: "80px", minHeight: "100vh" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
   title: { color: "#fff", fontSize: "22px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px" },
   badge: { background: "#f97316", color: "#fff", fontSize: "12px", fontWeight: "600", padding: "3px 8px", borderRadius: "999px" },
