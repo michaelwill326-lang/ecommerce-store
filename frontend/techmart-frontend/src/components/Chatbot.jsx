@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const API = "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { text: "Hello! I am your TechMart AI assistant. How can I help you?", sender: "bot" },
@@ -36,22 +38,14 @@ export default function Chatbot() {
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, typing, isOpen]);
-
-  // Prevent body scroll when chat is open on mobile
-  useEffect(() => {
-    if (isMobile && isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [isMobile, isOpen]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, typing]);
 
   const handleOpen = () => {
+    if (isMobile) {
+      navigate("/chat");
+      return;
+    }
     const user = JSON.parse(localStorage.getItem("user"));
     setUserEmail(user?.email || "Guest");
     setIsOpen(true);
@@ -94,50 +88,6 @@ export default function Chatbot() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
         }
-        .techmart-chat-container {
-          position: fixed;
-          bottom: 90px;
-          right: 24px;
-          width: 340px;
-          height: 480px;
-          background: #111;
-          border-radius: 16px;
-          border: 1px solid #222;
-          display: flex;
-          flex-direction: column;
-          box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-          z-index: 10000;
-          overflow: hidden;
-        }
-        @media (max-width: 768px) {
-          .techmart-chat-container {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            height: -webkit-fill-available !important;
-            border-radius: 0 !important;
-            border: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .techmart-chat-header {
-            padding-top: max(16px, env(safe-area-inset-top)) !important;
-            flex-shrink: 0 !important;
-          }
-          .techmart-chat-messages {
-            -webkit-overflow-scrolling: touch !important;
-            flex: 1 !important;
-            overflow-y: auto !important;
-          }
-          .techmart-chat-input {
-            flex-shrink: 0 !important;
-            padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
-          }
-        }
       `}</style>
 
       {/* FLOATING TOGGLE BUTTON */}
@@ -164,12 +114,25 @@ export default function Chatbot() {
         &#x1F916;
       </button>
 
-      {/* CHAT WINDOW */}
-      {isOpen && (
-        <div className="techmart-chat-container">
-
+      {/* DESKTOP CHAT WINDOW ONLY */}
+      {!isMobile && isOpen && (
+        <div style={{
+          position: "fixed",
+          bottom: "90px",
+          right: "24px",
+          width: "340px",
+          height: "480px",
+          background: "#111",
+          borderRadius: "16px",
+          border: "1px solid #222",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+          zIndex: 10000,
+          overflow: "hidden",
+        }}>
           {/* HEADER */}
-          <div className="techmart-chat-header" style={{
+          <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -179,87 +142,52 @@ export default function Chatbot() {
             flexShrink: 0,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "24px" }}>&#x1F916;</span>
+              <span style={{ fontSize: "22px" }}>&#x1F916;</span>
               <div>
-                <p style={{ margin: 0, fontWeight: "700", fontSize: "16px" }}>TechMart AI</p>
-                <p style={{ margin: 0, fontSize: "12px", color: "#86efac" }}>Online</p>
+                <p style={{ margin: 0, fontWeight: "700", fontSize: "15px" }}>TechMart AI</p>
+                <p style={{ margin: 0, fontSize: "11px", color: "#86efac" }}>Online</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{
-                background: "rgba(255,255,255,0.2)",
-                border: "none",
-                color: "#fff",
-                fontSize: "18px",
-                cursor: "pointer",
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >x</button>
+            <button onClick={() => setIsOpen(false)} style={{
+              background: "rgba(255,255,255,0.2)", border: "none", color: "#fff",
+              fontSize: "16px", cursor: "pointer", width: "32px", height: "32px",
+              borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>x</button>
           </div>
 
           {/* MESSAGES */}
-          <div
-            className="techmart-chat-messages"
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-            }}
-          >
+          <div style={{
+            flex: 1, overflowY: "auto", padding: "16px",
+            display: "flex", flexDirection: "column", gap: "10px",
+          }}>
             {messages.map((msg, i) => (
-              <div
-                key={i}
+              <div key={i}
                 style={msg.sender === "user" ? {
                   alignSelf: "flex-end",
                   background: "linear-gradient(135deg, #f97316, #dc2626)",
-                  color: "#fff",
-                  padding: "10px 14px",
+                  color: "#fff", padding: "10px 14px",
                   borderRadius: "16px 16px 4px 16px",
-                  fontSize: "14px",
-                  maxWidth: "85%",
-                  lineHeight: "1.5",
-                  wordBreak: "break-word",
+                  fontSize: "13px", maxWidth: "80%", lineHeight: "1.5",
                 } : {
-                  alignSelf: "flex-start",
-                  background: "#1e1e1e",
-                  color: "#fff",
-                  padding: "10px 14px",
+                  alignSelf: "flex-start", background: "#1e1e1e",
+                  color: "#fff", padding: "10px 14px",
                   borderRadius: "16px 16px 16px 4px",
-                  fontSize: "14px",
-                  maxWidth: "85%",
-                  lineHeight: "1.5",
-                  wordBreak: "break-word",
+                  fontSize: "13px", maxWidth: "80%", lineHeight: "1.5",
                 }}
                 dangerouslySetInnerHTML={{ __html: msg.text }}
               />
             ))}
             {typing && (
               <div style={{
-                alignSelf: "flex-start",
-                background: "#1e1e1e",
-                padding: "12px 16px",
-                borderRadius: "16px 16px 16px 4px",
-                display: "flex",
-                gap: "6px",
-                alignItems: "center",
+                alignSelf: "flex-start", background: "#1e1e1e",
+                padding: "10px 14px", borderRadius: "16px 16px 16px 4px",
+                display: "flex", gap: "4px", alignItems: "center",
               }}>
                 {[0,1,2].map(i => (
                   <span key={i} style={{
-                    width: "8px", height: "8px",
-                    background: "#f97316",
-                    borderRadius: "50%",
-                    display: "inline-block",
-                    animation: `bounce 1s infinite ${i * 0.2}s`,
+                    width: "8px", height: "8px", background: "#f97316",
+                    borderRadius: "50%", display: "inline-block",
+                    animation: `bounce 1s infinite ${i*0.2}s`,
                   }} />
                 ))}
               </div>
@@ -267,47 +195,28 @@ export default function Chatbot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* INPUT AREA */}
-          <div className="techmart-chat-input" style={{
-            display: "flex",
-            gap: "8px",
-            padding: "12px 16px",
-            borderTop: "1px solid #222",
-            background: "#0a0a0a",
-            flexShrink: 0,
+          {/* INPUT */}
+          <div style={{
+            display: "flex", gap: "8px", padding: "12px 16px",
+            borderTop: "1px solid #222", background: "#0a0a0a", flexShrink: 0,
           }}>
             <input
-              type="text"
-              value={input}
+              type="text" value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Ask me anything..."
               style={{
-                flex: 1,
-                padding: "12px 16px",
-                borderRadius: "999px",
-                border: "1px solid #333",
-                background: "#1a1a1a",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                minWidth: 0,
+                flex: 1, padding: "10px 14px", borderRadius: "999px",
+                border: "1px solid #333", background: "#1a1a1a",
+                color: "#fff", fontSize: "13px", outline: "none",
               }}
             />
-            <button
-              onClick={sendMessage}
-              style={{
-                padding: "12px 18px",
-                borderRadius: "999px",
-                background: "linear-gradient(135deg, #f97316, #dc2626)",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: "700",
-                fontSize: "14px",
-                flexShrink: 0,
-              }}
-            >Send</button>
+            <button onClick={sendMessage} style={{
+              padding: "10px 16px", borderRadius: "999px",
+              background: "linear-gradient(135deg, #f97316, #dc2626)",
+              color: "#fff", border: "none", cursor: "pointer",
+              fontWeight: "700", fontSize: "13px", flexShrink: 0,
+            }}>Send</button>
           </div>
         </div>
       )}

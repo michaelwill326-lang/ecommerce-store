@@ -17,6 +17,7 @@ import Verify from "./pages/Verify";
 import Success from "./pages/Success";
 import Wishlist from "./pages/Wishlist";
 import Policy from "./pages/Policy";
+import ChatPage from "./pages/ChatPage";
 
 export default function App() {
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/success" element={<Success />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/policy" element={<Policy />} />
+          <Route path="/chat" element={<ChatPage />} />
         </Routes>
       </main>
 
