@@ -116,13 +116,26 @@ export default function Chatbot() {
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            height: -webkit-fill-available !important;
             border-radius: 0 !important;
             border: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .techmart-chat-header {
+            padding-top: max(16px, env(safe-area-inset-top)) !important;
+            flex-shrink: 0 !important;
           }
           .techmart-chat-messages {
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch !important;
+            flex: 1 !important;
+            overflow-y: auto !important;
+          }
+          .techmart-chat-input {
+            flex-shrink: 0 !important;
+            padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
           }
         }
       `}</style>
@@ -156,7 +169,7 @@ export default function Chatbot() {
         <div className="techmart-chat-container">
 
           {/* HEADER */}
-          <div style={{
+          <div className="techmart-chat-header" style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -255,7 +268,7 @@ export default function Chatbot() {
           </div>
 
           {/* INPUT AREA */}
-          <div style={{
+          <div className="techmart-chat-input" style={{
             display: "flex",
             gap: "8px",
             padding: "12px 16px",
