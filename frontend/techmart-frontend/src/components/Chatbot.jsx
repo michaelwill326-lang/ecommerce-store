@@ -199,6 +199,7 @@ const styles = {
     padding: "16px",
     display: "flex",
     flexDirection: "column",
+    justifyContent: "flex-start",
     gap: "10px",
   },
   botMsg: {
