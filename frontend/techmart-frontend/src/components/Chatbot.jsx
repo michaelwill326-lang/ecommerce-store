@@ -236,6 +236,7 @@ const styles = {
     display: "flex",
     gap: "8px",
     padding: "12px",
+    paddingLeft: window.innerWidth <= 768 ? "72px" : "12px",
     borderTop: "1px solid #222",
     background: "#0a0a0a",
   },
