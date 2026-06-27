@@ -447,6 +447,20 @@ const SellerSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const Seller = mongoose.model("Seller", SellerSchema);
+
+// Flash Sale Model
+const FlashSaleSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+  productName: { type: String, required: true },
+  originalPrice: { type: Number, required: true },
+  salePrice: { type: Number, required: true },
+  startTime: { type: Date, required: true },
+  endTime: { type: Date, required: true },
+  active: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+const FlashSale = mongoose.model("FlashSale", FlashSaleSchema);
+
 /* ===========================
    COUPON ENDPOINTS
 =========================== */
@@ -511,6 +525,66 @@ const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/
 const CASHBACK_PERCENT = 2; // 2% cashback on every order
 
 
+
+
+/* ===========================
+   FLASH SALE ENDPOINTS
+=========================== */
+
+// Get active flash sales (public)
+app.get("/api/flash-sales", async (req, res) => {
+  try {
+    const now = new Date();
+    const sales = await FlashSale.find({
+      active: true,
+      startTime: { $lte: now },
+      endTime: { $gte: now }
+    }).populate("productId");
+    res.json(sales);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch flash sales" });
+  }
+});
+
+// Create flash sale (admin)
+app.post("/api/admin/flash-sales", adminOnly, async (req, res) => {
+  try {
+    const { productId, salePrice, startTime, endTime } = req.body;
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    const sale = await FlashSale.create({
+      productId,
+      productName: product.name,
+      originalPrice: product.price,
+      salePrice: Number(salePrice),
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+    });
+    res.status(201).json({ success: true, data: sale });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create flash sale" });
+  }
+});
+
+// Get all flash sales (admin)
+app.get("/api/admin/flash-sales", adminOnly, async (req, res) => {
+  try {
+    const sales = await FlashSale.find().sort({ createdAt: -1 });
+    res.json(sales);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch flash sales" });
+  }
+});
+
+// Delete flash sale (admin)
+app.delete("/api/admin/flash-sales/:id", adminOnly, async (req, res) => {
+  try {
+    await FlashSale.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete flash sale" });
+  }
+});
 
 /* ===========================
    DELIVERY FEE CALCULATOR
