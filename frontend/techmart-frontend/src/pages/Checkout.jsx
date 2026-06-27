@@ -19,11 +19,24 @@ export default function Checkout() {
   const token = localStorage.getItem("token");
   const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
   const [couponCode, setCouponCode] = useState("");
-  const [couponStatus, setCouponStatus] = useState(null); // { discount, message, error }
+  const [couponStatus, setCouponStatus] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const finalTotal = couponStatus?.discount ? total - couponStatus.discount : total;
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+  const [walletDebit, setWalletDebit] = useState(0);
+  const couponDiscount = couponStatus?.discount || 0;
+  const afterCoupon = total - couponDiscount;
+  const walletApplied = useWallet ? Math.min(walletBalance, afterCoupon) : 0;
+  const finalTotal = Math.max(0, afterCoupon - walletApplied);
 
   const [suggestions, setSuggestions] = useState([]);
+  useEffect(() => {
+    if (token) {
+      axios.get(`${API}/api/wallet`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => setWalletBalance(res.data.balance || 0))
+        .catch(() => {});
+    }
+  }, []);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef(null);
 
@@ -74,7 +87,7 @@ export default function Checkout() {
       setLoading(true);
       const response = await axios.post(
         `${API}/api/paystack/init`,
-        { email: user.email, amount: finalTotal, cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null },
+        { email: user.email, amount: finalTotal, cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: walletApplied },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       window.location.href = response.data.url;
@@ -236,7 +249,7 @@ export default function Checkout() {
             <div style={styles.summaryRow}>
               <span style={{ color: "#fff", fontWeight: "800", fontSize: "18px" }}>Total</span>
               <span style={{ color: "#f97316", fontWeight: "800", fontSize: "22px" }}>
-                {couponStatus?.discount ? (
+                {(couponDiscount > 0 || walletApplied > 0) ? (
                   <>
                     <span style={{ textDecoration: "line-through", color: "#999", fontSize: "14px" }}>₦{total.toLocaleString()}</span>
                     {" "}₦{finalTotal.toLocaleString()}
@@ -247,6 +260,24 @@ export default function Checkout() {
               </span>
             </div>
             {error && <div style={styles.errorBox}>⚠️ {error}</div>}
+            {/* WALLET */}
+            {walletBalance > 0 && (
+              <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 2px" }}>TechMart Wallet</p>
+                    <p style={{ color: "#86efac", fontSize: "13px", margin: 0 }}>Balance: ₦{walletBalance.toLocaleString()}</p>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={useWallet} onChange={e => setUseWallet(e.target.checked)} style={{ width: "16px", height: "16px", cursor: "pointer" }} />
+                    <span style={{ color: "#22c55e", fontSize: "13px", fontWeight: "600" }}>Use wallet</span>
+                  </label>
+                </div>
+                {useWallet && walletApplied > 0 && (
+                  <p style={{ color: "#86efac", fontSize: "13px", margin: "8px 0 0" }}>-₦{walletApplied.toLocaleString()} will be deducted from your wallet</p>
+                )}
+              </div>
+            )}
             {/* COUPON CODE */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
               <input

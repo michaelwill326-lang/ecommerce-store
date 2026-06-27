@@ -8,7 +8,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -30,6 +30,9 @@ export default function Admin() {
   const [reviewTab, setReviewTab] = useState("pending");
   const [coupons, setCoupons] = useState([]);
   const [sellers, setSellers] = useState([]);
+  const [wallets, setWallets] = useState({ users: [], totalInCirculation: 0 });
+  const [walletAction, setWalletAction] = useState({ userId: "", type: "credit", amount: "", description: "" });
+  const [walletMsg, setWalletMsg] = useState("");
   const [newCoupon, setNewCoupon] = useState({ code: "", type: "percent", value: "", minOrder: "", expiresAt: "" });
   const [couponMsg, setCouponMsg] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -50,7 +53,7 @@ export default function Admin() {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
@@ -60,6 +63,7 @@ export default function Admin() {
         axios.get(`${API}/api/admin/reviews/flagged`, { headers }),
         axios.get(`${API}/api/admin/coupons`, { headers }),
         axios.get(`${API}/api/admin/sellers`, { headers }),
+        axios.get(`${API}/api/admin/wallets`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
@@ -70,6 +74,7 @@ export default function Admin() {
       setFlaggedReviews(flaggedRes.data);
       setCoupons(couponsRes?.data || []);
       setSellers(sellersRes?.data || []);
+      setWallets(walletsRes?.data || { users: [], totalInCirculation: 0 });
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -541,6 +546,71 @@ export default function Admin() {
       {/* =====================
           REVIEWS TAB
       ===================== */}
+      {tab === "Wallets" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "8px" }}>Wallet Management</h2>
+          <p style={{ color: "#888", marginBottom: "20px" }}>Total in circulation: <span style={{ color: "#f97316", fontWeight: "700" }}>₦{(wallets.totalInCirculation || 0).toLocaleString()}</span></p>
+
+          {/* Manual Credit/Debit */}
+          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Manual Wallet Adjustment</h3>
+            {walletMsg && <p style={{ color: walletMsg.includes("success") ? "#22c55e" : "#f87171", marginBottom: "12px" }}>{walletMsg}</p>}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
+              <select value={walletAction.userId} onChange={e => setWalletAction({...walletAction, userId: e.target.value})}
+                style={{ ...styles.input, flex: "1", minWidth: "200px" }}>
+                <option value="">Select User</option>
+                {wallets.users.map(u => <option key={u._id} value={u._id}>{u.name} - ₦{u.walletBalance.toLocaleString()}</option>)}
+              </select>
+              <select value={walletAction.type} onChange={e => setWalletAction({...walletAction, type: e.target.value})}
+                style={{ ...styles.input, minWidth: "120px" }}>
+                <option value="credit">Credit</option>
+                <option value="debit">Debit</option>
+              </select>
+              <input placeholder="Amount (₦)" type="number" value={walletAction.amount}
+                onChange={e => setWalletAction({...walletAction, amount: e.target.value})}
+                style={{ ...styles.input, minWidth: "120px" }} />
+              <input placeholder="Description" value={walletAction.description}
+                onChange={e => setWalletAction({...walletAction, description: e.target.value})}
+                style={{ ...styles.input, flex: "1", minWidth: "200px" }} />
+            </div>
+            <button onClick={async () => {
+              setWalletMsg("");
+              if (!walletAction.userId || !walletAction.amount) { setWalletMsg("Please select user and enter amount"); return; }
+              try {
+                const res = await axios.post(`${API}/api/admin/wallets/${walletAction.userId}`, walletAction, { headers });
+                setWalletMsg(`success: Wallet updated! New balance: ₦${res.data.newBalance.toLocaleString()}`);
+                const walletsRes = await axios.get(`${API}/api/admin/wallets`, { headers });
+                setWallets(walletsRes.data);
+              } catch (err) { setWalletMsg(err.response?.data?.error || "Failed to update wallet"); }
+            }} style={styles.orangeBtn}>Apply</button>
+          </div>
+
+          {/* Wallet List */}
+          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Customer Wallets</h3>
+            {wallets.users.length === 0 ? <p style={{ color: "#888" }}>No wallets with balance yet.</p> : (
+              <table style={styles.table}>
+                <thead><tr>
+                  <th style={styles.th}>Customer</th>
+                  <th style={styles.th}>Email</th>
+                  <th style={styles.th}>Balance</th>
+                  <th style={styles.th}>Transactions</th>
+                </tr></thead>
+                <tbody>
+                  {wallets.users.map(u => (
+                    <tr key={u._id}>
+                      <td style={styles.td}>{u.name}</td>
+                      <td style={styles.td}>{u.email}</td>
+                      <td style={styles.td}><strong style={{ color: "#f97316" }}>₦{u.walletBalance.toLocaleString()}</strong></td>
+                      <td style={styles.td}>{u.walletTransactions?.length || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
       {tab === "Sellers" && (
         <div>
           <h2 style={{ color: "#fff", marginBottom: "20px" }}>Seller Applications</h2>

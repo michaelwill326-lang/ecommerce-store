@@ -90,10 +90,14 @@ export default function Navbar() {
 
             {user ? (
               <div style={styles.userWrap}>
-                <div style={styles.avatar}>
-                  {user.name?.charAt(0).toUpperCase()}
-                </div>
-                <span style={styles.userName}>Hi, {user.name?.split(" ")[0]}</span>
+                <Link to="/account" style={{ textDecoration: "none" }}>
+                  <div style={styles.avatar}>
+                    {user.name?.charAt(0).toUpperCase()}
+                  </div>
+                </Link>
+                <Link to="/account" style={{ textDecoration: "none" }}>
+                  <span style={{ ...styles.userName, color: "#f97316" }}>Hi, {user.name?.split(" ")[0]}</span>
+                </Link>
                 <button onClick={handleLogout} style={styles.logoutBtn}>
                   Logout
                 </button>
