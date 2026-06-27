@@ -8,7 +8,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -32,6 +32,9 @@ export default function Admin() {
   const [sellers, setSellers] = useState([]);
   const [wallets, setWallets] = useState({ users: [], totalInCirculation: 0 });
   const [walletAction, setWalletAction] = useState({ userId: "", type: "credit", amount: "", description: "" });
+  const [flashSales, setFlashSales] = useState([]);
+  const [newFlash, setNewFlash] = useState({ productId: "", salePrice: "", startTime: "", endTime: "" });
+  const [flashMsg, setFlashMsg] = useState("");
   const [walletMsg, setWalletMsg] = useState("");
   const [newCoupon, setNewCoupon] = useState({ code: "", type: "percent", value: "", minOrder: "", expiresAt: "" });
   const [couponMsg, setCouponMsg] = useState("");
@@ -53,7 +56,7 @@ export default function Admin() {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes, flashRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
@@ -64,6 +67,7 @@ export default function Admin() {
         axios.get(`${API}/api/admin/coupons`, { headers }),
         axios.get(`${API}/api/admin/sellers`, { headers }),
         axios.get(`${API}/api/admin/wallets`, { headers }),
+        axios.get(`${API}/api/admin/flash-sales`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
@@ -75,6 +79,7 @@ export default function Admin() {
       setCoupons(couponsRes?.data || []);
       setSellers(sellersRes?.data || []);
       setWallets(walletsRes?.data || { users: [], totalInCirculation: 0 });
+      setFlashSales(flashRes?.data || []);
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -546,6 +551,83 @@ export default function Admin() {
       {/* =====================
           REVIEWS TAB
       ===================== */}
+      {tab === "Flash Sales" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Flash Sales</h2>
+          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Create Flash Sale</h3>
+            {flashMsg && <p style={{ color: flashMsg.includes("success") ? "#22c55e" : "#f87171", marginBottom: "12px" }}>{flashMsg}</p>}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+              <select value={newFlash.productId} onChange={e => setNewFlash({...newFlash, productId: e.target.value})}
+                style={{ ...styles.input, flex: "1", minWidth: "200px" }}>
+                <option value="">Select Product</option>
+                {products.map(p => <option key={p._id} value={p._id}>{p.name} - N{p.price?.toLocaleString()}</option>)}
+              </select>
+              <input placeholder="Sale Price (N)" type="number" value={newFlash.salePrice}
+                onChange={e => setNewFlash({...newFlash, salePrice: e.target.value})}
+                style={{ ...styles.input, minWidth: "150px" }} />
+              <input placeholder="Start Time" type="datetime-local" value={newFlash.startTime}
+                onChange={e => setNewFlash({...newFlash, startTime: e.target.value})}
+                style={{ ...styles.input, minWidth: "180px", colorScheme: "dark" }} />
+              <input placeholder="End Time" type="datetime-local" value={newFlash.endTime}
+                onChange={e => setNewFlash({...newFlash, endTime: e.target.value})}
+                style={{ ...styles.input, minWidth: "180px", colorScheme: "dark" }} />
+            </div>
+            <button onClick={async () => {
+              setFlashMsg("");
+              if (!newFlash.productId || !newFlash.salePrice || !newFlash.startTime || !newFlash.endTime) {
+                setFlashMsg("All fields are required"); return;
+              }
+              try {
+                const res = await axios.post(`${API}/api/admin/flash-sales`, newFlash, { headers });
+                setFlashSales([res.data.data, ...flashSales]);
+                setNewFlash({ productId: "", salePrice: "", startTime: "", endTime: "" });
+                setFlashMsg("success: Flash sale created!");
+              } catch (err) { setFlashMsg(err.response?.data?.error || "Failed to create flash sale"); }
+            }} style={styles.orangeBtn}>Create Flash Sale</button>
+          </div>
+          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Active & Upcoming Sales</h3>
+            {flashSales.length === 0 ? <p style={{ color: "#888" }}>No flash sales yet.</p> : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {flashSales.map(s => {
+                  const now = new Date();
+                  const isActive = new Date(s.startTime) <= now && new Date(s.endTime) >= now;
+                  const isExpired = new Date(s.endTime) < now;
+                  const discount = Math.round(((s.originalPrice - s.salePrice) / s.originalPrice) * 100);
+                  return (
+                    <div key={s._id} style={{ background: "#111", borderRadius: "10px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                      <div>
+                        <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{s.productName}</p>
+                        <p style={{ color: "#888", fontSize: "13px", margin: "0 0 4px" }}>
+                          <span style={{ textDecoration: "line-through" }}>N{s.originalPrice?.toLocaleString()}</span>
+                          {" → "}
+                          <span style={{ color: "#f97316", fontWeight: "700" }}>N{s.salePrice?.toLocaleString()}</span>
+                          {" "}
+                          <span style={{ color: "#22c55e" }}>{discount}% off</span>
+                        </p>
+                        <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>
+                          {new Date(s.startTime).toLocaleString()} → {new Date(s.endTime).toLocaleString()}
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <span style={{ padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "700", background: isActive ? "#0a2a1a" : isExpired ? "#2a1010" : "#1a1a0a", color: isActive ? "#22c55e" : isExpired ? "#f87171" : "#fbbf24" }}>
+                          {isActive ? "LIVE" : isExpired ? "EXPIRED" : "UPCOMING"}
+                        </span>
+                        <button onClick={async () => {
+                          if (!window.confirm("Delete this flash sale?")) return;
+                          await axios.delete(`${API}/api/admin/flash-sales/${s._id}`, { headers });
+                          setFlashSales(flashSales.filter(x => x._id !== s._id));
+                        }} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px" }}>Delete</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {tab === "Wallets" && (
         <div>
           <h2 style={{ color: "#fff", marginBottom: "8px" }}>Wallet Management</h2>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import FlashSaleBanner from "../components/FlashSaleBanner";
 import { Link } from "react-router-dom";
 
 const CATEGORIES = ["All", "Phones", "Laptops", "Accessories", "Audio", "Gaming", "Tablets", "TVs"];
@@ -88,6 +89,7 @@ export default function Home() {
         @media(min-width:1200px){.tm-grid{grid-template-columns:repeat(5,1fr);gap:20px}.tm-card-img{height:200px}}
       `}</style>
       <div className="tm-container">
+        <FlashSaleBanner />
 
         {/* SEARCH BAR */}
         <div style={{ marginBottom: "16px" }}>
