@@ -494,6 +494,8 @@ app.delete("/api/admin/coupons/:id", adminOnly, async (req, res) => {
 });
 
 
+const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/uploader");
+
 /* ===========================
    SELLER ENDPOINTS
 =========================== */
@@ -1207,7 +1209,6 @@ app.post("/api/upload", adminOnly, upload.single("image"), async (req, res) => {
     res.status(500).json({ error: "Image upload failed" });
   }
 });
-const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/uploader");
 
 /* ===========================
    MULTI-IMAGE UPLOAD
