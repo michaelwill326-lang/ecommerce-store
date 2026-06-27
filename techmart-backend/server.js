@@ -422,6 +422,21 @@ app.get("/api/orders/me", auth, async (req, res) => {
 
 /* 1. INITIALIZE TRANSACTION & LOCK STOCK */
 
+
+// Seller Model
+const SellerSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: { type: String, default: "" },
+  storeName: { type: String, required: true },
+  storeDescription: { type: String, default: "" },
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+  commission: { type: Number, default: 10 },
+  totalSales: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+});
+const Seller = mongoose.model("Seller", SellerSchema);
 /* ===========================
    COUPON ENDPOINTS
 =========================== */
@@ -475,6 +490,155 @@ app.delete("/api/admin/coupons/:id", adminOnly, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete coupon" });
+  }
+});
+
+
+/* ===========================
+   SELLER ENDPOINTS
+=========================== */
+
+// Seller application
+app.post("/api/seller/apply", async (req, res) => {
+  try {
+    const { name, email, password, phone, storeName, storeDescription } = req.body;
+    if (!name || !email || !password || !storeName) {
+      return res.status(400).json({ error: "Name, email, password and store name are required" });
+    }
+    const existing = await Seller.findOne({ email });
+    if (existing) return res.status(400).json({ error: "A seller account with this email already exists" });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const seller = await Seller.create({ name, email, password: hashedPassword, phone, storeName, storeDescription });
+    res.status(201).json({ success: true, message: "Application submitted! We will review and get back to you shortly." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to submit application" });
+  }
+});
+
+// Seller login
+app.post("/api/seller/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const seller = await Seller.findOne({ email });
+    if (!seller) return res.status(400).json({ error: "Seller account not found" });
+    const match = await bcrypt.compare(password, seller.password);
+    if (!match) return res.status(400).json({ error: "Invalid password" });
+    if (seller.status === "pending") return res.status(403).json({ error: "Your application is still under review" });
+    if (seller.status === "rejected") return res.status(403).json({ error: "Your application was not approved" });
+    const token = jwt.sign({ id: seller._id, role: "seller", storeName: seller.storeName }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.json({ success: true, token, seller: { id: seller._id, name: seller.name, email: seller.email, storeName: seller.storeName, commission: seller.commission } });
+  } catch (err) {
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// Seller middleware
+const sellerAuth = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "No token" });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== "seller") return res.status(403).json({ error: "Seller access only" });
+    req.seller = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+// Get seller dashboard stats
+app.get("/api/seller/dashboard", sellerAuth, async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.seller.id).select("-password");
+    const products = await Product.find({ vendorId: req.seller.id });
+    const orders = await Order.find({ "items.vendorId": req.seller.id, status: { $in: ["Paid", "Shipped", "Delivered"] } });
+    const revenue = orders.reduce((sum, o) => {
+      const sellerItems = o.items.filter(i => i.vendorId === req.seller.id.toString());
+      return sum + sellerItems.reduce((s, i) => s + (i.price * (i.quantity || 1)), 0);
+    }, 0);
+    res.json({ seller, products, totalProducts: products.length, totalOrders: orders.length, revenue });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load dashboard" });
+  }
+});
+
+// Seller add product
+app.post("/api/seller/products", sellerAuth, adminUploader.array("images", 5), async (req, res) => {
+  try {
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const result = await cloudinaryCloud.uploader.upload(file.path, { folder: "techmart_products" });
+        imageUrls.push(result.secure_url);
+      }
+    }
+    const product = await Product.create({
+      name: req.body.name,
+      price: Number(req.body.price),
+      description: req.body.description,
+      stock: Number(req.body.stock),
+      category: req.body.category || "",
+      images: imageUrls,
+      vendorId: req.seller.id,
+      vendorName: req.seller.storeName,
+    });
+    res.status(201).json({ success: true, data: product });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to add product" });
+  }
+});
+
+// Seller get their products
+app.get("/api/seller/products", sellerAuth, async (req, res) => {
+  try {
+    const products = await Product.find({ vendorId: req.seller.id });
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+
+// Seller delete product
+app.delete("/api/seller/products/:id", sellerAuth, async (req, res) => {
+  try {
+    const product = await Product.findOne({ _id: req.params.id, vendorId: req.seller.id });
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
+// Admin - get all sellers
+app.get("/api/admin/sellers", adminOnly, async (req, res) => {
+  try {
+    const sellers = await Seller.find().select("-password").sort({ createdAt: -1 });
+    res.json(sellers);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch sellers" });
+  }
+});
+
+// Admin - approve/reject seller
+app.put("/api/admin/sellers/:id", adminOnly, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const seller = await Seller.findByIdAndUpdate(req.params.id, { status }, { new: true }).select("-password");
+    res.json({ success: true, data: seller });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update seller" });
+  }
+});
+
+// Admin - delete seller
+app.delete("/api/admin/sellers/:id", adminOnly, async (req, res) => {
+  try {
+    await Seller.findByIdAndDelete(req.params.id);
+    await Product.deleteMany({ vendorId: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete seller" });
   }
 });
 
