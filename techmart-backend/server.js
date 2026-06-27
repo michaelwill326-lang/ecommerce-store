@@ -160,6 +160,8 @@ const Order = mongoose.model(
     trackingNumber: String,
     deliveryAddress: { type: String, default: "" },
     phone: { type: String, default: "" },
+    deliveryFee: { type: Number, default: 0 },
+    deliveryZone: { type: String, default: "" },
     originalAmount: Number,
     couponCode: String,
     createdAt: { type: Date, default: Date.now }
@@ -509,6 +511,75 @@ const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/
 const CASHBACK_PERCENT = 2; // 2% cashback on every order
 
 
+
+/* ===========================
+   DELIVERY FEE CALCULATOR
+=========================== */
+const DELIVERY_ZONES = [
+  {
+    zone: 1,
+    name: "Ikeja & Surroundings",
+    areas: ["ikeja", "ogba", "agege", "ojota", "alausa", "oregun", "opebi", "allen", "maryland", "palmgrove", "onipanu"],
+    fee: 2500
+  },
+  {
+    zone: 2,
+    name: "Mainland",
+    areas: ["yaba", "mushin", "oshodi", "surulere", "isolo", "oshodi", "ilasamaja", "itire", "ketu", "mile 12", "bariga", "shomolu", "gbagada"],
+    fee: 3500
+  },
+  {
+    zone: 3,
+    name: "Lagos Island & VI",
+    areas: ["victoria island", "vi", "ikoyi", "lagos island", "apapa", "tincan", "obalende", "broad street", "marina"],
+    fee: 4500
+  },
+  {
+    zone: 4,
+    name: "Lekki & Ajah",
+    areas: ["lekki", "ajah", "sangotedo", "chevron", "vgc", "victoria garden", "abraham adesanya", "jakande", "igbo efon"],
+    fee: 5500
+  },
+  {
+    zone: 5,
+    name: "Outskirts",
+    areas: ["ikorodu", "badagry", "epe", "mowe", "ibafo", "sagamu", "abeokuta", "sango", "ota"],
+    fee: 7500
+  },
+];
+const FREE_DELIVERY_THRESHOLD = 150000;
+const DEFAULT_FEE = 12000; // Outside Lagos
+
+const calculateDeliveryFee = (address) => {
+  if (!address) return { fee: DEFAULT_FEE, zone: "Outside Lagos" };
+  const lower = address.toLowerCase();
+  for (const zone of DELIVERY_ZONES) {
+    if (zone.areas.some(area => lower.includes(area))) {
+      return { fee: zone.fee, zone: zone.name, zoneNumber: zone.zone };
+    }
+  }
+  return { fee: DEFAULT_FEE, zone: "Outside Lagos", zoneNumber: 6 };
+};
+
+app.post("/api/delivery-fee", async (req, res) => {
+  try {
+    const { address, orderTotal } = req.body;
+    if (!address) return res.status(400).json({ error: "Address is required" });
+    const result = calculateDeliveryFee(address);
+    const isFreeDelivery = orderTotal >= FREE_DELIVERY_THRESHOLD;
+    res.json({
+      fee: isFreeDelivery ? 0 : result.fee,
+      originalFee: result.fee,
+      zone: result.zone,
+      zoneNumber: result.zoneNumber,
+      freeDelivery: isFreeDelivery,
+      freeDeliveryThreshold: FREE_DELIVERY_THRESHOLD,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to calculate delivery fee" });
+  }
+});
+
 /* ===========================
    WALLET ENDPOINTS
 =========================== */
@@ -716,7 +787,7 @@ app.delete("/api/admin/sellers/:id", adminOnly, async (req, res) => {
 
 app.post("/api/paystack/init", async (req, res) => {
   try {
-    const { email, amount, cart, deliveryAddress, phone, couponCode, walletDebit } = req.body;
+    const { email, amount, cart, deliveryAddress, phone, couponCode, walletDebit, deliveryFee, deliveryZone } = req.body;
     if (!email || !amount || !cart || cart.length === 0) {
       return res.status(400).json({ error: "Missing checkout payload information" });
     }
@@ -794,7 +865,7 @@ app.post("/api/paystack/init", async (req, res) => {
         $push: { walletTransactions: { type: "debit", amount: appliedWalletDebit, description: `Wallet payment for order ${reference}`, reference } }
       });
     }
-    await Order.create({ email, items: cart, amount: finalAmount, originalAmount: amount, couponCode: appliedCoupon, walletDebit: appliedWalletDebit, reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
+    await Order.create({ email, items: cart, amount: finalAmount, originalAmount: amount, couponCode: appliedCoupon, walletDebit: appliedWalletDebit, deliveryFee: deliveryFee || 0, deliveryZone: deliveryZone || "", reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
