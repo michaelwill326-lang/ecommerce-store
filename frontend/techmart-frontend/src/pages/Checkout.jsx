@@ -193,6 +193,18 @@ export default function Checkout() {
                   placeholder="Start typing your address in Nigeria..."
                   value={address}
                   onChange={handleAddressChange}
+                  onBlur={async () => {
+                    if (address.trim().length > 5) {
+                      try {
+                        setDeliveryLoading(true);
+                        const res = await axios.post(`${API}/api/delivery-fee`, { address, orderTotal: total });
+                        setDeliveryFee(res.data.fee);
+                        setDeliveryZone(res.data.zone);
+                        setFreeDelivery(res.data.freeDelivery);
+                      } catch (err) { setDeliveryFee(0); }
+                      finally { setDeliveryLoading(false); }
+                    }
+                  }}
                   style={styles.input}
                   autoComplete="off"
                 />
