@@ -23,11 +23,14 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
-  const [walletDebit, setWalletDebit] = useState(0);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryZone, setDeliveryZone] = useState("");
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [freeDelivery, setFreeDelivery] = useState(false);
   const couponDiscount = couponStatus?.discount || 0;
   const afterCoupon = total - couponDiscount;
-  const walletApplied = useWallet ? Math.min(walletBalance, afterCoupon) : 0;
-  const finalTotal = Math.max(0, afterCoupon - walletApplied);
+  const walletApplied = useWallet ? Math.min(walletBalance, afterCoupon + deliveryFee) : 0;
+  const finalTotal = Math.max(0, afterCoupon + deliveryFee - walletApplied);
 
   const [suggestions, setSuggestions] = useState([]);
   useEffect(() => {
@@ -57,10 +60,20 @@ export default function Checkout() {
     }, 400);
   };
 
-  const selectSuggestion = (display_name) => {
+  const selectSuggestion = async (display_name) => {
     setAddress(display_name);
     setSuggestions([]);
     setShowSuggestions(false);
+    // Calculate delivery fee
+    try {
+      setDeliveryLoading(true);
+      const res = await axios.post(`${API}/api/delivery-fee`, { address: display_name, orderTotal: total });
+      setDeliveryFee(res.data.fee);
+      setDeliveryZone(res.data.zone);
+      setFreeDelivery(res.data.freeDelivery);
+    } catch (err) {
+      setDeliveryFee(0);
+    } finally { setDeliveryLoading(false); }
   };
 
   const applyCoupon = async () => {
@@ -87,7 +100,7 @@ export default function Checkout() {
       setLoading(true);
       const response = await axios.post(
         `${API}/api/paystack/init`,
-        { email: user.email, amount: finalTotal, cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: walletApplied },
+        { email: user.email, amount: finalTotal, cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: walletApplied, deliveryFee, deliveryZone },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       window.location.href = response.data.url;
@@ -194,6 +207,13 @@ export default function Checkout() {
                 )}
               </div>
               <p style={{color:"#888",fontSize:"12px",marginTop:"6px"}}>🔍 Google will suggest your address automatically</p>
+              {deliveryZone && (
+                <div style={{ marginTop: "8px", padding: "8px 12px", background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "8px" }}>
+                  <p style={{ color: "#22c55e", fontSize: "13px", margin: 0 }}>
+                    Zone: {deliveryZone} — {freeDelivery ? "Free Delivery!" : `₦${deliveryFee.toLocaleString()} delivery fee`}
+                  </p>
+                </div>
+              )}
             </div>
             <div style={styles.fieldWrap}>
               <label style={styles.label}>Phone Number</label>
@@ -242,9 +262,12 @@ export default function Checkout() {
             ))}
             <div style={styles.divider} />
             <div style={styles.summaryRow}>
-              <span style={styles.summaryLabel}>Delivery</span>
-              <span style={{ color: "#22c55e" }}>Free</span>
+              <span style={styles.summaryLabel}>Delivery {deliveryZone ? `(${deliveryZone})` : ""}</span>
+              <span style={{ color: freeDelivery ? "#22c55e" : "#fff", fontWeight: "600" }}>
+                {deliveryLoading ? "Calculating..." : freeDelivery ? "Free" : deliveryFee > 0 ? `₦${deliveryFee.toLocaleString()}` : "Enter address"}
+              </span>
             </div>
+            {freeDelivery && <p style={{ color: "#22c55e", fontSize: "12px", margin: "-8px 0 8px", textAlign: "right" }}>Free delivery on orders above ₦150,000!</p>}
             <div style={styles.divider} />
             <div style={styles.summaryRow}>
               <span style={{ color: "#fff", fontWeight: "800", fontSize: "18px" }}>Total</span>
