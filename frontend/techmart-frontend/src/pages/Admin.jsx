@@ -8,7 +8,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ export default function Admin() {
   const [sentiment, setSentiment] = useState(null);
   const [reviewTab, setReviewTab] = useState("pending");
   const [coupons, setCoupons] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [newCoupon, setNewCoupon] = useState({ code: "", type: "percent", value: "", minOrder: "", expiresAt: "" });
   const [couponMsg, setCouponMsg] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -49,7 +50,7 @@ export default function Admin() {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
@@ -58,6 +59,7 @@ export default function Admin() {
         axios.get(`${API}/api/admin/reviews/pending`, { headers }),
         axios.get(`${API}/api/admin/reviews/flagged`, { headers }),
         axios.get(`${API}/api/admin/coupons`, { headers }),
+        axios.get(`${API}/api/admin/sellers`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
@@ -67,6 +69,7 @@ export default function Admin() {
       setPendingReviews(pendingRes.data);
       setFlaggedReviews(flaggedRes.data);
       setCoupons(couponsRes?.data || []);
+      setSellers(sellersRes?.data || []);
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -538,6 +541,54 @@ export default function Admin() {
       {/* =====================
           REVIEWS TAB
       ===================== */}
+      {tab === "Sellers" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Seller Applications</h2>
+          {sellers.length === 0 ? (
+            <p style={{ color: "#888" }}>No seller applications yet.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {sellers.map(s => (
+                <div key={s._id} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <p style={{ color: "#fff", fontWeight: "700", fontSize: "16px", margin: "0 0 4px" }}>{s.storeName}</p>
+                      <p style={{ color: "#888", fontSize: "13px", margin: "0 0 4px" }}>{s.name} - {s.email}</p>
+                      <p style={{ color: "#888", fontSize: "13px", margin: "0 0 8px" }}>{s.phone}</p>
+                      {s.storeDescription && <p style={{ color: "#aaa", fontSize: "13px", margin: "0 0 8px" }}>{s.storeDescription}</p>}
+                      <span style={{
+                        padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "700",
+                        background: s.status === "approved" ? "#0a2a1a" : s.status === "rejected" ? "#2a1010" : "#1a1a0a",
+                        color: s.status === "approved" ? "#22c55e" : s.status === "rejected" ? "#f87171" : "#fbbf24",
+                        border: `1px solid ${s.status === "approved" ? "#22c55e" : s.status === "rejected" ? "#dc2626" : "#f59e0b"}`
+                      }}>{s.status.toUpperCase()}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {s.status !== "approved" && (
+                        <button onClick={async () => {
+                          const res = await axios.put(`${API}/api/admin/sellers/${s._id}`, { status: "approved" }, { headers });
+                          setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
+                        }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Approve</button>
+                      )}
+                      {s.status !== "rejected" && (
+                        <button onClick={async () => {
+                          const res = await axios.put(`${API}/api/admin/sellers/${s._id}`, { status: "rejected" }, { headers });
+                          setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
+                        }} style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Reject</button>
+                      )}
+                      <button onClick={async () => {
+                        if (!window.confirm("Delete this seller?")) return;
+                        await axios.delete(`${API}/api/admin/sellers/${s._id}`, { headers });
+                        setSellers(sellers.filter(x => x._id !== s._id));
+                      }} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Delete</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {tab === "Coupons" && (
         <div>
           <h2 style={{ color: "#fff", marginBottom: "20px" }}>Coupon Codes</h2>

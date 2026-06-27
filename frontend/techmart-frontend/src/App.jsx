@@ -18,6 +18,9 @@ import Success from "./pages/Success";
 import Wishlist from "./pages/Wishlist";
 import Policy from "./pages/Policy";
 import ChatPage from "./pages/ChatPage";
+import SellerApply from "./pages/seller/SellerApply";
+import SellerLogin from "./pages/seller/SellerLogin";
+import SellerDashboard from "./pages/seller/SellerDashboard";
 
 export default function App() {
   useEffect(() => {
@@ -60,6 +63,9 @@ export default function App() {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/policy" element={<Policy />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/seller/apply" element={<SellerApply />} />
+          <Route path="/seller/login" element={<SellerLogin />} />
+          <Route path="/seller/dashboard" element={<SellerDashboard />} />
         </Routes>
       </main>
 
