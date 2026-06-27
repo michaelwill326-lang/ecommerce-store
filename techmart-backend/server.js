@@ -109,6 +109,14 @@ const User = mongoose.model(
     referralCredits: { type: Number, default: 0 },
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
+    walletBalance: { type: Number, default: 0 },
+    walletTransactions: [{
+      type: { type: String, enum: ["credit", "debit"] },
+      amount: Number,
+      description: String,
+      reference: String,
+      createdAt: { type: Date, default: Date.now }
+    }],
     createdAt: { type: Date, default: Date.now }
   })
 );
@@ -496,6 +504,68 @@ app.delete("/api/admin/coupons/:id", adminOnly, async (req, res) => {
 
 const { upload: adminUploader, cloudinary: cloudinaryCloud } = require("./utils/uploader");
 
+
+// Wallet & Cashback Config
+const CASHBACK_PERCENT = 2; // 2% cashback on every order
+
+
+/* ===========================
+   WALLET ENDPOINTS
+=========================== */
+
+// Get wallet balance and transactions
+app.get("/api/wallet", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("walletBalance walletTransactions name email");
+    res.json({ balance: user.walletBalance || 0, transactions: user.walletTransactions || [] });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch wallet" });
+  }
+});
+
+// Apply wallet balance at checkout (validate how much to use)
+app.post("/api/wallet/apply", auth, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const user = await User.findById(req.user.id);
+    const available = user.walletBalance || 0;
+    const toUse = Math.min(amount, available);
+    res.json({ success: true, walletDebit: toUse, remaining: available - toUse });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to apply wallet" });
+  }
+});
+
+// Admin - get all wallets
+app.get("/api/admin/wallets", adminOnly, async (req, res) => {
+  try {
+    const users = await User.find({ walletBalance: { $gt: 0 } }).select("name email walletBalance walletTransactions").sort({ walletBalance: -1 });
+    const totalInCirculation = users.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
+    res.json({ users, totalInCirculation });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch wallets" });
+  }
+});
+
+// Admin - manually credit/debit wallet
+app.post("/api/admin/wallets/:userId", adminOnly, async (req, res) => {
+  try {
+    const { type, amount, description } = req.body;
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (type === "credit") {
+      user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    } else {
+      user.walletBalance = Math.max(0, (user.walletBalance || 0) - Number(amount));
+    }
+    user.walletTransactions.push({ type, amount: Number(amount), description: description || "Admin adjustment", reference: "ADMIN-" + Date.now() });
+    await user.save();
+    res.json({ success: true, newBalance: user.walletBalance });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update wallet" });
+  }
+});
+
 /* ===========================
    SELLER ENDPOINTS
 =========================== */
@@ -646,13 +716,14 @@ app.delete("/api/admin/sellers/:id", adminOnly, async (req, res) => {
 
 app.post("/api/paystack/init", async (req, res) => {
   try {
-    const { email, amount, cart, deliveryAddress, phone, couponCode } = req.body;
+    const { email, amount, cart, deliveryAddress, phone, couponCode, walletDebit } = req.body;
     if (!email || !amount || !cart || cart.length === 0) {
       return res.status(400).json({ error: "Missing checkout payload information" });
     }
     // Apply coupon discount if provided
     let finalAmount = amount;
     let appliedCoupon = null;
+    let appliedWalletDebit = 0;
     if (couponCode) {
       const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), active: true });
       if (coupon && (!coupon.expiresAt || new Date() <= coupon.expiresAt) && amount >= coupon.minOrder) {
@@ -661,6 +732,14 @@ app.post("/api/paystack/init", async (req, res) => {
           : Math.min(coupon.value, amount);
         finalAmount = amount - discount;
         appliedCoupon = couponCode.toUpperCase();
+      }
+    }
+    // Apply wallet debit
+    if (walletDebit && walletDebit > 0) {
+      const buyer = await User.findOne({ email });
+      if (buyer && buyer.walletBalance >= walletDebit) {
+        appliedWalletDebit = Math.min(walletDebit, finalAmount);
+        finalAmount = Math.max(0, finalAmount - appliedWalletDebit);
       }
     }
 
@@ -708,7 +787,14 @@ app.post("/api/paystack/init", async (req, res) => {
     }
 
     // Create pending database record since items are locked down securely
-    await Order.create({ email, items: cart, amount: finalAmount, originalAmount: amount, couponCode: appliedCoupon, reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
+    // Deduct wallet if used
+    if (appliedWalletDebit > 0) {
+      await User.findOneAndUpdate({ email }, {
+        $inc: { walletBalance: -appliedWalletDebit },
+        $push: { walletTransactions: { type: "debit", amount: appliedWalletDebit, description: `Wallet payment for order ${reference}`, reference } }
+      });
+    }
+    await Order.create({ email, items: cart, amount: finalAmount, originalAmount: amount, couponCode: appliedCoupon, walletDebit: appliedWalletDebit, reference, status: "Pending", deliveryAddress: deliveryAddress || "", phone: phone || "" });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
@@ -808,6 +894,26 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
       await sendAdminOrderNotification(order);
     } catch (e) {
       console.error("❌ Admin notification failed:", e.message);
+    }
+    // 6. CREDIT CASHBACK TO WALLET
+    try {
+      const buyer = await User.findOne({ email: order.email });
+      if (buyer) {
+        const cashback = Math.round((CASHBACK_PERCENT / 100) * order.amount);
+        if (cashback > 0) {
+          buyer.walletBalance = (buyer.walletBalance || 0) + cashback;
+          buyer.walletTransactions.push({
+            type: "credit",
+            amount: cashback,
+            description: `${CASHBACK_PERCENT}% cashback on order ${order.reference}`,
+            reference: order.reference
+          });
+          await buyer.save();
+          console.log(`Wallet: Credited N${cashback} cashback to ${buyer.email}`);
+        }
+      }
+    } catch (e) {
+      console.error("Cashback credit failed:", e.message);
     }
 
     // 5. NOTIFY FRONTEND
