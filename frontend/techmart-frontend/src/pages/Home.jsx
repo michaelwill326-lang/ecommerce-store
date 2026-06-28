@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import FlashSaleBanner from "../components/FlashSaleBanner";
 import { Link } from "react-router-dom";
 
-const CATEGORIES = ["All", "Phones", "Laptops", "Accessories", "Audio", "Gaming", "Tablets", "TVs"];
+const CATEGORIES = ["All", "Electronic", "Accessories", "Audio", "Electric"];
 const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },
   { label: "Price: Low to High", value: "price_asc" },
@@ -36,8 +36,8 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     let result = products.filter(p => {
-      const matchSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = category === "All" || p.category?.toLowerCase() === category.toLowerCase();
+      const matchSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase()) || p.category?.toLowerCase().includes(search.toLowerCase());
+      const matchCategory = category === "All" || p.category?.toLowerCase().trim().includes(category.toLowerCase().trim());
       const matchMin = !minPrice || p.price >= Number(minPrice);
       const matchMax = !maxPrice || p.price <= Number(maxPrice);
       return matchSearch && matchCategory && matchMin && matchMax;
