@@ -162,6 +162,7 @@ const Order = mongoose.model(
     phone: { type: String, default: "" },
     deliveryFee: { type: Number, default: 0 },
     deliveryZone: { type: String, default: "" },
+    paymentMethod: { type: String, default: "Paystack" },
     originalAmount: Number,
     couponCode: String,
     createdAt: { type: Date, default: Date.now }
@@ -696,6 +697,94 @@ app.post("/api/delivery-fee", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to calculate delivery fee" });
+  }
+});
+
+
+/* ===========================
+   PAY ON DELIVERY
+=========================== */
+app.post("/api/orders/pay-on-delivery", auth, async (req, res) => {
+  try {
+    const { cart, deliveryAddress, phone, couponCode, walletDebit, deliveryFee, deliveryZone } = req.body;
+    const { email } = req.user;
+
+    if (!cart || cart.length === 0) return res.status(400).json({ error: "Cart is empty" });
+    if (!deliveryAddress) return res.status(400).json({ error: "Delivery address is required" });
+    if (!phone) return res.status(400).json({ error: "Phone number is required" });
+
+    let amount = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+    let appliedCoupon = null;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), active: true });
+      if (coupon && (!coupon.expiresAt || new Date() <= coupon.expiresAt) && amount >= coupon.minOrder) {
+        const discount = coupon.type === "percent"
+          ? Math.round((coupon.value / 100) * amount)
+          : Math.min(coupon.value, amount);
+        amount = amount - discount;
+        appliedCoupon = couponCode.toUpperCase();
+      }
+    }
+
+    let appliedWalletDebit = 0;
+    if (walletDebit && walletDebit > 0) {
+      const buyer = await User.findOne({ email });
+      if (buyer && buyer.walletBalance >= walletDebit) {
+        appliedWalletDebit = Math.min(walletDebit, amount);
+        amount = Math.max(0, amount - appliedWalletDebit);
+        await User.findOneAndUpdate({ email }, {
+          $inc: { walletBalance: -appliedWalletDebit },
+          $push: { walletTransactions: { type: "debit", amount: appliedWalletDebit, description: "Wallet payment for POD order", reference: "POD-" + Date.now() } }
+        });
+      }
+    }
+
+    const totalWithDelivery = amount + (deliveryFee || 0);
+    const allocatedItems = [];
+    for (const item of cart) {
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: item._id || item.productId, stock: { $gte: item.quantity || 1 } },
+        { $inc: { stock: -(item.quantity || 1) } },
+        { new: true }
+      );
+      if (!updatedProduct) {
+        for (const r of allocatedItems) {
+          await Product.findByIdAndUpdate(r.productId, { $inc: { stock: r.quantity } });
+        }
+        return res.status(400).json({ error: `"${item.name}" is out of stock` });
+      }
+      allocatedItems.push({ productId: item._id || item.productId, quantity: item.quantity || 1 });
+      if (updatedProduct.stock <= 5) sendLowStockAlert(updatedProduct).catch(() => {});
+    }
+
+    const reference = "POD-" + Date.now();
+    const order = await Order.create({
+      email, items: cart, amount: totalWithDelivery, originalAmount: totalWithDelivery,
+      couponCode: appliedCoupon, walletDebit: appliedWalletDebit,
+      deliveryFee: deliveryFee || 0, deliveryZone: deliveryZone || "",
+      reference, status: "Pay on Delivery", deliveryAddress, phone,
+      paymentMethod: "Pay on Delivery",
+    });
+
+    try { await sendOrderConfirmation(order); } catch (e) {}
+    try { await sendAdminOrderNotification(order); } catch (e) {}
+
+    try {
+      const buyer = await User.findOne({ email });
+      if (buyer) {
+        const cashback = Math.round((CASHBACK_PERCENT / 100) * totalWithDelivery);
+        if (cashback > 0) {
+          buyer.walletBalance = (buyer.walletBalance || 0) + cashback;
+          buyer.walletTransactions.push({ type: "credit", amount: cashback, description: `${CASHBACK_PERCENT}% cashback on POD order ${reference}`, reference });
+          await buyer.save();
+        }
+      }
+    } catch (e) {}
+
+    res.status(201).json({ success: true, reference, message: "Order placed! Pay cash when your item arrives." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to place order" });
   }
 });
 
