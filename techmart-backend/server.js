@@ -165,6 +165,7 @@ const Order = mongoose.model(
     paymentMethod: { type: String, default: "Paystack" },
     depositPaid: { type: Number, default: 0 },
     depositReference: { type: String, default: "" },
+    podPaymentReference: { type: String, default: "" },
     originalAmount: Number,
     couponCode: String,
     createdAt: { type: Date, default: Date.now }
@@ -641,31 +642,31 @@ const DELIVERY_ZONES = [
   {
     zone: 1,
     name: "Ikeja & Surroundings",
-    areas: ["ikeja", "ogba", "agege", "ojota", "alausa", "oregun", "opebi", "allen", "maryland", "palmgrove", "onipanu"],
+    areas: ["ikeja", "ogba", "agege", "ojota", "alausa", "oregun", "opebi", "allen avenue", "maryland", "palmgrove", "onipanu", "gbagada", "magodo", "omole", "berger", "ojodu", "ketu", "mile 12", "oworo", "oworonshoki"],
     fee: 2500
   },
   {
     zone: 2,
     name: "Mainland",
-    areas: ["yaba", "mushin", "oshodi", "surulere", "isolo", "oshodi", "ilasamaja", "itire", "ketu", "mile 12", "bariga", "shomolu", "gbagada"],
+    areas: ["yaba", "mushin", "oshodi", "surulere", "isolo", "ilasamaja", "itire", "bariga", "shomolu", "tinubu", "iganmu", "ebute metta", "otto", "ijora", "orile", "okota", "ago palace", "isolo"],
     fee: 3500
   },
   {
     zone: 3,
     name: "Lagos Island & VI",
-    areas: ["victoria island", "vi", "ikoyi", "lagos island", "apapa", "tincan", "obalende", "broad street", "marina"],
+    areas: ["victoria island", "ikoyi", "lagos island", "apapa", "obalende", "broad street", "marina", "bar beach", "eti osa", "itirin", "onikan", "idumota", "balogun", "carter"],
     fee: 4500
   },
   {
     zone: 4,
     name: "Lekki & Ajah",
-    areas: ["lekki", "ajah", "sangotedo", "chevron", "vgc", "victoria garden", "abraham adesanya", "jakande", "igbo efon"],
+    areas: ["lekki", "ajah", "sangotedo", "chevron", "vgc", "victoria garden", "abraham adesanya", "jakande", "igbo efon", "ibeju", "awoyaya", "lakowe", "bogije", "monastery", "orchid", "lafiaji"],
     fee: 5500
   },
   {
     zone: 5,
     name: "Outskirts",
-    areas: ["ikorodu", "badagry", "epe", "mowe", "ibafo", "sagamu", "abeokuta", "sango", "ota"],
+    areas: ["ikorodu", "badagry", "epe", "mowe", "ibafo", "sagamu", "sango", "ota", "agbara", "arepo", "ojokoro", "ifako", "meiran", "abule egba", "alakuko"],
     fee: 7500
   },
 ];
@@ -675,12 +676,21 @@ const DEFAULT_FEE = 12000; // Outside Lagos
 const calculateDeliveryFee = (address) => {
   if (!address) return { fee: DEFAULT_FEE, zone: "Outside Lagos" };
   const lower = address.toLowerCase();
+
+  // If address doesn't contain "lagos", charge outside Lagos fee
+  if (!lower.includes("lagos")) {
+    return { fee: DEFAULT_FEE, zone: "Outside Lagos", zoneNumber: 6 };
+  }
+
+  // Check zones by keyword
   for (const zone of DELIVERY_ZONES) {
     if (zone.areas.some(area => lower.includes(area))) {
       return { fee: zone.fee, zone: zone.name, zoneNumber: zone.zone };
     }
   }
-  return { fee: DEFAULT_FEE, zone: "Outside Lagos", zoneNumber: 6 };
+
+  // Address contains Lagos but no specific zone match - charge Zone 2 (Mainland) as default
+  return { fee: 3500, zone: "Lagos (Mainland)", zoneNumber: 2 };
 };
 
 app.post("/api/delivery-fee", async (req, res) => {
@@ -768,6 +778,39 @@ app.post("/api/orders/pod-deposit", auth, async (req, res) => {
   } catch (err) {
     console.error("POD deposit error:", err.message);
     res.status(500).json({ error: "Failed to initialize deposit payment" });
+  }
+});
+
+
+// Send Paystack payment link for POD order (admin)
+app.post("/api/admin/orders/:id/send-payment-link", adminOnly, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.status !== "Pay on Delivery") return res.status(400).json({ error: "Order is not a POD order" });
+
+    const reference = "POD-PAY-" + Date.now();
+    const response = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email: order.email,
+        amount: order.amount * 100,
+        reference,
+        callback_url: `${process.env.FRONTEND_URL}/success?reference=${reference}`,
+        metadata: { orderId: order._id.toString(), isPodPayment: true }
+      },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    const paymentUrl = response.data.data.authorization_url;
+
+    // Update order with payment reference
+    await Order.findByIdAndUpdate(req.params.id, { podPaymentReference: reference });
+
+    res.json({ success: true, paymentUrl, reference });
+  } catch (err) {
+    console.error("Send payment link error:", err.message);
+    res.status(500).json({ error: "Failed to generate payment link" });
   }
 });
 
@@ -1201,6 +1244,30 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     );
 
     const paymentData = verify.data.data;
+
+    // Handle POD full payment (sent by admin at door)
+    if (paymentData.metadata?.isPodPayment) {
+      try {
+        const orderId = paymentData.metadata.orderId;
+        const order = await Order.findByIdAndUpdate(orderId, { status: "Paid" }, { new: true });
+        if (order) {
+          // Credit cashback
+          const buyer = await User.findOne({ email: order.email });
+          if (buyer) {
+            const cashback = Math.round((CASHBACK_PERCENT / 100) * order.amount);
+            if (cashback > 0) {
+              buyer.walletBalance = (buyer.walletBalance || 0) + cashback;
+              buyer.walletTransactions.push({ type: "credit", amount: cashback, description: `Cashback on POD payment ${order.reference}`, reference: paymentData.reference });
+              await buyer.save();
+            }
+          }
+          console.log(`POD order ${orderId} marked as Paid`);
+        }
+      } catch(e) {
+        console.error("POD payment webhook error:", e.message);
+      }
+      return res.status(200).json({ status: "success" });
+    }
 
     // Handle POD deposit payment
     if (paymentData.metadata?.isPodDeposit) {
