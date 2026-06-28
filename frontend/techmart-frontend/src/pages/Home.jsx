@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import FlashSaleBanner from "../components/FlashSaleBanner";
 import { Link } from "react-router-dom";
 
-const CATEGORIES = ["All", "Electronic", "Accessories", "Audio", "Electric"];
+const CATEGORIES = ["All", "Phones", "Laptops", "Electronics", "Audio", "Accessories", "Gaming", "Computers", "Wearables", "Printers"];
 const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },
   { label: "Price: Low to High", value: "price_asc" },
