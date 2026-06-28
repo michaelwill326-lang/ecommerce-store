@@ -25,6 +25,8 @@ export default function Checkout() {
   const [useWallet, setUseWallet] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [podLoading, setPodLoading] = useState(false);
+  const [podEligible, setPodEligible] = useState(false);
+  const [podEligibilityChecked, setPodEligibilityChecked] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryZone, setDeliveryZone] = useState("");
   const [deliveryLoading, setDeliveryLoading] = useState(false);
@@ -34,12 +36,21 @@ export default function Checkout() {
   const walletApplied = useWallet ? Math.min(walletBalance, afterCoupon + deliveryFee) : 0;
   const finalTotal = Math.max(0, afterCoupon + deliveryFee - walletApplied);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [suggestions, setSuggestions] = useState([]);
   useEffect(() => {
     if (token) {
       axios.get(`${API}/api/wallet`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setWalletBalance(res.data.balance || 0))
         .catch(() => {});
+      axios.get(`${API}/api/orders/pod-eligibility`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => { setPodEligible(res.data.eligible); setPodEligibilityChecked(true); })
+        .catch(() => setPodEligibilityChecked(true));
     }
   }, []);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -98,14 +109,15 @@ export default function Checkout() {
     if (cart.length === 0) { setError("Your cart is empty"); return; }
     if (!address.trim()) { setError("Please enter your delivery address"); return; }
     if (!phone.trim()) { setError("Please enter your phone number"); return; }
+    if (!deliveryFee || deliveryFee === 0) { setError("Please select your delivery address to calculate delivery fee first"); return; }
     try {
       setPodLoading(true);
       const res = await axios.post(
-        `${API}/api/orders/pay-on-delivery`,
+        `${API}/api/orders/pod-deposit`,
         { cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: walletApplied, deliveryFee, deliveryZone },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      navigate(`/success?reference=${res.data.reference}&pod=true`);
+      window.location.href = res.data.url;
     } catch (err) {
       setError(err.response?.data?.error || "Failed to place order.");
     } finally { setPodLoading(false); }
@@ -141,13 +153,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   return (
     <div style={styles.page}>
@@ -325,10 +330,10 @@ export default function Checkout() {
                   <p style={{ color: paymentMethod === "online" ? "#f97316" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay Online</p>
                   <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>Card / Transfer</p>
                 </div>
-                <div onClick={() => setPaymentMethod("pod")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "pod" ? "#22c55e" : "#333"}`, background: paymentMethod === "pod" ? "#0a1a0a" : "#111", cursor: "pointer", textAlign: "center" }}>
+                <div onClick={() => podEligible && setPaymentMethod("pod")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "pod" ? "#22c55e" : "#333"}`, background: paymentMethod === "pod" ? "#0a1a0a" : "#111", cursor: podEligible ? "pointer" : "not-allowed", textAlign: "center", opacity: podEligibilityChecked && !podEligible ? 0.5 : 1 }}>
                   <p style={{ margin: "0 0 2px", fontSize: "18px" }}>💵</p>
                   <p style={{ color: paymentMethod === "pod" ? "#22c55e" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay on Delivery</p>
-                  <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>Cash at doorstep</p>
+                  <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>{podEligible ? "Pay delivery fee now, rest on arrival" : "Complete 1 order to unlock"}</p>
                 </div>
               </div>
             </div>
@@ -374,9 +379,15 @@ export default function Checkout() {
                 {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} Online →`}
               </button>
             ) : (
-              <button onClick={handlePOD} disabled={podLoading || !user} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #16a34a, #15803d)", opacity: podLoading || !user ? 0.7 : 1 }}>
-                {podLoading ? "Placing Order..." : `Place Order - Pay ₦${finalTotal.toLocaleString()} on Delivery`}
-              </button>
+              <>
+                <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
+                  <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: "0 0 4px" }}>Delivery Deposit Required</p>
+                  <p style={{ color: "#86efac", fontSize: "12px", margin: 0 }}>You will pay ₦{deliveryFee.toLocaleString()} now (delivery fee) and ₦{(finalTotal - deliveryFee).toLocaleString()} cash on delivery.</p>
+                </div>
+                <button onClick={handlePOD} disabled={podLoading || !user || !deliveryFee} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #16a34a, #15803d)", opacity: podLoading || !user || !deliveryFee ? 0.7 : 1 }}>
+                  {podLoading ? "Processing..." : `Pay ₦${deliveryFee.toLocaleString()} Delivery Deposit →`}
+                </button>
+              </>
             )}
             {/* TRUST BADGES */}
             <div style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", marginTop: "16px" }}>
