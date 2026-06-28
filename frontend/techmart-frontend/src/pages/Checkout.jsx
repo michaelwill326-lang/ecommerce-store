@@ -23,6 +23,8 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("online");
+  const [podLoading, setPodLoading] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryZone, setDeliveryZone] = useState("");
   const [deliveryLoading, setDeliveryLoading] = useState(false);
@@ -88,6 +90,25 @@ export default function Checkout() {
     } finally {
       setCouponLoading(false);
     }
+  };
+
+  const handlePOD = async () => {
+    setError("");
+    if (!token || !user) { navigate("/login"); return; }
+    if (cart.length === 0) { setError("Your cart is empty"); return; }
+    if (!address.trim()) { setError("Please enter your delivery address"); return; }
+    if (!phone.trim()) { setError("Please enter your phone number"); return; }
+    try {
+      setPodLoading(true);
+      const res = await axios.post(
+        `${API}/api/orders/pay-on-delivery`,
+        { cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: walletApplied, deliveryFee, deliveryZone },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      navigate(`/success?reference=${res.data.reference}&pod=true`);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to place order.");
+    } finally { setPodLoading(false); }
   };
 
   const handlePayment = async () => {
@@ -295,6 +316,22 @@ export default function Checkout() {
               </span>
             </div>
             {error && <div style={styles.errorBox}>⚠️ {error}</div>}
+            {/* PAYMENT METHOD */}
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{ color: "#fff", fontWeight: "700", fontSize: "14px", margin: "0 0 10px" }}>Payment Method</p>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <div onClick={() => setPaymentMethod("online")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "online" ? "#f97316" : "#333"}`, background: paymentMethod === "online" ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 2px", fontSize: "18px" }}>💳</p>
+                  <p style={{ color: paymentMethod === "online" ? "#f97316" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay Online</p>
+                  <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>Card / Transfer</p>
+                </div>
+                <div onClick={() => setPaymentMethod("pod")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "pod" ? "#22c55e" : "#333"}`, background: paymentMethod === "pod" ? "#0a1a0a" : "#111", cursor: "pointer", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 2px", fontSize: "18px" }}>💵</p>
+                  <p style={{ color: paymentMethod === "pod" ? "#22c55e" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay on Delivery</p>
+                  <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>Cash at doorstep</p>
+                </div>
+              </div>
+            </div>
             {/* WALLET */}
             {walletBalance > 0 && (
               <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
@@ -332,13 +369,15 @@ export default function Checkout() {
             </div>
             {couponStatus?.message && <p style={{ color: "#22c55e", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.message}</p>}
             {couponStatus?.error && <p style={{ color: "#ef4444", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.error}</p>}
-            <button
-              onClick={handlePayment}
-              disabled={loading || !user}
-              style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}
-            >
-              {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} →`}
-            </button>
+            {paymentMethod === "online" ? (
+              <button onClick={handlePayment} disabled={loading || !user} style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}>
+                {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} Online →`}
+              </button>
+            ) : (
+              <button onClick={handlePOD} disabled={podLoading || !user} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #16a34a, #15803d)", opacity: podLoading || !user ? 0.7 : 1 }}>
+                {podLoading ? "Placing Order..." : `Place Order - Pay ₦${finalTotal.toLocaleString()} on Delivery`}
+              </button>
+            )}
             {/* TRUST BADGES */}
             <div style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", marginTop: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "12px" }}>

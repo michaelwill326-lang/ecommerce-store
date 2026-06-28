@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
 
@@ -8,6 +8,9 @@ export default function Success() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(10);
   const user = JSON.parse(localStorage.getItem("user"));
+  const [searchParams] = useSearchParams();
+  const isPOD = searchParams.get("pod") === "true";
+  const reference = searchParams.get("reference");
 
   useEffect(() => {
     // Clear cart on successful payment
@@ -39,21 +42,27 @@ export default function Success() {
         </div>
 
         {/* TITLE */}
-        <h1 style={styles.title}>Payment Successful!</h1>
+        <h1 style={styles.title}>{isPOD ? "Order Placed!" : "Payment Successful!"}</h1>
         <p style={styles.subtitle}>
-          Thank you{user?.name ? `, ${user.name}` : ""}! Your order has been placed successfully.
+          Thank you{user?.name ? `, ${user.name}` : ""}! {isPOD ? "Your order has been placed. Please have cash ready for delivery." : "Your order has been placed successfully."}
         </p>
 
         {/* ORDER DETAILS */}
         <div style={styles.detailsCard}>
           <div style={styles.detailRow}>
             <span style={styles.detailLabel}>Status</span>
-            <span style={styles.successBadge}>✅ Confirmed</span>
+            <span style={isPOD ? {...styles.successBadge, background: "#0a2a1a", color: "#22c55e", border: "1px solid #22c55e"} : styles.successBadge}>{isPOD ? "💵 Pay on Delivery" : "✅ Confirmed"}</span>
           </div>
           <div style={styles.detailRow}>
             <span style={styles.detailLabel}>Delivery</span>
-            <span style={styles.detailValue}>Free • 2-5 business days</span>
+            <span style={styles.detailValue}>2-5 business days</span>
           </div>
+          {isPOD && (
+            <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginTop: "12px" }}>
+              <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>Pay on Delivery Instructions</p>
+              <p style={{ color: "#86efac", fontSize: "13px", margin: 0 }}>Please have the exact cash amount ready when our delivery agent arrives. Do not pay before inspecting your item.</p>
+            </div>
+          )}
           <div style={styles.detailRow}>
             <span style={styles.detailLabel}>Email</span>
             <span style={styles.detailValue}>{user?.email || "—"}</span>
