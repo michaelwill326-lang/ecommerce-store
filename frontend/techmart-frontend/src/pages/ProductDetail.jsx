@@ -262,7 +262,7 @@ export default function ProductDetail() {
           </button>
 
           {/* WHATSAPP SHARE */}
-          
+          <a
             href={`https://wa.me/?text=${encodeURIComponent("Check out " + product.name + " on TechMart for just N" + product.price?.toLocaleString() + "! Shop here: " + window.location.href)}`}
             target="_blank"
             rel="noopener noreferrer"
