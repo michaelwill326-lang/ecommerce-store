@@ -527,6 +527,51 @@ const CASHBACK_PERCENT = 2; // 2% cashback on every order
 
 
 
+
+// One-time: clean up product categories
+app.post("/api/admin/fix-categories", adminOnly, async (req, res) => {
+  try {
+    const products = await Product.find();
+    let updated = 0;
+    for (const p of products) {
+      const name = p.name?.toLowerCase() || "";
+      const cat = p.category?.trim().toLowerCase() || "";
+      let newCategory = p.category?.trim() || "Electronics";
+
+      // Assign proper categories based on product name
+      if (name.includes("iphone") || name.includes("xiaomi") || name.includes("redmi") || name.includes("samsung") && name.includes("phone")) {
+        newCategory = "Phones";
+      } else if (name.includes("macbook") || name.includes("laptop") || name.includes("elitebook") || name.includes("latitude") || name.includes("thinkpad")) {
+        newCategory = "Laptops";
+      } else if (name.includes("mac mini") || name.includes("imac") || name.includes("desktop") || name.includes("monitor")) {
+        newCategory = "Computers";
+      } else if (name.includes("airpod") || name.includes("headphone") || name.includes("earphone") || name.includes("speaker") || name.includes("zealot") || name.includes("tws")) {
+        newCategory = "Audio";
+      } else if (name.includes("watch")) {
+        newCategory = "Wearables";
+      } else if (name.includes("keyboard") || name.includes("mouse") || name.includes("case") || name.includes("charger") || name.includes("cable") || name.includes("type-c") || name.includes("sticker")) {
+        newCategory = "Accessories";
+      } else if (name.includes("printer") || name.includes("deskjet")) {
+        newCategory = "Printers";
+      } else if (name.includes("power bank") || name.includes("powerbank")) {
+        newCategory = "Accessories";
+      } else if (name.includes("gaming")) {
+        newCategory = "Gaming";
+      } else if (cat === "electronic" || cat === "electronic " || cat === "electronics") {
+        newCategory = "Electronics";
+      }
+
+      if (newCategory !== p.category) {
+        await Product.findByIdAndUpdate(p._id, { category: newCategory });
+        updated++;
+      }
+    }
+    res.json({ success: true, updated, total: products.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ===========================
    FLASH SALE ENDPOINTS
 =========================== */
