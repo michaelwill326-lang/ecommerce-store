@@ -163,6 +163,8 @@ const Order = mongoose.model(
     deliveryFee: { type: Number, default: 0 },
     deliveryZone: { type: String, default: "" },
     paymentMethod: { type: String, default: "Paystack" },
+    depositPaid: { type: Number, default: 0 },
+    depositReference: { type: String, default: "" },
     originalAmount: Number,
     couponCode: String,
     createdAt: { type: Date, default: Date.now }
@@ -701,6 +703,74 @@ app.post("/api/delivery-fee", async (req, res) => {
 });
 
 
+
+/* ===========================
+   POD ELIGIBILITY & DEPOSIT
+=========================== */
+
+// Check if customer is eligible for POD
+app.get("/api/orders/pod-eligibility", auth, async (req, res) => {
+  try {
+    const completedOrders = await Order.countDocuments({
+      email: req.user.email,
+      status: { $in: ["Paid", "Delivered", "Shipped"] }
+    });
+    res.json({ eligible: completedOrders > 0, completedOrders });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to check eligibility" });
+  }
+});
+
+// Initialize Paystack payment for delivery deposit
+app.post("/api/orders/pod-deposit", auth, async (req, res) => {
+  try {
+    const { deliveryFee, deliveryZone, cart, deliveryAddress, phone, couponCode, walletDebit } = req.body;
+    const { email } = req.user;
+
+    if (!deliveryFee || deliveryFee <= 0) {
+      return res.status(400).json({ error: "Please enter your delivery address first to calculate delivery fee" });
+    }
+
+    // Check eligibility
+    const completedOrders = await Order.countDocuments({
+      email,
+      status: { $in: ["Paid", "Delivered", "Shipped"] }
+    });
+    if (completedOrders === 0) {
+      return res.status(403).json({ error: "Pay on Delivery is only available for returning customers" });
+    }
+
+    const reference = "POD-DEP-" + Date.now();
+
+    // Store pending POD order data in a temp reference
+    const response = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email,
+        amount: deliveryFee * 100,
+        reference,
+        callback_url: `${process.env.FRONTEND_URL}/success?pod=true&reference=${reference}`,
+        metadata: {
+          isPodDeposit: true,
+          cart: JSON.stringify(cart),
+          deliveryAddress,
+          phone,
+          couponCode: couponCode || "",
+          walletDebit: walletDebit || 0,
+          deliveryFee,
+          deliveryZone: deliveryZone || "",
+        }
+      },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    res.json({ url: response.data.data.authorization_url, reference });
+  } catch (err) {
+    console.error("POD deposit error:", err.message);
+    res.status(500).json({ error: "Failed to initialize deposit payment" });
+  }
+});
+
 /* ===========================
    PAY ON DELIVERY
 =========================== */
@@ -1131,6 +1201,51 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     );
 
     const paymentData = verify.data.data;
+
+    // Handle POD deposit payment
+    if (paymentData.metadata?.isPodDeposit) {
+      try {
+        const meta = paymentData.metadata;
+        const cart = JSON.parse(meta.cart || "[]");
+        const reference = "POD-" + Date.now();
+        const amount = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+
+        // Create the full POD order
+        const order = await Order.create({
+          email: paymentData.customer.email,
+          items: cart,
+          amount: amount + Number(meta.deliveryFee || 0),
+          originalAmount: amount + Number(meta.deliveryFee || 0),
+          deliveryFee: Number(meta.deliveryFee || 0),
+          deliveryZone: meta.deliveryZone || "",
+          depositPaid: Number(meta.deliveryFee || 0),
+          depositReference: paymentData.reference,
+          reference,
+          status: "Pay on Delivery",
+          deliveryAddress: meta.deliveryAddress,
+          phone: meta.phone,
+          paymentMethod: "Pay on Delivery",
+          couponCode: meta.couponCode || null,
+        });
+
+        try { await sendOrderConfirmation(order); } catch(e) {}
+        try { await sendAdminOrderNotification(order); } catch(e) {}
+
+        // Cashback
+        const buyer = await User.findOne({ email: paymentData.customer.email });
+        if (buyer) {
+          const cashback = Math.round((CASHBACK_PERCENT / 100) * order.amount);
+          if (cashback > 0) {
+            buyer.walletBalance = (buyer.walletBalance || 0) + cashback;
+            buyer.walletTransactions.push({ type: "credit", amount: cashback, description: `Cashback on POD order ${reference}`, reference });
+            await buyer.save();
+          }
+        }
+      } catch(e) {
+        console.error("POD deposit webhook error:", e.message);
+      }
+      return res.status(200).json({ status: "success" });
+    }
 
     if (paymentData.status !== "success") {
       console.log(`⚠️ Payment not successful for ${reference}: ${paymentData.status}`);
