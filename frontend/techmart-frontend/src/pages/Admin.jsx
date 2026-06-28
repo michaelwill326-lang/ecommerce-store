@@ -346,10 +346,30 @@ export default function Admin() {
                       onChange={(e) => updateOrderStatus(o._id, e.target.value)}
                       style={styles.select}
                     >
-                      {["Pending", "Paid", "Shipped", "Delivered", "Cancelled"].map(s => (
+                      {["Pending", "Pay on Delivery", "Paid", "Shipped", "Delivered", "Cancelled"].map(s => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    {o.status === "Pay on Delivery" && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await axios.post(`${API}/api/admin/orders/${o._id}/send-payment-link`, {}, { headers });
+                            const url = res.data.paymentUrl;
+                            await navigator.clipboard.writeText(url);
+                            alert(`Payment link copied to clipboard!
+
+Send this to the customer:
+${url}`);
+                          } catch (err) {
+                            alert("Failed to generate payment link");
+                          }
+                        }}
+                        style={{ marginTop: "6px", width: "100%", padding: "6px 8px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}
+                      >
+                        Send Payment Link
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
