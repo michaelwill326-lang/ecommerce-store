@@ -445,7 +445,11 @@ const SellerSchema = new mongoose.Schema({
   phone: { type: String, default: "" },
   storeName: { type: String, required: true },
   storeDescription: { type: String, default: "" },
+  storeBanner: { type: String, default: "" },
+  storeLogo: { type: String, default: "" },
+  storeColor: { type: String, default: "#f97316" },
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+  verified: { type: Boolean, default: false },
   commission: { type: Number, default: 10 },
   totalSales: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
@@ -464,6 +468,60 @@ const FlashSaleSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const FlashSale = mongoose.model("FlashSale", FlashSaleSchema);
+
+
+// Payout Request Model
+const PayoutSchema = new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller", required: true },
+  sellerName: String,
+  storeName: String,
+  amount: { type: Number, required: true },
+  bankName: String,
+  accountNumber: String,
+  accountName: String,
+  status: { type: String, enum: ["pending", "approved", "paid", "rejected"], default: "pending" },
+  note: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const Payout = mongoose.model("Payout", PayoutSchema);
+
+// Dispute Model
+const DisputeSchema = new mongoose.Schema({
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
+  customerId: String,
+  customerEmail: String,
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller" },
+  sellerName: String,
+  subject: String,
+  description: String,
+  status: { type: String, enum: ["open", "seller_responded", "resolved", "closed"], default: "open" },
+  messages: [{
+    sender: String,
+    senderType: { type: String, enum: ["customer", "seller", "admin"] },
+    message: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
+  createdAt: { type: Date, default: Date.now }
+});
+const Dispute = mongoose.model("Dispute", DisputeSchema);
+
+// Seller Message Model
+const SellerMessageSchema = new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller" },
+  customerEmail: String,
+  customerName: String,
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+  productName: String,
+  messages: [{
+    sender: String,
+    senderType: { type: String, enum: ["customer", "seller"] },
+    message: String,
+    read: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  createdAt: { type: Date, default: Date.now }
+});
+const SellerMessage = mongoose.model("SellerMessage", SellerMessageSchema);
 
 /* ===========================
    COUPON ENDPOINTS
@@ -573,6 +631,301 @@ app.post("/api/admin/fix-categories", adminOnly, async (req, res) => {
     res.json({ success: true, updated, total: products.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+
+/* ===========================
+   MARKETPLACE ENDPOINTS
+=========================== */
+
+// --- SELLER ANALYTICS ---
+app.get("/api/seller/analytics", sellerAuth, async (req, res) => {
+  try {
+    const products = await Product.find({ vendorId: req.seller.id });
+    const productIds = products.map(p => p._id.toString());
+    const orders = await Order.find({ status: { $in: ["Paid", "Shipped", "Delivered"] } });
+    const sellerOrders = orders.filter(o => o.items?.some(i => productIds.includes(i._id?.toString() || i.productId?.toString())));
+    const seller = await Seller.findById(req.seller.id);
+    const commission = seller.commission || 10;
+
+    const revenue = sellerOrders.reduce((sum, o) => {
+      const items = o.items.filter(i => productIds.includes(i._id?.toString() || i.productId?.toString()));
+      return sum + items.reduce((s, i) => s + (i.price * (i.quantity || 1)), 0);
+    }, 0);
+
+    const commissionAmount = Math.round((commission / 100) * revenue);
+    const netRevenue = revenue - commissionAmount;
+
+    // Revenue by date (last 30 days)
+    const revenueByDate = {};
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    sellerOrders.filter(o => new Date(o.createdAt) >= thirtyDaysAgo).forEach(o => {
+      const date = new Date(o.createdAt).toLocaleDateString();
+      const items = o.items.filter(i => productIds.includes(i._id?.toString() || i.productId?.toString()));
+      const orderRevenue = items.reduce((s, i) => s + (i.price * (i.quantity || 1)), 0);
+      revenueByDate[date] = (revenueByDate[date] || 0) + orderRevenue;
+    });
+
+    // Top products
+    const productSales = {};
+    sellerOrders.forEach(o => {
+      o.items.filter(i => productIds.includes(i._id?.toString() || i.productId?.toString())).forEach(i => {
+        const id = i._id?.toString() || i.productId?.toString();
+        if (!productSales[id]) productSales[id] = { name: i.name, sales: 0, revenue: 0 };
+        productSales[id].sales += (i.quantity || 1);
+        productSales[id].revenue += (i.price * (i.quantity || 1));
+      });
+    });
+    const topProducts = Object.values(productSales).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+
+    // Performance metrics
+    const totalReviews = products.reduce((sum, p) => sum + (p.reviews?.filter(r => r.approved)?.length || 0), 0);
+    const avgRating = products.reduce((sum, p) => sum + (p.rating || 0), 0) / (products.length || 1);
+    const disputes = await Dispute.countDocuments({ sellerId: req.seller.id });
+    const resolvedDisputes = await Dispute.countDocuments({ sellerId: req.seller.id, status: "resolved" });
+
+    res.json({
+      revenue, commissionAmount, netRevenue, commission,
+      totalOrders: sellerOrders.length,
+      totalProducts: products.length,
+      revenueByDate,
+      topProducts,
+      avgRating: avgRating.toFixed(1),
+      totalReviews,
+      disputes,
+      resolvedDisputes,
+      fulfillmentRate: sellerOrders.length > 0 ? Math.round((sellerOrders.filter(o => o.status === "Delivered").length / sellerOrders.length) * 100) : 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+// --- COMMISSION MANAGEMENT (Admin) ---
+app.put("/api/admin/sellers/:id/commission", adminOnly, async (req, res) => {
+  try {
+    const { commission } = req.body;
+    const seller = await Seller.findByIdAndUpdate(req.params.id, { commission: Number(commission) }, { new: true }).select("-password");
+    res.json({ success: true, data: seller });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update commission" });
+  }
+});
+
+// --- SELLER VERIFICATION (Admin) ---
+app.put("/api/admin/sellers/:id/verify", adminOnly, async (req, res) => {
+  try {
+    const { verified } = req.body;
+    const seller = await Seller.findByIdAndUpdate(req.params.id, { verified: Boolean(verified) }, { new: true }).select("-password");
+    res.json({ success: true, data: seller });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update verification" });
+  }
+});
+
+// --- STOREFRONT CUSTOMIZATION ---
+app.put("/api/seller/storefront", sellerAuth, async (req, res) => {
+  try {
+    const { storeDescription, storeBanner, storeLogo, storeColor } = req.body;
+    const seller = await Seller.findByIdAndUpdate(
+      req.seller.id,
+      { storeDescription, storeBanner, storeLogo, storeColor },
+      { new: true }
+    ).select("-password");
+    res.json({ success: true, data: seller });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update storefront" });
+  }
+});
+
+// Get seller storefront (public)
+app.get("/api/seller/store/:id", async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.params.id).select("-password");
+    if (!seller || seller.status !== "approved") return res.status(404).json({ error: "Store not found" });
+    const products = await Product.find({ vendorId: req.params.id });
+    res.json({ seller, products });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch store" });
+  }
+});
+
+// --- PAYOUT REQUESTS ---
+app.post("/api/seller/payouts", sellerAuth, async (req, res) => {
+  try {
+    const { amount, bankName, accountNumber, accountName } = req.body;
+    if (!amount || !bankName || !accountNumber || !accountName) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    const seller = await Seller.findById(req.seller.id);
+    const payout = await Payout.create({
+      sellerId: req.seller.id,
+      sellerName: seller.name,
+      storeName: seller.storeName,
+      amount: Number(amount),
+      bankName, accountNumber, accountName
+    });
+    res.status(201).json({ success: true, data: payout });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to request payout" });
+  }
+});
+
+app.get("/api/seller/payouts", sellerAuth, async (req, res) => {
+  try {
+    const payouts = await Payout.find({ sellerId: req.seller.id }).sort({ createdAt: -1 });
+    res.json(payouts);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch payouts" });
+  }
+});
+
+// Admin payout management
+app.get("/api/admin/payouts", adminOnly, async (req, res) => {
+  try {
+    const payouts = await Payout.find().sort({ createdAt: -1 });
+    res.json(payouts);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch payouts" });
+  }
+});
+
+app.put("/api/admin/payouts/:id", adminOnly, async (req, res) => {
+  try {
+    const { status, note } = req.body;
+    const payout = await Payout.findByIdAndUpdate(req.params.id, { status, note }, { new: true });
+    res.json({ success: true, data: payout });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update payout" });
+  }
+});
+
+// --- DISPUTES ---
+app.post("/api/disputes", auth, async (req, res) => {
+  try {
+    const { orderId, sellerId, sellerName, subject, description } = req.body;
+    const user = await User.findById(req.user.id);
+    const dispute = await Dispute.create({
+      orderId, sellerId, sellerName, subject, description,
+      customerEmail: user.email,
+      customerId: req.user.id,
+      messages: [{ sender: user.name, senderType: "customer", message: description }]
+    });
+    res.status(201).json({ success: true, data: dispute });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create dispute" });
+  }
+});
+
+app.get("/api/disputes/my", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const disputes = await Dispute.find({ customerEmail: user.email }).sort({ createdAt: -1 });
+    res.json(disputes);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch disputes" });
+  }
+});
+
+app.get("/api/seller/disputes", sellerAuth, async (req, res) => {
+  try {
+    const disputes = await Dispute.find({ sellerId: req.seller.id }).sort({ createdAt: -1 });
+    res.json(disputes);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch disputes" });
+  }
+});
+
+app.post("/api/disputes/:id/reply", async (req, res) => {
+  try {
+    const { message, sender, senderType } = req.body;
+    const dispute = await Dispute.findByIdAndUpdate(
+      req.params.id,
+      {
+        $push: { messages: { sender, senderType, message } },
+        status: senderType === "seller" ? "seller_responded" : "open"
+      },
+      { new: true }
+    );
+    res.json({ success: true, data: dispute });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to reply to dispute" });
+  }
+});
+
+app.get("/api/admin/disputes", adminOnly, async (req, res) => {
+  try {
+    const disputes = await Dispute.find().sort({ createdAt: -1 });
+    res.json(disputes);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch disputes" });
+  }
+});
+
+app.put("/api/admin/disputes/:id", adminOnly, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const dispute = await Dispute.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    res.json({ success: true, data: dispute });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update dispute" });
+  }
+});
+
+// --- SELLER MESSAGING ---
+app.post("/api/seller/messages", auth, async (req, res) => {
+  try {
+    const { sellerId, productId, productName, message } = req.body;
+    const user = await User.findById(req.user.id);
+    let thread = await SellerMessage.findOne({ sellerId, customerEmail: user.email, productId });
+    if (!thread) {
+      thread = await SellerMessage.create({
+        sellerId, customerEmail: user.email, customerName: user.name,
+        productId, productName,
+        messages: [{ sender: user.name, senderType: "customer", message }]
+      });
+    } else {
+      thread.messages.push({ sender: user.name, senderType: "customer", message });
+      await thread.save();
+    }
+    res.json({ success: true, data: thread });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
+
+app.get("/api/seller/messages", sellerAuth, async (req, res) => {
+  try {
+    const threads = await SellerMessage.find({ sellerId: req.seller.id }).sort({ createdAt: -1 });
+    res.json(threads);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+app.post("/api/seller/messages/:id/reply", sellerAuth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    const seller = await Seller.findById(req.seller.id);
+    const thread = await SellerMessage.findByIdAndUpdate(
+      req.params.id,
+      { $push: { messages: { sender: seller.storeName, senderType: "seller", message } } },
+      { new: true }
+    );
+    res.json({ success: true, data: thread });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to reply" });
+  }
+});
+
+app.get("/api/seller/messages/customer", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const threads = await SellerMessage.find({ customerEmail: user.email }).sort({ createdAt: -1 });
+    res.json(threads);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch messages" });
   }
 });
 
