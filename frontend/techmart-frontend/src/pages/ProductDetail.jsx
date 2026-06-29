@@ -174,6 +174,12 @@ export default function ProductDetail() {
 
         {/* RIGHT — DETAILS */}
         <div style={styles.detailsCol}>
+          {product.vendorName && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+              <span style={{ color: "#888", fontSize: "13px" }}>Sold by</span>
+              <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>{product.vendorName}</span>
+            </div>
+          )}
 
           {/* CATEGORY */}
           <span style={styles.categoryBadge}>{product.category}</span>
@@ -287,6 +293,29 @@ export default function ProductDetail() {
             </svg>
             Share on WhatsApp
           </a>
+          {/* MESSAGE SELLER */}
+          {product.vendorId && (
+            <button
+              onClick={async () => {
+                const user = JSON.parse(localStorage.getItem("user"));
+                const token = localStorage.getItem("token");
+                if (!user || !token) { navigate("/login"); return; }
+                const msg = prompt("Send a message to the seller about this product:");
+                if (!msg) return;
+                try {
+                  await fetch(`${API}/api/seller/messages`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ sellerId: product.vendorId, productId: product._id, productName: product.name, message: msg })
+                  });
+                  alert("Message sent to seller!");
+                } catch { alert("Failed to send message"); }
+              }}
+              style={{ padding: "14px", background: "transparent", border: "1px solid #3b82f6", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", color: "#3b82f6", width: "100%" }}
+            >
+              Message Seller
+            </button>
+          )}
           {/* VIEW CART */}
           {inCart && !added && (
             <button

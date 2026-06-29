@@ -8,7 +8,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -33,6 +33,10 @@ export default function Admin() {
   const [wallets, setWallets] = useState({ users: [], totalInCirculation: 0 });
   const [walletAction, setWalletAction] = useState({ userId: "", type: "credit", amount: "", description: "" });
   const [flashSales, setFlashSales] = useState([]);
+  const [payouts, setPayouts] = useState([]);
+  const [disputes, setDisputes] = useState([]);
+  const [selectedDispute, setSelectedDispute] = useState(null);
+  const [disputeReply, setDisputeReply] = useState("");
   const [newFlash, setNewFlash] = useState({ productId: "", salePrice: "", startTime: "", endTime: "" });
   const [flashMsg, setFlashMsg] = useState("");
   const [walletMsg, setWalletMsg] = useState("");
@@ -56,7 +60,7 @@ export default function Admin() {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes, flashRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes, flashRes, payoutsRes, disputesRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
@@ -68,6 +72,8 @@ export default function Admin() {
         axios.get(`${API}/api/admin/sellers`, { headers }),
         axios.get(`${API}/api/admin/wallets`, { headers }),
         axios.get(`${API}/api/admin/flash-sales`, { headers }),
+        axios.get(`${API}/api/admin/payouts`, { headers }),
+        axios.get(`${API}/api/admin/disputes`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
@@ -80,6 +86,8 @@ export default function Admin() {
       setSellers(sellersRes?.data || []);
       setWallets(walletsRes?.data || { users: [], totalInCirculation: 0 });
       setFlashSales(flashRes?.data || []);
+      setPayouts(payoutsRes?.data || []);
+      setDisputes(disputesRes?.data || []);
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -571,6 +579,96 @@ ${url}`);
       {/* =====================
           REVIEWS TAB
       ===================== */}
+      {tab === "Payouts" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Seller Payout Requests</h2>
+          {payouts.length === 0 ? <p style={{ color: "#888" }}>No payout requests yet.</p> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {payouts.map(p => (
+                <div key={p._id} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <p style={{ color: "#fff", fontWeight: "700", fontSize: "16px", margin: "0 0 4px" }}>N{p.amount.toLocaleString()} — {p.storeName}</p>
+                      <p style={{ color: "#888", fontSize: "13px", margin: "0 0 2px" }}>{p.bankName} | {p.accountNumber} | {p.accountName}</p>
+                      <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>{new Date(p.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "700", background: p.status === "paid" ? "#0a2a1a" : p.status === "rejected" ? "#2a1010" : "#1a1a0a", color: p.status === "paid" ? "#22c55e" : p.status === "rejected" ? "#f87171" : "#fbbf24" }}>{p.status.toUpperCase()}</span>
+                      {p.status === "pending" && (
+                        <>
+                          <button onClick={async () => {
+                            const res = await axios.put(`${API}/api/admin/payouts/${p._id}`, { status: "paid" }, { headers });
+                            setPayouts(payouts.map(x => x._id === p._id ? res.data.data : x));
+                          }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Mark Paid</button>
+                          <button onClick={async () => {
+                            const note = prompt("Reason for rejection:");
+                            if (!note) return;
+                            const res = await axios.put(`${API}/api/admin/payouts/${p._id}`, { status: "rejected", note }, { headers });
+                            setPayouts(payouts.map(x => x._id === p._id ? res.data.data : x));
+                          }} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Reject</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {tab === "Disputes" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Customer Disputes</h2>
+          {selectedDispute ? (
+            <div>
+              <button onClick={() => setSelectedDispute(null)} style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>Back</button>
+              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <h3 style={{ color: "#fff", margin: "0 0 8px" }}>{selectedDispute.subject}</h3>
+                <p style={{ color: "#888", fontSize: "13px", margin: "0 0 4px" }}>Customer: {selectedDispute.customerEmail}</p>
+                <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>Seller: {selectedDispute.sellerName}</p>
+                <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                  {["resolved", "closed"].map(s => (
+                    <button key={s} onClick={async () => {
+                      const res = await axios.put(`${API}/api/admin/disputes/${selectedDispute._id}`, { status: s }, { headers });
+                      setSelectedDispute(res.data.data);
+                      setDisputes(disputes.map(d => d._id === selectedDispute._id ? res.data.data : d));
+                    }} style={{ padding: "6px 14px", background: s === "resolved" ? "#22c55e" : "#333", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>{s.charAt(0).toUpperCase() + s.slice(1)}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
+                {selectedDispute.messages.map((m, i) => (
+                  <div key={i} style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "10px", padding: "12px" }}>
+                    <p style={{ color: "#f97316", fontSize: "11px", fontWeight: "700", margin: "0 0 4px" }}>{m.sender} ({m.senderType})</p>
+                    <p style={{ color: "#fff", fontSize: "14px", margin: 0 }}>{m.message}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input value={disputeReply} onChange={e => setDisputeReply(e.target.value)} placeholder="Admin response..." style={{ flex: 1, padding: "10px 14px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "#fff", outline: "none" }} />
+                <button onClick={async () => {
+                  if (!disputeReply.trim()) return;
+                  const res = await axios.post(`${API}/api/disputes/${selectedDispute._id}/reply`, { message: disputeReply, sender: "TechMart Admin", senderType: "admin" });
+                  setSelectedDispute(res.data.data);
+                  setDisputeReply("");
+                }} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700" }}>Send</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {disputes.length === 0 ? <p style={{ color: "#888" }}>No disputes yet.</p> : disputes.map(d => (
+                <div key={d._id} onClick={() => setSelectedDispute(d)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{d.subject}</p>
+                    <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: "700", background: d.status === "resolved" ? "#0a2a1a" : "#2a1a0a", color: d.status === "resolved" ? "#22c55e" : "#fbbf24" }}>{d.status}</span>
+                  </div>
+                  <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>{d.customerEmail} vs {d.sellerName}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {tab === "Flash Sales" && (
         <div>
           <h2 style={{ color: "#fff", marginBottom: "20px" }}>Flash Sales</h2>
@@ -742,6 +840,16 @@ ${url}`);
                           setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
                         }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Approve</button>
                       )}
+                      <button onClick={async () => {
+                        const res = await axios.put(`${API}/api/admin/sellers/${s._id}/verify`, { verified: !s.verified }, { headers });
+                        setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
+                      }} style={{ background: s.verified ? "#1d4ed8" : "#333", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>{s.verified ? "Unverify" : "Verify"}</button>
+                      <button onClick={async () => {
+                        const commission = prompt("Set commission % (current: " + (s.commission || 10) + "%):");
+                        if (!commission) return;
+                        const res = await axios.put(`${API}/api/admin/sellers/${s._id}/commission`, { commission }, { headers });
+                        setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
+                      }} style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Commission</button>
                       {s.status !== "rejected" && (
                         <button onClick={async () => {
                           const res = await axios.put(`${API}/api/admin/sellers/${s._id}`, { status: "rejected" }, { headers });
