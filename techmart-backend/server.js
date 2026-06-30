@@ -1451,6 +1451,267 @@ app.get("/api/ai/inventory-forecast", adminOnly, async (req, res) => {
   }
 });
 
+
+/* ===========================
+   AI COMMERCE ENDPOINTS
+=========================== */
+
+// 1. AI SEARCH - Natural language product search
+app.post("/api/ai/search", async (req, res) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Query is required" });
+
+    const products = await Product.find({ stock: { $gt: 0 } });
+    const productList = products.map(p => `ID:${p._id} | ${p.name} | N${p.price} | ${p.category} | Stock:${p.stock} | ${p.description?.substring(0, 100)}`).join("\n");
+
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `You are TechMart's AI search engine. Given a customer's natural language query and a list of products, return the IDs of the most relevant products (max 10). Only return a JSON array of IDs like: ["id1","id2"]. No explanation.`
+          },
+          {
+            role: "user",
+            content: `Query: "${query}"\n\nProducts:\n${productList}`
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.1
+      },
+      { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
+    );
+
+    const text = response.data.choices[0].message.content.trim();
+    let ids = [];
+    try {
+      ids = JSON.parse(text);
+    } catch {
+      const match = text.match(/\[.*?\]/s);
+      if (match) ids = JSON.parse(match[0]);
+    }
+
+    const results = products.filter(p => ids.includes(p._id.toString()));
+    res.json({ success: true, query, results, total: results.length });
+  } catch (err) {
+    console.error("AI search error:", err.message);
+    res.status(500).json({ error: "AI search failed" });
+  }
+});
+
+// 2. AI PRODUCT RECOMMENDATIONS
+app.post("/api/ai/recommendations", async (req, res) => {
+  try {
+    const { productId, cartItems, userId } = req.body;
+    const products = await Product.find({ stock: { $gt: 0 } });
+
+    let context = "";
+    if (productId) {
+      const current = products.find(p => p._id.toString() === productId);
+      if (current) context += `Currently viewing: ${current.name} (${current.category}) at N${current.price}\n`;
+    }
+    if (cartItems?.length) {
+      context += `In cart: ${cartItems.map(i => i.name).join(", ")}\n`;
+    }
+
+    const productList = products
+      .filter(p => p._id.toString() !== productId)
+      .map(p => `ID:${p._id} | ${p.name} | N${p.price} | ${p.category}`)
+      .join("\n");
+
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `You are TechMart's recommendation engine. Based on customer context, recommend the 6 most relevant products. Return only a JSON array of IDs: ["id1","id2",...]. No explanation.`
+          },
+          {
+            role: "user",
+            content: `Context:\n${context}\nAvailable products:\n${productList}`
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.3
+      },
+      { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
+    );
+
+    const text = response.data.choices[0].message.content.trim();
+    let ids = [];
+    try { ids = JSON.parse(text); } catch { const m = text.match(/\[.*?\]/s); if (m) ids = JSON.parse(m[0]); }
+
+    const results = products.filter(p => ids.includes(p._id.toString())).slice(0, 6);
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error("AI recommendations error:", err.message);
+    res.status(500).json({ error: "Failed to get recommendations" });
+  }
+});
+
+// 3. AI BUNDLE SUGGESTIONS
+app.post("/api/ai/bundles", async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const otherProducts = await Product.find({ _id: { $ne: productId }, stock: { $gt: 0 } });
+    const productList = otherProducts.map(p => `ID:${p._id} | ${p.name} | N${p.price} | ${p.category}`).join("\n");
+
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `You are TechMart's bundle suggestion engine. Suggest 3 complementary products that go well with the main product. Return only a JSON array of IDs: ["id1","id2","id3"]. No explanation.`
+          },
+          {
+            role: "user",
+            content: `Main product: ${product.name} (${product.category}) at N${product.price}\n\nAvailable products:\n${productList}`
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.3
+      },
+      { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
+    );
+
+    const text = response.data.choices[0].message.content.trim();
+    let ids = [];
+    try { ids = JSON.parse(text); } catch { const m = text.match(/\[.*?\]/s); if (m) ids = JSON.parse(m[0]); }
+
+    const bundleProducts = await Product.find({ _id: { $in: ids }, stock: { $gt: 0 } });
+    const bundleTotal = product.price + bundleProducts.reduce((sum, p) => sum + p.price, 0);
+    const bundleDiscount = Math.round(bundleTotal * 0.05);
+
+    res.json({ success: true, mainProduct: product, bundleProducts, bundleTotal, bundleDiscount, bundlePrice: bundleTotal - bundleDiscount });
+  } catch (err) {
+    console.error("AI bundle error:", err.message);
+    res.status(500).json({ error: "Failed to get bundle suggestions" });
+  }
+});
+
+// 4. AI PRODUCT DESCRIPTION GENERATOR
+app.post("/api/ai/generate-description", async (req, res) => {
+  try {
+    const { productName, category, price, keyFeatures } = req.body;
+    if (!productName) return res.status(400).json({ error: "Product name is required" });
+
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `You are TechMart's product description writer. Write compelling, SEO-friendly product descriptions for Nigerian electronics marketplace. Be concise (100-150 words), highlight key benefits, and use engaging language. Return only the description text, no extra formatting.`
+          },
+          {
+            role: "user",
+            content: `Product: ${productName}\nCategory: ${category || "Electronics"}\nPrice: N${price || ""}\nKey Features: ${keyFeatures || "Not specified"}\n\nWrite a compelling product description.`
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      },
+      { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
+    );
+
+    const description = response.data.choices[0].message.content.trim();
+    res.json({ success: true, description });
+  } catch (err) {
+    console.error("AI description error:", err.message);
+    res.status(500).json({ error: "Failed to generate description" });
+  }
+});
+
+// 5. AI REVIEW SUMMARY
+app.get("/api/ai/review-summary/:productId", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const approvedReviews = product.reviews?.filter(r => r.approved) || [];
+    if (approvedReviews.length === 0) return res.json({ success: true, summary: null, reviewCount: 0 });
+
+    const reviewText = approvedReviews.map(r => `${r.stars}/5 stars: ${r.comment}`).join("\n");
+
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `You are TechMart's review summarizer. Summarize customer reviews in 2-3 sentences. Mention what customers love and any concerns. Be balanced and factual. Return only the summary text.`
+          },
+          {
+            role: "user",
+            content: `Product: ${product.name}\nReviews:\n${reviewText}`
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.3
+      },
+      { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
+    );
+
+    const summary = response.data.choices[0].message.content.trim();
+    res.json({ success: true, summary, reviewCount: approvedReviews.length, avgRating: product.rating });
+  } catch (err) {
+    console.error("AI review summary error:", err.message);
+    res.status(500).json({ error: "Failed to generate review summary" });
+  }
+});
+
+// 6. AI INVENTORY FORECASTING
+app.get("/api/ai/inventory-forecast", adminOnly, async (req, res) => {
+  try {
+    const products = await Product.find();
+    const orders = await Order.find({ status: { $in: ["Paid", "Delivered", "Shipped"] }, createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } });
+
+    // Calculate sales velocity per product
+    const salesMap = {};
+    orders.forEach(o => {
+      o.items?.forEach(item => {
+        const id = item._id?.toString() || item.productId?.toString();
+        if (id) salesMap[id] = (salesMap[id] || 0) + (item.quantity || 1);
+      });
+    });
+
+    const forecasts = products.map(p => {
+      const sold30Days = salesMap[p._id.toString()] || 0;
+      const dailyVelocity = sold30Days / 30;
+      const daysUntilStockout = dailyVelocity > 0 ? Math.floor(p.stock / dailyVelocity) : null;
+      const reorderSuggestion = dailyVelocity > 0 ? Math.ceil(dailyVelocity * 30) : 0;
+
+      return {
+        productId: p._id,
+        name: p.name,
+        currentStock: p.stock,
+        sold30Days,
+        dailyVelocity: dailyVelocity.toFixed(2),
+        daysUntilStockout,
+        reorderSuggestion,
+        status: daysUntilStockout === null ? "slow" : daysUntilStockout <= 7 ? "critical" : daysUntilStockout <= 14 ? "low" : "healthy"
+      };
+    }).sort((a, b) => (a.daysUntilStockout || 999) - (b.daysUntilStockout || 999));
+
+    res.json({ success: true, forecasts, generatedAt: new Date() });
+  } catch (err) {
+    console.error("AI forecast error:", err.message);
+    res.status(500).json({ error: "Failed to generate forecast" });
+  }
+});
+
 /* ===========================
    FLASH SALE ENDPOINTS
 =========================== */
