@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import AIDescriptionGenerator from "../../components/AIDescriptionGenerator";
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function SellerDashboard() {
@@ -267,6 +268,9 @@ export default function SellerDashboard() {
               <input placeholder="Stock *" type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} style={inp} />
               <input placeholder="Category" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} style={inp} />
               <textarea placeholder="Description" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} style={{ ...inp, height: "80px", resize: "vertical" }} />
+              <AIDescriptionGenerator
+                onGenerated={(desc) => setNewProduct(prev => ({...prev, description: desc}))}
+              />
               <label style={{ display: "inline-block", padding: "10px 20px", background: "#333", color: "#fff", borderRadius: "8px", cursor: "pointer", marginBottom: "12px" }}>
                 {uploading ? "Uploading..." : "Upload Images"}
                 <input type="file" accept="image/*" multiple onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />

@@ -20,6 +20,7 @@ import Policy from "./pages/Policy";
 import ChatPage from "./pages/ChatPage";
 import SellerApply from "./pages/seller/SellerApply";
 import Account from "./pages/Account";
+import AISearch from "./pages/AISearch";
 import SellerLogin from "./pages/seller/SellerLogin";
 import SellerDashboard from "./pages/seller/SellerDashboard";
 
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/seller/apply" element={<SellerApply />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/ai-search" element={<AISearch />} />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
         </Routes>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AIInventoryForecast from "../components/AIInventoryForecast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -8,7 +9,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -614,6 +615,13 @@ ${url}`);
               ))}
             </div>
           )}
+        </div>
+      )}
+      {tab === "AI Forecast" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "8px" }}>AI Inventory Forecast</h2>
+          <p style={{ color: "#888", marginBottom: "20px" }}>AI analyzes your sales velocity to predict stockouts and suggest reorder quantities.</p>
+          <AIInventoryForecast headers={headers} />
         </div>
       )}
       {tab === "Disputes" && (

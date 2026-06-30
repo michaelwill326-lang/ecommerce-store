@@ -329,7 +329,12 @@ export default function ProductDetail() {
         </div>
       </div>
 
+      <AIReviewSummary productId={product._id} />
       <ReviewSection product={product} onRefresh={fetchProduct} />
+      <AIBundle productId={product._id} onAddBundle={(bundleProducts) => {
+        bundleProducts.forEach(p => addToCart(p));
+        alert("Bundle added to cart!");
+      }} />
 
       {/* YOU MAY ALSO LIKE */}
       {recommendations.length > 0 && (

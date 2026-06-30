@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import FlashSaleBanner from "../components/FlashSaleBanner";
 import { Link } from "react-router-dom";
+import FlashSaleBanner from "../components/FlashSaleBanner";
 
 const CATEGORIES = ["All", "Phones", "Laptops", "Electronics", "Audio", "Accessories", "Gaming", "Computers", "Wearables", "Printers"];
 const SORT_OPTIONS = [
@@ -92,8 +92,11 @@ export default function Home() {
         <FlashSaleBanner />
 
         {/* SEARCH BAR */}
-        <div style={{ marginBottom: "16px" }}>
-          <input type="text" placeholder="🔍 Search products..." value={search} onChange={e=>setSearch(e.target.value)} className="tm-search" />
+        <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
+          <input type="text" placeholder="🔍 Search products..." value={search} onChange={e=>setSearch(e.target.value)} className="tm-search" style={{ flex: 1 }} />
+          <Link to="/ai-search" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "12px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", borderRadius: "999px", textDecoration: "none", fontWeight: "700", fontSize: "13px", whiteSpace: "nowrap", flexShrink: 0 }}>
+            🤖 AI Search
+          </Link>
         </div>
 
         {/* CATEGORY PILLS */}
