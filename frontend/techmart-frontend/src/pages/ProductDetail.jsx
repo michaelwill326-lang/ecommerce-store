@@ -6,6 +6,7 @@ import { useWishlist } from "../context/WishlistContext";
 import axios from "axios";
 import ReviewSection from "../components/ReviewSection";
 import AIReviewSummary from "../components/AIReviewSummary";
+import AIBundle from "../components/AIBundle";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 const FALLBACK_IMG = "https://placehold.co/500x400?text=No+Image";
