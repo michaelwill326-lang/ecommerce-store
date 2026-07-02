@@ -21,6 +21,7 @@ import ChatPage from "./pages/ChatPage";
 import SellerApply from "./pages/seller/SellerApply";
 import Account from "./pages/Account";
 import AISearch from "./pages/AISearch";
+import TechMartPay from "./pages/TechMartPay";
 import SellerLogin from "./pages/seller/SellerLogin";
 import SellerDashboard from "./pages/seller/SellerDashboard";
 
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/seller/apply" element={<SellerApply />} />
           <Route path="/account" element={<Account />} />
           <Route path="/ai-search" element={<AISearch />} />
+          <Route path="/pay" element={<TechMartPay />} />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
         </Routes>

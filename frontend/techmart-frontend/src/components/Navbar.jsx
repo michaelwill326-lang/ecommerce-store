@@ -70,6 +70,7 @@ export default function Navbar() {
           <div style={styles.desktopLinks}>
             <Link to="/" style={linkStyle("/")}>Home</Link>
             <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
+            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "#f97316" : "#22c55e", fontWeight: "700" }}>Pay</Link>
 
             {user?.role === "admin" && (
               <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>

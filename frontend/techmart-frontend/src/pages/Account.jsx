@@ -68,6 +68,7 @@ export default function Account() {
             <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "14px", margin: "0 0 8px" }}>TechMart Wallet Balance</p>
             <p style={{ color: "#fff", fontSize: "36px", fontWeight: "900", margin: "0 0 8px" }}>₦{(wallet.balance || 0).toLocaleString()}</p>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px", margin: 0 }}>Earn 2% cashback on every order</p>
+            <Link to="/pay" style={{ display: "inline-block", marginTop: "12px", padding: "8px 20px", background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: "999px", textDecoration: "none", fontWeight: "700", fontSize: "13px" }}>Open TechMart Pay →</Link>
           </div>
 
           {/* How it works */}
