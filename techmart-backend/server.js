@@ -117,6 +117,9 @@ const User = mongoose.model(
       reference: String,
       createdAt: { type: Date, default: Date.now }
     }],
+    virtualAccountNumber: { type: String, default: null },
+    virtualAccountBank: { type: String, default: null },
+    paystackCustomerCode: { type: String, default: null },
     createdAt: { type: Date, default: Date.now }
   })
 );
@@ -635,6 +638,236 @@ app.post("/api/admin/fix-categories", adminOnly, async (req, res) => {
 });
 
 
+
+/* ===========================
+   TECHMART PAY
+=========================== */
+
+// 1. Create/Get Virtual Account for wallet funding
+app.post("/api/pay/virtual-account", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    // Check if user already has a virtual account
+    if (user.virtualAccountNumber) {
+      return res.json({ success: true, account: { accountNumber: user.virtualAccountNumber, bankName: user.virtualAccountBank, accountName: user.name } });
+    }
+
+    // Create Paystack customer first
+    const customerRes = await axios.post(
+      "https://api.paystack.co/customer",
+      { email: user.email, first_name: user.name.split(" ")[0], last_name: user.name.split(" ")[1] || user.name },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+    const customerCode = customerRes.data.data.customer_code;
+
+    // Create dedicated virtual account
+    const vaRes = await axios.post(
+      "https://api.paystack.co/dedicated_account",
+      { customer: customerCode, preferred_bank: "wema-bank" },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    const va = vaRes.data.data;
+    await User.findByIdAndUpdate(req.user.id, {
+      virtualAccountNumber: va.account_number,
+      virtualAccountBank: va.bank?.name || "Wema Bank",
+      paystackCustomerCode: customerCode
+    });
+
+    res.json({ success: true, account: { accountNumber: va.account_number, bankName: va.bank?.name || "Wema Bank", accountName: user.name } });
+  } catch (err) {
+    console.error("Virtual account error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Failed to create virtual account" });
+  }
+});
+
+// 2. Wallet to Wallet Transfer
+app.post("/api/pay/send", auth, async (req, res) => {
+  try {
+    const { recipientEmail, amount, note } = req.body;
+    if (!recipientEmail || !amount) return res.status(400).json({ error: "Recipient email and amount are required" });
+    if (Number(amount) < 100) return res.status(400).json({ error: "Minimum transfer is N100" });
+
+    const sender = await User.findById(req.user.id);
+    const recipient = await User.findOne({ email: recipientEmail });
+
+    if (!recipient) return res.status(404).json({ error: "No TechMart user found with that email" });
+    if (sender.email === recipientEmail) return res.status(400).json({ error: "You cannot send money to yourself" });
+    if ((sender.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    const reference = "TXF-" + Date.now();
+
+    // Debit sender
+    sender.walletBalance = (sender.walletBalance || 0) - Number(amount);
+    sender.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `Transfer to ${recipient.name} (${recipientEmail})${note ? " — " + note : ""}`,
+      reference
+    });
+    await sender.save();
+
+    // Credit recipient
+    recipient.walletBalance = (recipient.walletBalance || 0) + Number(amount);
+    recipient.walletTransactions.push({
+      type: "credit",
+      amount: Number(amount),
+      description: `Transfer from ${sender.name}${note ? " — " + note : ""}`,
+      reference
+    });
+    await recipient.save();
+
+    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} sent to ${recipient.name}` });
+  } catch (err) {
+    console.error("Transfer error:", err.message);
+    res.status(500).json({ error: "Transfer failed" });
+  }
+});
+
+// 3. Withdraw to Bank Account
+app.post("/api/pay/withdraw", auth, async (req, res) => {
+  try {
+    const { amount, bankCode, accountNumber, accountName } = req.body;
+    if (!amount || !bankCode || !accountNumber || !accountName) return res.status(400).json({ error: "All fields are required" });
+    if (Number(amount) < 500) return res.status(400).json({ error: "Minimum withdrawal is N500" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    // Create transfer recipient on Paystack
+    const recipientRes = await axios.post(
+      "https://api.paystack.co/transferrecipient",
+      { type: "nuban", name: accountName, account_number: accountNumber, bank_code: bankCode, currency: "NGN" },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+    const recipientCode = recipientRes.data.data.recipient_code;
+
+    // Initiate transfer
+    const reference = "WTH-" + Date.now();
+    await axios.post(
+      "https://api.paystack.co/transfer",
+      { source: "balance", amount: Number(amount) * 100, recipient: recipientCode, reason: `TechMart withdrawal by ${user.name}`, reference },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    // Debit wallet
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `Withdrawal to ${accountName} (${accountNumber})`,
+      reference
+    });
+    await user.save();
+
+    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} withdrawal initiated. Arrives in 1-2 minutes.` });
+  } catch (err) {
+    console.error("Withdrawal error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Withdrawal failed. Please try again." });
+  }
+});
+
+// 4. Get Nigerian Banks List
+app.get("/api/pay/banks", async (req, res) => {
+  try {
+    const response = await axios.get(
+      "https://api.paystack.co/bank?currency=NGN&use_cursor=false",
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+    res.json(response.data.data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch banks" });
+  }
+});
+
+// 5. Verify Bank Account
+app.post("/api/pay/verify-account", auth, async (req, res) => {
+  try {
+    const { accountNumber, bankCode } = req.body;
+    const response = await axios.get(
+      `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+    res.json({ success: true, accountName: response.data.data.account_name });
+  } catch (err) {
+    res.status(500).json({ error: "Could not verify account" });
+  }
+});
+
+// 6. Bill Payments (Airtime via Paystack)
+app.post("/api/pay/airtime", auth, async (req, res) => {
+  try {
+    const { phone, amount, network } = req.body;
+    if (!phone || !amount || !network) return res.status(400).json({ error: "Phone, amount and network are required" });
+    if (Number(amount) < 50) return res.status(400).json({ error: "Minimum airtime is N50" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    // Network to Paystack provider code mapping
+    const providerMap = { MTN: "MTN", Airtel: "AIR", Glo: "GLO", "9mobile": "ETISALAT" };
+    const provider = providerMap[network];
+    if (!provider) return res.status(400).json({ error: "Invalid network" });
+
+    const reference = "AIR-" + Date.now();
+
+    // Call Paystack VAS (Value Added Services) for airtime
+    const response = await axios.post(
+      "https://api.paystack.co/charge",
+      {
+        email: user.email,
+        amount: Number(amount) * 100,
+        mobile_money: { phone, provider },
+        reference
+      },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    // Debit wallet
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `${network} airtime for ${phone}`,
+      reference
+    });
+    await user.save();
+
+    res.json({ success: true, reference, message: `N${amount} ${network} airtime sent to ${phone}` });
+  } catch (err) {
+    console.error("Airtime error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Airtime purchase failed" });
+  }
+});
+
+// 7. TechMart Pay Dashboard Data
+app.get("/api/pay/dashboard", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank");
+    
+    // Recent transactions (last 10)
+    const recent = [...(user.walletTransactions || [])].reverse().slice(0, 10);
+    
+    // Stats
+    const totalIn = (user.walletTransactions || []).filter(t => t.type === "credit").reduce((sum, t) => sum + t.amount, 0);
+    const totalOut = (user.walletTransactions || []).filter(t => t.type === "debit").reduce((sum, t) => sum + t.amount, 0);
+
+    res.json({
+      balance: user.walletBalance || 0,
+      virtualAccount: user.virtualAccountNumber ? {
+        accountNumber: user.virtualAccountNumber,
+        bankName: user.virtualAccountBank || "Wema Bank",
+        accountName: user.name
+      } : null,
+      recentTransactions: recent,
+      stats: { totalIn, totalOut, transactionCount: (user.walletTransactions || []).length }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch dashboard" });
+  }
+});
+
 /* ===========================
    MARKETPLACE ENDPOINTS
 =========================== */
@@ -932,7 +1165,7 @@ app.get("/api/seller/messages/customer", auth, async (req, res) => {
 
 /* ===========================
    AI COMMERCE ENDPOINTS
-=========================== */
+// ===========================n// AI ASSISTANT ROUTERn// ===========================napp.post("/api/ai/assistant", async (req, res) => {n  try {n    const { message } = req.body;nn    const response = await axios.post(n      "https://api.groq.com/openai/v1/chat/completions",n      {n        model: "llama-3.3-70b-versatile",n        messages: [n          {n            role: "system",n            content: `Classify intent into: search, recommend, bundle, support, general. Return JSON only.`n          },n          { role: "user", content: message }n        ],n        temperature: 0.2n      },n      {n        headers: {n          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,n          "Content-Type": "application/json"n        }n      }n    );nn    let parsed;n    try {n      parsed = JSON.parse(response.data.choices[0].message.content);n    } catch {n      return res.json({ type: "text", message: "Could not understand request." });n    }nn    if (parsed.intent === "search") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/search`, {n        query: parsed.queryn      });n      return res.json({ type: "products", data: r.data.results });n    }nn    if (parsed.intent === "recommend") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/recommendations`, {n        productId: parsed.productIdn      });n      return res.json({ type: "products", data: r.data.results });n    }nn    if (parsed.intent === "bundle") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/bundles`, {n        productId: parsed.productIdn      });n      return res.json({ type: "bundle", data: r.data });n    }nn    return res.json({ type: "text", message: "Try asking about products or recommendations." });nn  } catch (err) {n    console.error(err.message);n    res.status(500).json({ error: "AI assistant failed" });n  }n});=========================== */
 
 // 1. AI SEARCH - Natural language product search
 app.post("/api/ai/search", async (req, res) => {
@@ -1193,7 +1426,7 @@ app.get("/api/ai/inventory-forecast", adminOnly, async (req, res) => {
 
 /* ===========================
    AI COMMERCE ENDPOINTS
-=========================== */
+// ===========================n// AI ASSISTANT ROUTERn// ===========================napp.post("/api/ai/assistant", async (req, res) => {n  try {n    const { message } = req.body;nn    const response = await axios.post(n      "https://api.groq.com/openai/v1/chat/completions",n      {n        model: "llama-3.3-70b-versatile",n        messages: [n          {n            role: "system",n            content: `Classify intent into: search, recommend, bundle, support, general. Return JSON only.`n          },n          { role: "user", content: message }n        ],n        temperature: 0.2n      },n      {n        headers: {n          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,n          "Content-Type": "application/json"n        }n      }n    );nn    let parsed;n    try {n      parsed = JSON.parse(response.data.choices[0].message.content);n    } catch {n      return res.json({ type: "text", message: "Could not understand request." });n    }nn    if (parsed.intent === "search") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/search`, {n        query: parsed.queryn      });n      return res.json({ type: "products", data: r.data.results });n    }nn    if (parsed.intent === "recommend") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/recommendations`, {n        productId: parsed.productIdn      });n      return res.json({ type: "products", data: r.data.results });n    }nn    if (parsed.intent === "bundle") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/bundles`, {n        productId: parsed.productIdn      });n      return res.json({ type: "bundle", data: r.data });n    }nn    return res.json({ type: "text", message: "Try asking about products or recommendations." });nn  } catch (err) {n    console.error(err.message);n    res.status(500).json({ error: "AI assistant failed" });n  }n});=========================== */
 
 // 1. AI SEARCH - Natural language product search
 app.post("/api/ai/search", async (req, res) => {
@@ -1454,7 +1687,7 @@ app.get("/api/ai/inventory-forecast", adminOnly, async (req, res) => {
 
 /* ===========================
    AI COMMERCE ENDPOINTS
-=========================== */
+// ===========================n// AI ASSISTANT ROUTERn// ===========================napp.post("/api/ai/assistant", async (req, res) => {n  try {n    const { message } = req.body;nn    const response = await axios.post(n      "https://api.groq.com/openai/v1/chat/completions",n      {n        model: "llama-3.3-70b-versatile",n        messages: [n          {n            role: "system",n            content: `Classify intent into: search, recommend, bundle, support, general. Return JSON only.`n          },n          { role: "user", content: message }n        ],n        temperature: 0.2n      },n      {n        headers: {n          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,n          "Content-Type": "application/json"n        }n      }n    );nn    let parsed;n    try {n      parsed = JSON.parse(response.data.choices[0].message.content);n    } catch {n      return res.json({ type: "text", message: "Could not understand request." });n    }nn    if (parsed.intent === "search") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/search`, {n        query: parsed.queryn      });n      return res.json({ type: "products", data: r.data.results });n    }nn    if (parsed.intent === "recommend") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/recommendations`, {n        productId: parsed.productIdn      });n      return res.json({ type: "products", data: r.data.results });n    }nn    if (parsed.intent === "bundle") {n      const r = await axios.post(`https://techmart-backend-ecbi.onrender.com/api/ai/bundles`, {n        productId: parsed.productIdn      });n      return res.json({ type: "bundle", data: r.data });n    }nn    return res.json({ type: "text", message: "Try asking about products or recommendations." });nn  } catch (err) {n    console.error(err.message);n    res.status(500).json({ error: "AI assistant failed" });n  }n});=========================== */
 
 // 1. AI SEARCH - Natural language product search
 app.post("/api/ai/search", async (req, res) => {
