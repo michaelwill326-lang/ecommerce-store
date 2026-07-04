@@ -59,7 +59,7 @@ export default function TechMartPay() {
       setDashboard(prev => ({ ...prev, virtualAccount: res.data.account }));
       setMsg({ text: "Virtual account created!", type: "success" });
     } catch (err) {
-      setMsg({ text: err.response?.data?.error || "Failed to create virtual account", type: "error" });
+      setMsg({ text: err.response?.data?.error === "Failed to create virtual account" ? "Virtual account funding is coming soon. We're setting this up with our banking partner." : err.response?.data?.error, type: "error" });
     } finally { setVaLoading(false); }
   };
 
