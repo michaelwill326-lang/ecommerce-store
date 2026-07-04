@@ -812,27 +812,48 @@ app.post("/api/pay/airtime", auth, async (req, res) => {
 
     const reference = "AIR-" + Date.now();
 
-    // Call Paystack VAS (Value Added Services) for airtime
-    const response = await axios.post(
-      "https://api.paystack.co/charge",
-      {
-        email: user.email,
-        amount: Number(amount) * 100,
-        mobile_money: { phone, provider },
-        reference
-      },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-    );
-
-    // Debit wallet
+    // Debit wallet first
     user.walletBalance = (user.walletBalance || 0) - Number(amount);
     user.walletTransactions.push({
       type: "debit",
       amount: Number(amount),
       description: `${network} airtime for ${phone}`,
-      reference
+      reference,
+      status: "pending"
     });
     await user.save();
+
+    // Call Flutterwave for airtime fulfillment
+    const networkMap = { MTN: "MTN", Airtel: "AIRTEL", Glo: "GLO", "9mobile": "ETISALAT" };
+    const flwRes = await axios.post(
+      "https://api.flutterwave.com/v3/bills",
+      {
+        country: "NG",
+        customer: phone,
+        amount: Number(amount),
+        recurrence: "ONCE",
+        type: networkMap[network] + "-AIRTIME",
+        reference
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    if (flwRes.data.status !== "success") {
+      user.walletBalance = (user.walletBalance || 0) + Number(amount);
+      user.walletTransactions.push({
+        type: "credit",
+        amount: Number(amount),
+        description: `Refund: failed airtime for ${phone}`,
+        reference: reference + "-REFUND"
+      });
+      await user.save();
+      return res.status(502).json({ error: "Airtime delivery failed. Your wallet has been refunded." });
+    }
 
     res.json({ success: true, reference, message: `N${amount} ${network} airtime sent to ${phone}` });
   } catch (err) {
