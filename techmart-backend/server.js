@@ -3251,3 +3251,7 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
 });
 // deploy trigger
 
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`TechMart Backend running on port ${PORT}`));
+
