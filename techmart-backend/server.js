@@ -3253,4 +3253,3 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
 
 
 
-app.listen(process.env.PORT || 5000, () => console.log("TechMart Backend running"));
