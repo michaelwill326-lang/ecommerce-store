@@ -31,6 +31,11 @@ export default function TechMartPay() {
   const [dataPlans, setDataPlans] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataPlansLoading, setDataPlansLoading] = useState(false);
+  // Electricity state
+  const [elecForm, setElecForm] = useState({ meterNumber: "", disco: "", meterType: "prepaid", amount: "", customerName: "" });
+  const [elecLoading, setElecLoading] = useState(false);
+  const [elecVerified, setElecVerified] = useState(false);
+  const [elecVerifying, setElecVerifying] = useState(false);
 
   // Virtual account state
   const [vaLoading, setVaLoading] = useState(false);
@@ -150,7 +155,36 @@ export default function TechMartPay() {
       setMsg({ text: err.response?.data?.error || "Data purchase failed", type: "error" });
     } finally { setDataLoading(false); }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "History"];
+  const verifyMeter = async () => {
+    if (!elecForm.meterNumber || !elecForm.disco || !elecForm.meterType) {
+      return setMsg({ text: "Please select disco and enter meter number", type: "error" });
+    }
+    setElecVerifying(true);
+    setElecVerified(false);
+    try {
+      const res = await axios.post(`${API}/api/pay/electricity/verify`, elecForm, { headers });
+      setElecForm(prev => ({ ...prev, customerName: res.data.data?.name || res.data.data?.customer_name || "Verified" }));
+      setElecVerified(true);
+      setMsg({ text: "Meter verified successfully", type: "success" });
+    } catch {
+      setMsg({ text: "Could not verify meter. Check the number and try again.", type: "error" });
+    } finally { setElecVerifying(false); }
+  };
+  const payElectricity = async () => {
+    if (!elecVerified) return setMsg({ text: "Please verify your meter first", type: "error" });
+    if (!elecForm.amount || Number(elecForm.amount) < 500) return setMsg({ text: "Minimum payment is N500", type: "error" });
+    setElecLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/pay/electricity`, elecForm, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      setElecForm({ meterNumber: "", disco: "", meterType: "prepaid", amount: "", customerName: "" });
+      setElecVerified(false);
+      fetchDashboard();
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "Payment failed", type: "error" });
+    } finally { setElecLoading(false); }
+  };
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "History"];
   const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -201,6 +235,7 @@ export default function TechMartPay() {
             { icon: "🏦", label: "Withdraw", tab: "Withdraw" },
             { icon: "📱", label: "Airtime", tab: "Airtime" },
             { icon: "📶", label: "Data", tab: "Data" },
+            { icon: "⚡", label: "Electricity", tab: "Electricity" },
           ].map((a, i) => (
             <button key={i} onClick={() => setTab(a.tab)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
               <p style={{ fontSize: "22px", margin: "0 0 4px" }}>{a.icon}</p>
@@ -396,6 +431,47 @@ export default function TechMartPay() {
               <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
               <button onClick={buyData} disabled={dataLoading || !dataForm.planId} style={{ width: "100%", padding: "14px", background: dataForm.planId ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: dataForm.planId ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {dataLoading ? "Processing..." : dataForm.planName ? `Buy ${dataForm.planName}` : "Select a plan"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ELECTRICITY TAB */}
+        {tab === "Electricity" && (
+          <div>
+            <h2 style={{ color: "#fff", marginBottom: "16px" }}>⚡ Electricity Payment</h2>
+            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Distribution Company</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", marginBottom: "16px" }}>
+                {["IKEDC", "EKEDC", "AEDC", "PHEDC", "KAEDCO", "IBEDC", "KEDCO", "EEDC"].map(d => (
+                  <button key={d} onClick={() => { setElecForm({...elecForm, disco: d}); setElecVerified(false); }}
+                    style={{ padding: "10px", borderRadius: "8px", border: `2px solid ${elecForm.disco === d ? "#f97316" : "#333"}`, background: elecForm.disco === d ? "#1a0a00" : "#111", color: elecForm.disco === d ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "12px" }}>{d}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                {["prepaid", "postpaid"].map(t => (
+                  <button key={t} onClick={() => setElecForm({...elecForm, meterType: t, customerName: ""})} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `2px solid ${elecForm.meterType === t ? "#f97316" : "#333"}`, background: elecForm.meterType === t ? "#1a0a00" : "#111", color: elecForm.meterType === t ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer", textTransform: "capitalize" }}>{t}</button>
+                ))}
+              </div>
+              <input placeholder="Meter number" value={elecForm.meterNumber} onChange={e => { setElecForm({...elecForm, meterNumber: e.target.value}); setElecVerified(false); }} style={inp} />
+              {!elecVerified ? (
+                <button onClick={verifyMeter} disabled={elecVerifying} style={{ width: "100%", padding: "12px", background: "#1a1a2a", border: "1px solid #f97316", color: "#f97316", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "12px" }}>
+                  {elecVerifying ? "Verifying..." : "Verify Meter"}
+                </button>
+              ) : (
+                <div style={{ background: "#0a2a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{elecForm.customerName}</strong></p>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+                {[500, 1000, 2000, 5000].map(a => (
+                  <button key={a} onClick={() => setElecForm({...elecForm, amount: String(a)})} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${elecForm.amount === String(a) ? "#f97316" : "#333"}`, background: elecForm.amount === String(a) ? "#1a0a00" : "#111", color: elecForm.amount === String(a) ? "#f97316" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>₦{a.toLocaleString()}</button>
+                ))}
+              </div>
+              <input placeholder="Or enter custom amount (min N500)" type="number" value={elecForm.amount} onChange={e => setElecForm({...elecForm, amount: e.target.value})} style={inp} />
+              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={payElectricity} disabled={elecLoading || !elecVerified} style={{ width: "100%", padding: "14px", background: elecVerified ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: elecVerified ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+                {elecLoading ? "Processing..." : `Pay ₦${Number(elecForm.amount || 0).toLocaleString()} Electricity`}
               </button>
             </div>
           </div>
