@@ -120,6 +120,8 @@ const User = mongoose.model(
     virtualAccountNumber: { type: String, default: null },
     virtualAccountBank: { type: String, default: null },
     paystackCustomerCode: { type: String, default: null },
+    walletPin: { type: String, default: null },
+    walletPinSet: { type: Boolean, default: false },
     fraudScore: { type: Number, default: 0 },
     isFlagged: { type: Boolean, default: false },
     fraudFlags: [{
@@ -1021,6 +1023,117 @@ app.post("/api/pay/electricity", auth, async (req, res) => {
   } catch (err) {
     console.error("Electricity error:", err.response?.data || err.message);
     res.status(500).json({ error: "Electricity payment failed" });
+  }
+});
+
+
+// 12. Verify Cable TV Smartcard
+app.post("/api/pay/cabletv/verify", auth, async (req, res) => {
+  try {
+    const { smartcardNumber, provider } = req.body;
+    if (!smartcardNumber || !provider) return res.status(400).json({ error: "Smartcard number and provider are required" });
+
+    const response = await axios.get(
+      `https://www.nellobytesystems.com/APIVerifyCableTVV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&CableTV=${provider}&SmartCardNo=${smartcardNumber}`
+    );
+    res.json({ success: true, data: response.data });
+  } catch (err) {
+    console.error("Smartcard verify error:", err.message);
+    res.status(500).json({ error: "Failed to verify smartcard" });
+  }
+});
+
+// 13. Get Cable TV Packages
+app.get("/api/pay/cabletv/plans/:provider", auth, async (req, res) => {
+  try {
+    const { provider } = req.params;
+    const response = await axios.get(
+      `https://www.nellobytesystems.com/APIGetCableTVV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&CableTV=${provider}`
+    );
+    res.json({ success: true, plans: response.data });
+  } catch (err) {
+    console.error("Cable TV plans error:", err.message);
+    res.status(500).json({ error: "Failed to fetch cable TV plans" });
+  }
+});
+
+// 14. Pay Cable TV Subscription
+app.post("/api/pay/cabletv", auth, async (req, res) => {
+  try {
+    const { smartcardNumber, provider, planId, planName, amount, customerName } = req.body;
+    if (!smartcardNumber || !provider || !planId || !amount) return res.status(400).json({ error: "All fields are required" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    const reference = "CATV-" + Date.now();
+
+    // Debit wallet first
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `${provider} ${planName || planId} for smartcard ${smartcardNumber}`,
+      reference,
+      status: "pending"
+    });
+    await user.save();
+
+    // TODO: Replace with live Clubkonnect API call when credentials are active
+    // const ckUrl = `https://www.nellobytesystems.com/APICableTVV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&CableTV=${provider}&SmartCardNo=${smartcardNumber}&PackageCode=${planId}&Amount=${amount}&RequestID=${reference}&CallBackURL=`;
+    // const ckRes = await axios.get(ckUrl);
+
+    analyzeFraud(user, "cabletv_payment", { provider, planId, amount, reference }).catch(() => {});
+    res.json({ success: true, reference, message: `${provider} ${planName || planId} subscription successful` });
+  } catch (err) {
+    console.error("Cable TV error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Cable TV payment failed" });
+  }
+});
+
+
+// Set Wallet PIN
+app.post("/api/pay/pin/set", auth, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) return res.status(400).json({ error: "PIN must be exactly 4 digits" });
+    const hashed = await bcrypt.hash(pin, 10);
+    await User.findByIdAndUpdate(req.user.id, { walletPin: hashed, walletPinSet: true });
+    res.json({ success: true, message: "Wallet PIN set successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to set PIN" });
+  }
+});
+
+// Verify Wallet PIN
+app.post("/api/pay/pin/verify", auth, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) return res.status(400).json({ error: "PIN is required" });
+    const user = await User.findById(req.user.id);
+    if (!user.walletPinSet) return res.status(400).json({ error: "No PIN set. Please set a wallet PIN first." });
+    const match = await bcrypt.compare(pin, user.walletPin);
+    if (!match) return res.status(401).json({ error: "Incorrect PIN" });
+    res.json({ success: true, message: "PIN verified" });
+  } catch (err) {
+    res.status(500).json({ error: "PIN verification failed" });
+  }
+});
+
+// Change Wallet PIN
+app.post("/api/pay/pin/change", auth, async (req, res) => {
+  try {
+    const { oldPin, newPin } = req.body;
+    if (!oldPin || !newPin) return res.status(400).json({ error: "Old and new PIN are required" });
+    if (!/^\d{4}$/.test(newPin)) return res.status(400).json({ error: "New PIN must be exactly 4 digits" });
+    const user = await User.findById(req.user.id);
+    const match = await bcrypt.compare(oldPin, user.walletPin);
+    if (!match) return res.status(401).json({ error: "Incorrect current PIN" });
+    const hashed = await bcrypt.hash(newPin, 10);
+    await User.findByIdAndUpdate(req.user.id, { walletPin: hashed });
+    res.json({ success: true, message: "PIN changed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to change PIN" });
   }
 });
 
