@@ -9,7 +9,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -27,6 +27,7 @@ export default function Admin() {
   });
   const [pendingReviews, setPendingReviews] = useState([]);
   const [flaggedReviews, setFlaggedReviews] = useState([]);
+  const [flaggedUsers, setFlaggedUsers] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [reviewTab, setReviewTab] = useState("pending");
   const [coupons, setCoupons] = useState([]);
@@ -246,6 +247,7 @@ export default function Admin() {
             {t === "Products" && "🛍️ "}
             {t === "Users" && "👥 "}
             {t === "Reviews" && "⭐ "}
+            {t === "Fraud" && "🚨 "}
             {t}
           </button>
         ))}
@@ -617,6 +619,68 @@ ${url}`);
           )}
         </div>
       )}
+      {/* =====================
+          FRAUD TAB
+      ===================== */}
+      {tab === "Fraud" && (
+        <div style={styles.tableCard}>
+          <h2 style={{ color: "#f97316", marginBottom: 16 }}>🚨 Fraud Detection</h2>
+          <button onClick={async () => {
+            try {
+              const res = await axios.get(`${API}/api/admin/fraud/flagged`, { headers });
+              setFlaggedUsers(res.data);
+            } catch { alert("Failed to load flagged users"); }
+          }} style={{ ...styles.addBtn, marginBottom: 16 }}>Load Flagged Users</button>
+          {flaggedUsers.length === 0 ? (
+            <p style={{ color: "#888" }}>No flagged users yet. Click Load to fetch.</p>
+          ) : (
+            <table style={styles.table}>
+              <thead><tr>
+                <th style={styles.th}>User</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Fraud Score</th>
+                <th style={styles.th}>Flags</th>
+                <th style={styles.th}>Wallet</th>
+                <th style={styles.th}>Actions</th>
+              </tr></thead>
+              <tbody>
+                {flaggedUsers.map(u => (
+                  <tr key={u._id}>
+                    <td style={styles.td}>{u.name}</td>
+                    <td style={styles.td}>{u.email}</td>
+                    <td style={styles.td}>
+                      <span style={{ color: u.fraudScore > 70 ? "#dc2626" : u.fraudScore > 40 ? "#f97316" : "#22c55e", fontWeight: 700 }}>
+                        {u.fraudScore}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      {(u.fraudFlags || []).slice(-2).map((f, i) => (
+                        <div key={i} style={{ fontSize: 11, color: f.severity === "high" ? "#dc2626" : "#f97316", marginBottom: 2 }}>
+                          [{f.severity}] {f.reason}
+                        </div>
+                      ))}
+                    </td>
+                    <td style={styles.td}>N{(u.walletBalance || 0).toLocaleString()}</td>
+                    <td style={styles.td}>
+                      <button onClick={async () => {
+                        await axios.post(`${API}/api/admin/fraud/clear/${u._id}`, {}, { headers });
+                        setFlaggedUsers(flaggedUsers.filter(x => x._id !== u._id));
+                      }} style={{ ...styles.approveBtn, marginRight: 6 }}>Clear</button>
+                      <button onClick={async () => {
+                        if (window.confirm("Suspend this user?")) {
+                          await axios.post(`${API}/api/admin/fraud/suspend/${u._id}`, {}, { headers });
+                          setFlaggedUsers(flaggedUsers.filter(x => x._id !== u._id));
+                        }
+                      }} style={{ ...styles.deleteBtn }}>Suspend</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {tab === "AI Forecast" && (
         <div>
           <h2 style={{ color: "#fff", marginBottom: "8px" }}>AI Inventory Forecast</h2>
