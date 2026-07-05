@@ -26,6 +26,11 @@ export default function TechMartPay() {
   // Airtime state
   const [airtimeForm, setAirtimeForm] = useState({ phone: "", amount: "", network: "" });
   const [airtimeLoading, setAirtimeLoading] = useState(false);
+  // Data bundle state
+  const [dataForm, setDataForm] = useState({ phone: "", network: "", planId: "", planName: "", amount: "" });
+  const [dataPlans, setDataPlans] = useState([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataPlansLoading, setDataPlansLoading] = useState(false);
 
   // Virtual account state
   const [vaLoading, setVaLoading] = useState(false);
@@ -121,7 +126,31 @@ export default function TechMartPay() {
     } finally { setAirtimeLoading(false); }
   };
 
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "History"];
+  const fetchDataPlans = async (network) => {
+    setDataPlansLoading(true);
+    setDataPlans([]);
+    try {
+      const res = await axios.get(`${API}/api/pay/data-plans/${network}`, { headers });
+      setDataPlans(res.data.plans || []);
+    } catch { setMsg({ text: "Failed to load data plans", type: "error" }); }
+    finally { setDataPlansLoading(false); }
+  };
+  const buyData = async () => {
+    if (!dataForm.phone || !dataForm.network || !dataForm.planId) {
+      return setMsg({ text: "Please select network, plan and enter phone number", type: "error" });
+    }
+    setDataLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/pay/data`, dataForm, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      setDataForm({ phone: "", network: "", planId: "", planName: "", amount: "" });
+      setDataPlans([]);
+      fetchDashboard();
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "Data purchase failed", type: "error" });
+    } finally { setDataLoading(false); }
+  };
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "History"];
   const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -171,6 +200,7 @@ export default function TechMartPay() {
             { icon: "📤", label: "Send", tab: "Send Money" },
             { icon: "🏦", label: "Withdraw", tab: "Withdraw" },
             { icon: "📱", label: "Airtime", tab: "Airtime" },
+            { icon: "📶", label: "Data", tab: "Data" },
           ].map((a, i) => (
             <button key={i} onClick={() => setTab(a.tab)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
               <p style={{ fontSize: "22px", margin: "0 0 4px" }}>{a.icon}</p>
@@ -329,6 +359,43 @@ export default function TechMartPay() {
               <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
               <button onClick={buyAirtime} disabled={airtimeLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {airtimeLoading ? "Processing..." : `Buy ₦${Number(airtimeForm.amount || 0).toLocaleString()} Airtime`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* DATA TAB */}
+        {tab === "Data" && (
+          <div>
+            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Buy Data Bundle</h2>
+            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                {["MTN", "Airtel", "Glo", "9mobile"].map(n => (
+                  <button key={n} onClick={() => { setDataForm({...dataForm, network: n, planId: "", planName: "", amount: ""}); fetchDataPlans(n); }}
+                    style={{ padding: "12px", borderRadius: "10px", border: `2px solid ${dataForm.network === n ? "#f97316" : "#333"}`, background: dataForm.network === n ? "#1a0a00" : "#111", color: dataForm.network === n ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer" }}>{n}</button>
+                ))}
+              </div>
+              <input placeholder="Phone number (e.g. 08012345678)" value={dataForm.phone} onChange={e => setDataForm({...dataForm, phone: e.target.value})} style={inp} />
+              {dataPlansLoading && <p style={{ color: "#888", fontSize: "13px" }}>Loading plans...</p>}
+              {dataPlans.length > 0 && (
+                <div style={{ maxHeight: "200px", overflowY: "auto", marginBottom: "12px", border: "1px solid #2a2a2a", borderRadius: "10px" }}>
+                  {dataPlans.map((plan, i) => (
+                    <div key={i} onClick={() => setDataForm({...dataForm, planId: plan.id || plan.code || String(i), planName: plan.name || plan.description, amount: String(plan.price || plan.amount)})}
+                      style={{ padding: "12px 16px", borderBottom: "1px solid #222", cursor: "pointer", background: dataForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: dataForm.planId === (plan.id || plan.code || String(i)) ? "#f97316" : "#fff", fontSize: "13px" }}>{plan.name || plan.description}</span>
+                      <span style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {dataForm.planName && (
+                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>Selected: <strong>{dataForm.planName}</strong> — ₦{Number(dataForm.amount || 0).toLocaleString()}</p>
+                </div>
+              )}
+              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={buyData} disabled={dataLoading || !dataForm.planId} style={{ width: "100%", padding: "14px", background: dataForm.planId ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: dataForm.planId ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+                {dataLoading ? "Processing..." : dataForm.planName ? `Buy ${dataForm.planName}` : "Select a plan"}
               </button>
             </div>
           </div>
