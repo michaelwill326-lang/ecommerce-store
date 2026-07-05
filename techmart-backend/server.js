@@ -915,6 +915,63 @@ app.post("/api/pay/airtime", auth, async (req, res) => {
   }
 });
 
+
+// 8. Get Data Bundle Plans
+app.get("/api/pay/data-plans/:network", auth, async (req, res) => {
+  try {
+    const { network } = req.params;
+    const networkMap = { MTN: "MTN", Airtel: "AIRTEL", Glo: "GLO", "9mobile": "9MOBILE" };
+    const networkCode = networkMap[network];
+    if (!networkCode) return res.status(400).json({ error: "Invalid network" });
+
+    const response = await axios.get(
+      `https://www.nellobytesystems.com/APIGetDataBundleV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&MobileNetwork=${networkCode}`
+    );
+    res.json({ success: true, plans: response.data });
+  } catch (err) {
+    console.error("Data plans error:", err.message);
+    res.status(500).json({ error: "Failed to fetch data plans" });
+  }
+});
+
+// 9. Purchase Data Bundle
+app.post("/api/pay/data", auth, async (req, res) => {
+  try {
+    const { phone, network, planId, amount, planName } = req.body;
+    if (!phone || !network || !planId || !amount) return res.status(400).json({ error: "Phone, network, plan and amount are required" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    const networkMap = { MTN: "MTN", Airtel: "AIRTEL", Glo: "GLO", "9mobile": "9MOBILE" };
+    const networkCode = networkMap[network];
+    if (!networkCode) return res.status(400).json({ error: "Invalid network" });
+
+    const reference = "DATA-" + Date.now();
+
+    // Debit wallet first
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `${network} ${planName || planId} data for ${phone}`,
+      reference,
+      status: "pending"
+    });
+    await user.save();
+
+    // TODO: Replace with live Clubkonnect API call when credentials are active
+    // const ckUrl = `https://www.nellobytesystems.com/APIGetDataBundleV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&MobileNetwork=${networkCode}&DataPlan=${planId}&MobileNumber=${phone}&RequestID=${reference}&CallBackURL=`;
+    // const ckRes = await axios.get(ckUrl);
+
+    analyzeFraud(user, "data_purchase", { phone, network, planId, amount, reference }).catch(() => {});
+    res.json({ success: true, reference, message: `${planName || planId} ${network} data sent to ${phone}` });
+  } catch (err) {
+    console.error("Data bundle error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Data purchase failed" });
+  }
+});
+
 // 7. TechMart Pay Dashboard Data
 app.get("/api/pay/dashboard", auth, async (req, res) => {
   try {
