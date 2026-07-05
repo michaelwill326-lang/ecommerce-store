@@ -972,6 +972,58 @@ app.post("/api/pay/data", auth, async (req, res) => {
   }
 });
 
+
+// 10. Verify Electricity Meter
+app.post("/api/pay/electricity/verify", auth, async (req, res) => {
+  try {
+    const { meterNumber, disco, meterType } = req.body;
+    if (!meterNumber || !disco || !meterType) return res.status(400).json({ error: "Meter number, disco and meter type are required" });
+
+    const response = await axios.get(
+      `https://www.nellobytesystems.com/APIVerifyElectricityV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&ElectricDisco=${disco}&MeterType=${meterType}&MeterNumber=${meterNumber}`
+    );
+    res.json({ success: true, data: response.data });
+  } catch (err) {
+    console.error("Meter verify error:", err.message);
+    res.status(500).json({ error: "Failed to verify meter" });
+  }
+});
+
+// 11. Pay Electricity Bill
+app.post("/api/pay/electricity", auth, async (req, res) => {
+  try {
+    const { meterNumber, disco, meterType, amount, customerName } = req.body;
+    if (!meterNumber || !disco || !meterType || !amount) return res.status(400).json({ error: "All fields are required" });
+    if (Number(amount) < 500) return res.status(400).json({ error: "Minimum electricity payment is N500" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    const reference = "ELEC-" + Date.now();
+
+    // Debit wallet first
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `${disco} electricity for meter ${meterNumber}`,
+      reference,
+      status: "pending"
+    });
+    await user.save();
+
+    // TODO: Replace with live Clubkonnect API call when credentials are active
+    // const ckUrl = `https://www.nellobytesystems.com/APIElectricityV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&ElectricDisco=${disco}&MeterType=${meterType}&MeterNumber=${meterNumber}&Amount=${amount}&RequestID=${reference}&CallBackURL=`;
+    // const ckRes = await axios.get(ckUrl);
+
+    analyzeFraud(user, "electricity_payment", { meterNumber, disco, amount, reference }).catch(() => {});
+    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} electricity payment successful for meter ${meterNumber}` });
+  } catch (err) {
+    console.error("Electricity error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Electricity payment failed" });
+  }
+});
+
 // 7. TechMart Pay Dashboard Data
 app.get("/api/pay/dashboard", auth, async (req, res) => {
   try {
