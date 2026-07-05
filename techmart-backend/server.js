@@ -120,6 +120,17 @@ const User = mongoose.model(
     virtualAccountNumber: { type: String, default: null },
     virtualAccountBank: { type: String, default: null },
     paystackCustomerCode: { type: String, default: null },
+    fraudScore: { type: Number, default: 0 },
+    isFlagged: { type: Boolean, default: false },
+    fraudFlags: [{
+      reason: String,
+      severity: { type: String, enum: ["low", "medium", "high"] },
+      details: String,
+      createdAt: { type: Date, default: Date.now }
+    }],
+    loginAttempts: { type: Number, default: 0 },
+    lastLoginAt: { type: Date, default: null },
+    lastLoginIP: { type: String, default: null },
     createdAt: { type: Date, default: Date.now }
   })
 );
@@ -278,6 +289,7 @@ app.post("/api/auth/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+    analyzeFraud(user, "login", { email: user.email, accountAge: Math.floor((Date.now() - new Date(user.createdAt)) / 86400000) + " days" }).catch(() => {});
     res.json({ success: true, token, user });
   } catch (err) {
     console.error(err);
@@ -640,6 +652,75 @@ app.post("/api/admin/fix-categories", adminOnly, async (req, res) => {
 
 
 /* ===========================
+   🛡️ AI FRAUD DETECTION
+=========================== */
+async function analyzeFraud(user, action, details) {
+  try {
+    const recentTxns = (user.walletTransactions || []).slice(-20);
+    const totalDebits = recentTxns.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
+    const txnCount = recentTxns.length;
+    const accountAgeDays = Math.floor((Date.now() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24));
+
+    const prompt = `You are a fraud detection AI for TechMart, a Nigerian e-commerce platform.
+Analyze this user activity and return a JSON object with:
+- score: number 0-100 (0=safe, 100=definitely fraud)
+- severity: "low" | "medium" | "high" | "none"
+- reason: short string explaining the risk
+- flag: boolean (true if score >= 60)
+
+User profile:
+- Account age: ${accountAgeDays} days
+- Total wallet debits (last 20 txns): N${totalDebits}
+- Transaction count (last 20): ${txnCount}
+- Already flagged: ${user.isFlagged}
+- Current fraud score: ${user.fraudScore}
+
+Current action: ${action}
+Action details: ${JSON.stringify(details)}
+
+Common fraud patterns to detect:
+- New account (< 3 days) making large transactions
+- More than 5 airtime purchases within 1 hour
+- Transfer amount > 50000 in a single transaction
+- Rapid repeated transfers to same recipient
+- Multiple failed login attempts then sudden activity
+
+Respond ONLY with valid JSON, no markdown.`;
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200,
+      temperature: 0.1
+    });
+
+    const raw = completion.choices[0].message.content.trim();
+    const result = JSON.parse(raw.replace(/```json|```/g, "").trim());
+
+    if (result.flag && result.severity !== "none") {
+      await User.findByIdAndUpdate(user._id, {
+        $inc: { fraudScore: result.score },
+        $set: { isFlagged: true },
+        $push: {
+          fraudFlags: {
+            reason: result.reason,
+            severity: result.severity,
+            details: JSON.stringify(details),
+            createdAt: new Date()
+          }
+        }
+      });
+      console.log("FRAUD DETECTED: " + user.email + " - " + result.reason + " (score: " + result.score + ")");
+    }
+
+    return result;
+  } catch (err) {
+    console.error("Fraud detection error:", err.message);
+    return { score: 0, flag: false, severity: "none", reason: "analysis failed" };
+  }
+}
+
+/* ===========================
    TECHMART PAY
 =========================== */
 
@@ -718,6 +799,7 @@ app.post("/api/pay/send", auth, async (req, res) => {
     });
     await recipient.save();
 
+    analyzeFraud(sender, "wallet_transfer", { recipientEmail, amount, reference }).catch(() => {});
     res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} sent to ${recipient.name}` });
   } catch (err) {
     console.error("Transfer error:", err.message);
@@ -825,6 +907,7 @@ app.post("/api/pay/airtime", auth, async (req, res) => {
 
     // TODO: Replace with live Clubkonnect API call when credentials are active
     // Simulated airtime fulfillment — wallet debited, order queued
+    analyzeFraud(user, "airtime_purchase", { phone, amount, network, reference }).catch(() => {});
     res.json({ success: true, reference, message: `N${amount} ${network} airtime sent to ${phone}` });
   } catch (err) {
     console.error("Airtime error:", err.response?.data || err.message);
@@ -3203,6 +3286,46 @@ setInterval(() => {
    🚀 START SERVER
 =========================== */
 const PORT = process.env.PORT || 5002;
+
+
+/* ===========================
+   🛡️ FRAUD ADMIN ENDPOINTS
+=========================== */
+// Get all flagged users
+app.get("/api/admin/fraud/flagged", adminOnly, async (req, res) => {
+  try {
+    const flagged = await User.find({ isFlagged: true })
+      .select("name email fraudScore fraudFlags isFlagged createdAt walletBalance")
+      .sort({ fraudScore: -1 });
+    res.json(flagged);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch flagged users" });
+  }
+});
+
+// Clear fraud flag on a user
+app.post("/api/admin/fraud/clear/:userId", adminOnly, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.userId, {
+      $set: { isFlagged: false, fraudScore: 0, fraudFlags: [] }
+    });
+    res.json({ success: true, message: "Fraud flag cleared" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to clear flag" });
+  }
+});
+
+// Suspend a flagged user
+app.post("/api/admin/fraud/suspend/:userId", adminOnly, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.userId, {
+      $set: { role: "suspended" }
+    });
+    res.json({ success: true, message: "User suspended" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to suspend user" });
+  }
+});
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
