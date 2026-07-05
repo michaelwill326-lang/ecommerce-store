@@ -1137,6 +1137,60 @@ app.post("/api/pay/pin/change", auth, async (req, res) => {
   }
 });
 
+
+// 15. Get Betting Platforms
+app.get("/api/pay/betting/platforms", auth, async (req, res) => {
+  try {
+    const platforms = [
+      { id: "bet9ja", name: "Bet9ja", icon: "🎯", minDeposit: 100 },
+      { id: "sportybet", name: "SportyBet", icon: "⚽", minDeposit: 100 },
+      { id: "1xbet", name: "1xBet", icon: "🏆", minDeposit: 100 }
+    ];
+    res.json({ success: true, platforms });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch platforms" });
+  }
+});
+
+// 16. Fund Betting Wallet
+app.post("/api/pay/betting", auth, async (req, res) => {
+  try {
+    const { platform, bettingId, amount } = req.body;
+    if (!platform || !bettingId || !amount) return res.status(400).json({ error: "Platform, betting ID and amount are required" });
+    if (Number(amount) < 100) return res.status(400).json({ error: "Minimum betting deposit is N100" });
+
+    const validPlatforms = ["bet9ja", "sportybet", "1xbet"];
+    if (!validPlatforms.includes(platform.toLowerCase())) return res.status(400).json({ error: "Invalid betting platform" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    const reference = "BET-" + Date.now();
+    const platformNames = { bet9ja: "Bet9ja", sportybet: "SportyBet", "1xbet": "1xBet" };
+
+    // Debit wallet first
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `${platformNames[platform.toLowerCase()]} wallet funding for ID ${bettingId}`,
+      reference,
+      status: "pending"
+    });
+    await user.save();
+
+    // TODO: Replace with live Clubkonnect API call when credentials are active
+    // const ckUrl = `https://www.nellobytesystems.com/APIGetBettingV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&BettingCompany=${platform}&CustomerID=${bettingId}&Amount=${amount}&RequestID=${reference}&CallBackURL=`;
+    // const ckRes = await axios.get(ckUrl);
+
+    analyzeFraud(user, "betting_deposit", { platform, bettingId, amount, reference }).catch(() => {});
+    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} sent to your ${platformNames[platform.toLowerCase()]} wallet` });
+  } catch (err) {
+    console.error("Betting error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Betting wallet funding failed" });
+  }
+});
+
 // 7. TechMart Pay Dashboard Data
 app.get("/api/pay/dashboard", auth, async (req, res) => {
   try {
