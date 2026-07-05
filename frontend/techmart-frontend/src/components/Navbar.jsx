@@ -178,6 +178,9 @@ export default function Navbar() {
               <span style={styles.mobileBadge}>{cartCount}</span>
             )}
           </Link>
+          <Link to="/pay" style={{...styles.mobileLink, color: "#f97316", fontWeight: "700"}} onClick={() => setMenuOpen(false)}>
+            💳 TechMart Pay
+          </Link>
 
           {user?.role === "admin" && (
             <Link to="/admin" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
