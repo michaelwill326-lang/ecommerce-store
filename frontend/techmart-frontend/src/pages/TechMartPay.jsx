@@ -51,6 +51,9 @@ export default function TechMartPay() {
   const [showSetPin, setShowSetPin] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [pinSet, setPinSet] = useState(false);
+  // Betting state
+  const [betForm, setBetForm] = useState({ platform: "", bettingId: "", amount: "" });
+  const [betLoading, setBetLoading] = useState(false);
 
   // Virtual account state
   const [vaLoading, setVaLoading] = useState(false);
@@ -266,7 +269,19 @@ export default function TechMartPay() {
       setMsg({ text: err.response?.data?.error || "Failed to set PIN", type: "error" });
     }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "History"];
+  const fundBetting = async () => {
+    if (!betForm.platform || !betForm.bettingId || !betForm.amount) return setMsg({ text: "Please fill all fields", type: "error" });
+    setBetLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/pay/betting`, betForm, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      setBetForm({ platform: "", bettingId: "", amount: "" });
+      fetchDashboard();
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "Funding failed", type: "error" });
+    } finally { setBetLoading(false); }
+  };
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History"];
   const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -320,6 +335,7 @@ export default function TechMartPay() {
             { icon: "📶", label: "Data", tab: "Data" },
             { icon: "⚡", label: "Electricity", tab: "Electricity" },
             { icon: "📺", label: "Cable TV", tab: "Cable TV" },
+            { icon: "🎯", label: "Betting", tab: "Betting" },
           ].map((a, i) => (
             <button key={i} onClick={() => setTab(a.tab)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
               <p style={{ fontSize: "22px", margin: "0 0 4px" }}>{a.icon}</p>
@@ -603,6 +619,33 @@ export default function TechMartPay() {
               <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
               <button onClick={payCableTV} disabled={ctvLoading || !ctvVerified || !ctvForm.planId} style={{ width: "100%", padding: "14px", background: (ctvVerified && ctvForm.planId) ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: (ctvVerified && ctvForm.planId) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {ctvLoading ? "Processing..." : ctvForm.planName ? `Subscribe — ₦${Number(ctvForm.amount || 0).toLocaleString()}` : "Select a package"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* BETTING TAB */}
+        {tab === "Betting" && (
+          <div>
+            <h2 style={{ color: "#fff", marginBottom: "16px" }}>🎯 Fund Betting Wallet</h2>
+            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Platform</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
+                {[{ id: "bet9ja", name: "Bet9ja", icon: "🎯" }, { id: "sportybet", name: "SportyBet", icon: "⚽" }, { id: "1xbet", name: "1xBet", icon: "🏆" }].map(p => (
+                  <button key={p.id} onClick={() => setBetForm({...betForm, platform: p.id})}
+                    style={{ padding: "12px 6px", borderRadius: "8px", border: `2px solid ${betForm.platform === p.id ? "#f97316" : "#333"}`, background: betForm.platform === p.id ? "#1a0a00" : "#111", color: betForm.platform === p.id ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "11px", textAlign: "center" }}>{p.icon} {p.name}</button>
+                ))}
+              </div>
+              <input placeholder="Your Betting User ID / Username" value={betForm.bettingId} onChange={e => setBetForm({...betForm, bettingId: e.target.value})} style={inp} />
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+                {[500, 1000, 2000, 5000].map(a => (
+                  <button key={a} onClick={() => setBetForm({...betForm, amount: String(a)})} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${betForm.amount === String(a) ? "#f97316" : "#333"}`, background: betForm.amount === String(a) ? "#1a0a00" : "#111", color: betForm.amount === String(a) ? "#f97316" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>N{a.toLocaleString()}</button>
+                ))}
+              </div>
+              <input placeholder="Or enter custom amount (min N100)" type="number" value={betForm.amount} onChange={e => setBetForm({...betForm, amount: e.target.value})} style={inp} />
+              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: N{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={fundBetting} disabled={betLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+                {betLoading ? "Processing..." : `Fund N${Number(betForm.amount || 0).toLocaleString()} to ${betForm.platform || "Betting"} Wallet`}
               </button>
             </div>
           </div>
