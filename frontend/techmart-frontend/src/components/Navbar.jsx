@@ -29,6 +29,8 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("cart");
+    window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
     navigate("/login");
     setMenuOpen(false);
   };

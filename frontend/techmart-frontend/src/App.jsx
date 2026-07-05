@@ -31,7 +31,7 @@ export default function App() {
     const resetTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        localStorage.removeItem("token");
+        localStorage.removeItem("token"); localStorage.removeItem("cart"); window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
         localStorage.removeItem("user");
         window.location.href = "/login";
       }, 5 * 60 * 1000);

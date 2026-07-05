@@ -1,18 +1,28 @@
 import { createContext, useEffect, useState } from "react";
-
 export const CartContext = createContext();
-
 export function CartProvider({ children }) {
   const [cart, setCart] = useState(() => {
+    if (!localStorage.getItem("token")) return [];
     const saved = localStorage.getItem("cart");
     return saved ? JSON.parse(saved) : [];
   });
-
-  // Save cart to localStorage
+  // Save cart to localStorage only when logged in
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
+    if (localStorage.getItem("token")) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
   }, [cart]);
-
+  // Clear cart on logout
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === "token" && !e.newValue) {
+        setCart([]);
+        localStorage.removeItem("cart");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
   // ADD TO CART
   const addToCart = (product) => {
     setCart((prev) => {
