@@ -68,7 +68,7 @@ export default function Chatbot() {
         body: JSON.stringify({ message, userEmail, userName }),
       });
       const data = await response.json();
-setTyping(false);nnif (data.type === "text") {n  addMessage(data.message, "bot");n}nnif (data.type === "products") {n  addMessage("Here are results:", "bot");n  data.data.forEach(p => addMessage(`<b>${p.name}</b> - N${p.price}`, "bot"));n}nnif (data.type === "bundle") {n  addMessage("Bundle found:", "bot");n  data.data.bundleProducts.forEach(p => addMessage(p.name, "bot"));n  addMessage(`Total: N${data.data.bundlePrice}`, "bot");n}n      setTyping(false);
+      setTyping(false);
       addMessage(data.reply || "No response", "bot");
       if (data.products && data.products.length > 0) {
         data.products.forEach((p) => {
