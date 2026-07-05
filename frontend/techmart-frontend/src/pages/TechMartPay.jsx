@@ -36,6 +36,21 @@ export default function TechMartPay() {
   const [elecLoading, setElecLoading] = useState(false);
   const [elecVerified, setElecVerified] = useState(false);
   const [elecVerifying, setElecVerifying] = useState(false);
+  // Cable TV state
+  const [ctvForm, setCtvForm] = useState({ smartcardNumber: "", provider: "", planId: "", planName: "", amount: "", customerName: "" });
+  const [ctvPlans, setCtvPlans] = useState([]);
+  const [ctvLoading, setCtvLoading] = useState(false);
+  const [ctvPlansLoading, setCtvPlansLoading] = useState(false);
+  const [ctvVerified, setCtvVerified] = useState(false);
+  const [ctvVerifying, setCtvVerifying] = useState(false);
+  // PIN state
+  const [pinModal, setPinModal] = useState({ open: false, onSuccess: null });
+  const [pinInput, setPinInput] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [showSetPin, setShowSetPin] = useState(false);
+  const [newPin, setNewPin] = useState("");
+  const [pinSet, setPinSet] = useState(false);
 
   // Virtual account state
   const [vaLoading, setVaLoading] = useState(false);
@@ -184,7 +199,74 @@ export default function TechMartPay() {
       setMsg({ text: err.response?.data?.error || "Payment failed", type: "error" });
     } finally { setElecLoading(false); }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "History"];
+  const fetchCtvPlans = async (provider) => {
+    setCtvPlansLoading(true);
+    setCtvPlans([]);
+    try {
+      const res = await axios.get(`${API}/api/pay/cabletv/plans/${provider}`, { headers });
+      setCtvPlans(res.data.plans || []);
+    } catch { setMsg({ text: "Failed to load plans", type: "error" }); }
+    finally { setCtvPlansLoading(false); }
+  };
+  const verifySmartcard = async () => {
+    if (!ctvForm.smartcardNumber || !ctvForm.provider) return setMsg({ text: "Select provider and enter smartcard number", type: "error" });
+    setCtvVerifying(true);
+    setCtvVerified(false);
+    try {
+      const res = await axios.post(`${API}/api/pay/cabletv/verify`, ctvForm, { headers });
+      setCtvForm(prev => ({ ...prev, customerName: res.data.data?.name || res.data.data?.customer_name || "Verified" }));
+      setCtvVerified(true);
+      setMsg({ text: "Smartcard verified successfully", type: "success" });
+    } catch { setMsg({ text: "Could not verify smartcard. Check the number and try again.", type: "error" }); }
+    finally { setCtvVerifying(false); }
+  };
+  const payCableTV = async () => {
+    if (!ctvVerified) return setMsg({ text: "Please verify your smartcard first", type: "error" });
+    if (!ctvForm.planId) return setMsg({ text: "Please select a package", type: "error" });
+    setCtvLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/pay/cabletv`, ctvForm, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      setCtvForm({ smartcardNumber: "", provider: "", planId: "", planName: "", amount: "", customerName: "" });
+      setCtvVerified(false);
+      setCtvPlans([]);
+      fetchDashboard();
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "Payment failed", type: "error" });
+    } finally { setCtvLoading(false); }
+  };
+  const requirePin = (onSuccess) => {
+    if (!pinSet) { setShowSetPin(true); return; }
+    setPinInput("");
+    setPinError("");
+    setPinModal({ open: true, onSuccess });
+  };
+  const confirmPin = async () => {
+    if (pinInput.length !== 4) return setPinError("Enter 4-digit PIN");
+    setPinLoading(true);
+    try {
+      await axios.post(`${API}/api/pay/pin/verify`, { pin: pinInput }, { headers });
+      const cb = pinModal.onSuccess;
+      setPinModal({ open: false, onSuccess: null });
+      setPinInput("");
+      cb && cb();
+    } catch (err) {
+      setPinError(err.response?.data?.error || "Incorrect PIN");
+    } finally { setPinLoading(false); }
+  };
+  const setWalletPin = async () => {
+    if (newPin.length !== 4) return setMsg({ text: "PIN must be 4 digits", type: "error" });
+    try {
+      await axios.post(`${API}/api/pay/pin/set`, { pin: newPin }, { headers });
+      setPinSet(true);
+      setShowSetPin(false);
+      setNewPin("");
+      setMsg({ text: "Wallet PIN set successfully!", type: "success" });
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "Failed to set PIN", type: "error" });
+    }
+  };
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "History"];
   const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -194,6 +276,7 @@ export default function TechMartPay() {
   );
 
   return (
+    <>
     <div style={{ minHeight: "100vh", background: "#0a0a0a", padding: "16px", paddingBottom: "60px" }}>
       <div style={{ maxWidth: "600px", margin: "0 auto" }}>
 
@@ -236,6 +319,7 @@ export default function TechMartPay() {
             { icon: "📱", label: "Airtime", tab: "Airtime" },
             { icon: "📶", label: "Data", tab: "Data" },
             { icon: "⚡", label: "Electricity", tab: "Electricity" },
+            { icon: "📺", label: "Cable TV", tab: "Cable TV" },
           ].map((a, i) => (
             <button key={i} onClick={() => setTab(a.tab)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
               <p style={{ fontSize: "22px", margin: "0 0 4px" }}>{a.icon}</p>
@@ -477,6 +561,53 @@ export default function TechMartPay() {
           </div>
         )}
 
+        {/* CABLE TV TAB */}
+        {tab === "Cable TV" && (
+          <div>
+            <h2 style={{ color: "#fff", marginBottom: "16px" }}>📺 Cable TV Subscription</h2>
+            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Provider</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
+                {["DSTV", "GOTV", "STARTIMES"].map(p => (
+                  <button key={p} onClick={() => { setCtvForm({...ctvForm, provider: p, planId: "", planName: "", amount: "", customerName: ""}); setCtvVerified(false); fetchCtvPlans(p); }}
+                    style={{ padding: "12px 6px", borderRadius: "8px", border: `2px solid ${ctvForm.provider === p ? "#f97316" : "#333"}`, background: ctvForm.provider === p ? "#1a0a00" : "#111", color: ctvForm.provider === p ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "12px", textAlign: "center" }}>{p}</button>
+                ))}
+              </div>
+              <input placeholder="Smartcard / IUC number" value={ctvForm.smartcardNumber} onChange={e => { setCtvForm({...ctvForm, smartcardNumber: e.target.value}); setCtvVerified(false); }} style={inp} />
+              {!ctvVerified ? (
+                <button onClick={verifySmartcard} disabled={ctvVerifying} style={{ width: "100%", padding: "12px", background: "#1a1a2a", border: "1px solid #f97316", color: "#f97316", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "12px" }}>
+                  {ctvVerifying ? "Verifying..." : "Verify Smartcard"}
+                </button>
+              ) : (
+                <div style={{ background: "#0a2a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{ctvForm.customerName}</strong></p>
+                </div>
+              )}
+              {ctvPlansLoading && <p style={{ color: "#888", fontSize: "13px" }}>Loading packages...</p>}
+              {ctvPlans.length > 0 && (
+                <div style={{ maxHeight: "200px", overflowY: "auto", marginBottom: "12px", border: "1px solid #2a2a2a", borderRadius: "10px" }}>
+                  {ctvPlans.map((plan, i) => (
+                    <div key={i} onClick={() => setCtvForm({...ctvForm, planId: plan.id || plan.code || String(i), planName: plan.name || plan.description, amount: String(plan.price || plan.amount)})}
+                      style={{ padding: "12px 16px", borderBottom: "1px solid #222", cursor: "pointer", background: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#f97316" : "#fff", fontSize: "13px" }}>{plan.name || plan.description}</span>
+                      <span style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {ctvForm.planName && (
+                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>Selected: <strong>{ctvForm.planName}</strong> — ₦{Number(ctvForm.amount || 0).toLocaleString()}</p>
+                </div>
+              )}
+              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={payCableTV} disabled={ctvLoading || !ctvVerified || !ctvForm.planId} style={{ width: "100%", padding: "14px", background: (ctvVerified && ctvForm.planId) ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: (ctvVerified && ctvForm.planId) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+                {ctvLoading ? "Processing..." : ctvForm.planName ? `Subscribe — ₦${Number(ctvForm.amount || 0).toLocaleString()}` : "Select a package"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* HISTORY TAB */}
         {tab === "History" && (
           <div>
@@ -507,5 +638,37 @@ export default function TechMartPay() {
         )}
       </div>
     </div>
+
+      {pinModal.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
+            <h3 style={{ color: "#fff", marginBottom: "8px" }}>Lock Enter Wallet PIN</h3>
+            <p style={{ color: "#888", fontSize: "13px", marginBottom: "20px" }}>Enter your 4-digit PIN to confirm</p>
+            <input type="password" maxLength={4} placeholder="4 digits" value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/[^0-9]/g, "")); setPinError(""); }}
+              style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "8px" }} />
+            {pinError && <p style={{ color: "#f87171", fontSize: "12px", marginBottom: "8px" }}>{pinError}</p>}
+            <button onClick={confirmPin} disabled={pinLoading} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
+              {pinLoading ? "Verifying..." : "Confirm"}
+            </button>
+            <button onClick={() => setPinModal({ open: false, onSuccess: null })} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showSetPin && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
+            <h3 style={{ color: "#fff", marginBottom: "8px" }}>Set Wallet PIN</h3>
+            <p style={{ color: "#888", fontSize: "13px", marginBottom: "20px" }}>Create a 4-digit PIN to secure your wallet</p>
+            <input type="password" maxLength={4} placeholder="Enter 4-digit PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ""))}
+              style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "16px" }} />
+            <button onClick={setWalletPin} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
+              Set PIN
+            </button>
+            <button onClick={() => setShowSetPin(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
