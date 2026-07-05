@@ -442,10 +442,10 @@ export default function TechMartPay() {
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>⚡ Electricity Payment</h2>
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Distribution Company</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", marginBottom: "16px", width: "100%" }}>
                 {["IKEDC", "EKEDC", "AEDC", "PHEDC", "KAEDCO", "IBEDC", "KEDCO", "EEDC"].map(d => (
                   <button key={d} onClick={() => { setElecForm({...elecForm, disco: d}); setElecVerified(false); }}
-                    style={{ padding: "10px", borderRadius: "8px", border: `2px solid ${elecForm.disco === d ? "#f97316" : "#333"}`, background: elecForm.disco === d ? "#1a0a00" : "#111", color: elecForm.disco === d ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "12px" }}>{d}</button>
+                    style={{ padding: "10px 6px", borderRadius: "8px", border: `2px solid ${elecForm.disco === d ? "#f97316" : "#333"}`, background: elecForm.disco === d ? "#1a0a00" : "#111", color: elecForm.disco === d ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "11px", textAlign: "center", width: "100%" }}>{d}</button>
                 ))}
               </div>
               <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
