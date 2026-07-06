@@ -952,10 +952,11 @@ app.post("/api/pay/airtime", auth, async (req, res) => {
     });
     await user.save();
 
-    // TODO: Replace with live Clubkonnect API call when credentials are active
-    // Simulated airtime fulfillment — wallet debited, order queued
-    analyzeFraud(user, "airtime_purchase", { phone, amount, network, reference }).catch(() => {});
-    res.json({ success: true, reference, message: `N${amount} ${network} airtime sent to ${phone}` });
+    // Clubkonnect not yet active — refund and block
+    user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    user.walletTransactions.push({ type: "credit", amount: Number(amount), description: "Refund: airtime service coming soon", reference: reference + "-REFUND" });
+    await user.save();
+    return res.status(503).json({ error: "Airtime service is coming soon. Your wallet has not been charged." });
   } catch (err) {
     console.error("Airtime error:", err.response?.data || err.message);
     res.status(500).json({ error: "Airtime purchase failed" });
@@ -1039,12 +1040,11 @@ app.post("/api/pay/data", auth, async (req, res) => {
     });
     await user.save();
 
-    // TODO: Replace with live Clubkonnect API call when credentials are active
-    // const ckUrl = `https://www.nellobytesystems.com/APIGetDataBundleV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&MobileNetwork=${networkCode}&DataPlan=${planId}&MobileNumber=${phone}&RequestID=${reference}&CallBackURL=`;
-    // const ckRes = await axios.get(ckUrl);
-
-    analyzeFraud(user, "data_purchase", { phone, network, planId, amount, reference }).catch(() => {});
-    res.json({ success: true, reference, message: `${planName || planId} ${network} data sent to ${phone}` });
+    // Clubkonnect not yet active — refund and block
+    user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    user.walletTransactions.push({ type: "credit", amount: Number(amount), description: "Refund: data service coming soon", reference: reference + "-REFUND" });
+    await user.save();
+    return res.status(503).json({ error: "Data bundle service is coming soon. Your wallet has not been charged." });
   } catch (err) {
     console.error("Data bundle error:", err.response?.data || err.message);
     res.status(500).json({ error: "Data purchase failed" });
@@ -1091,12 +1091,11 @@ app.post("/api/pay/electricity", auth, async (req, res) => {
     });
     await user.save();
 
-    // TODO: Replace with live Clubkonnect API call when credentials are active
-    // const ckUrl = `https://www.nellobytesystems.com/APIElectricityV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&ElectricDisco=${disco}&MeterType=${meterType}&MeterNumber=${meterNumber}&Amount=${amount}&RequestID=${reference}&CallBackURL=`;
-    // const ckRes = await axios.get(ckUrl);
-
-    analyzeFraud(user, "electricity_payment", { meterNumber, disco, amount, reference }).catch(() => {});
-    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} electricity payment successful for meter ${meterNumber}` });
+    // Clubkonnect not yet active — refund and block
+    user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    user.walletTransactions.push({ type: "credit", amount: Number(amount), description: "Refund: electricity service coming soon", reference: reference + "-REFUND" });
+    await user.save();
+    return res.status(503).json({ error: "Electricity payment service is coming soon. Your wallet has not been charged." });
   } catch (err) {
     console.error("Electricity error:", err.response?.data || err.message);
     res.status(500).json({ error: "Electricity payment failed" });
@@ -1283,12 +1282,11 @@ app.post("/api/pay/betting", auth, async (req, res) => {
     });
     await user.save();
 
-    // TODO: Replace with live Clubkonnect API call when credentials are active
-    // const ckUrl = `https://www.nellobytesystems.com/APIGetBettingV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&BettingCompany=${platform}&CustomerID=${bettingId}&Amount=${amount}&RequestID=${reference}&CallBackURL=`;
-    // const ckRes = await axios.get(ckUrl);
-
-    analyzeFraud(user, "betting_deposit", { platform, bettingId, amount, reference }).catch(() => {});
-    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} sent to your ${platformNames[platform.toLowerCase()]} wallet` });
+    // Clubkonnect not yet active — refund and block
+    user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    user.walletTransactions.push({ type: "credit", amount: Number(amount), description: "Refund: betting service coming soon", reference: reference + "-REFUND" });
+    await user.save();
+    return res.status(503).json({ error: "Betting wallet funding is coming soon. Your wallet has not been charged." });
   } catch (err) {
     console.error("Betting error:", err.response?.data || err.message);
     res.status(500).json({ error: "Betting wallet funding failed" });
