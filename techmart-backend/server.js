@@ -1520,9 +1520,7 @@ app.get("/api/seller/messages/customer", auth, async (req, res) => {
 
 /* ===========================
    AI COMMERCE ENDPOINTS
-
-// 1. AI SEARCH - Natural language product search
-
+=========================== */
 // AI Chat Assistant
 app.post("/api/ai/chat", async (req, res) => {
   try {
