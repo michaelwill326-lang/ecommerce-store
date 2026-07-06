@@ -770,6 +770,46 @@ app.post("/api/pay/virtual-account", auth, async (req, res) => {
   }
 });
 
+
+// 1b. Fund Wallet via Paystack Payment Link
+app.post("/api/pay/fund-wallet", auth, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!amount || Number(amount) < 100) return res.status(400).json({ error: "Minimum deposit is N100" });
+
+    const user = await User.findById(req.user.id);
+    const reference = "WAL-" + Date.now();
+
+    const response = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email: user.email,
+        amount: Number(amount) * 100, // kobo
+        reference,
+        metadata: {
+          userId: user._id.toString(),
+          purpose: "wallet_funding",
+          custom_fields: [
+            { display_name: "Purpose", variable_name: "purpose", value: "TechMart Wallet Funding" }
+          ]
+        },
+        callback_url: `${process.env.FRONTEND_URL || "https://techmart-frontend.onrender.com"}/pay?funded=true`
+      },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    res.json({
+      success: true,
+      paymentUrl: response.data.data.authorization_url,
+      reference,
+      amount
+    });
+  } catch (err) {
+    console.error("Wallet funding error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Failed to initialize payment" });
+  }
+});
+
 // 2. Wallet to Wallet Transfer
 app.post("/api/pay/send", auth, async (req, res) => {
   try {
@@ -2488,6 +2528,29 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     );
 
     const paymentData = verify.data.data;
+
+    // Handle Wallet Funding
+    if (paymentData.metadata?.purpose === "wallet_funding") {
+      try {
+        const userId = paymentData.metadata.userId;
+        const amount = paymentData.amount / 100; // convert from kobo
+        const user = await User.findById(userId);
+        if (user) {
+          user.walletBalance = (user.walletBalance || 0) + amount;
+          user.walletTransactions.push({
+            type: "credit",
+            amount,
+            description: `Wallet funded via Paystack`,
+            reference: paymentData.reference
+          });
+          await user.save();
+          console.log(`Wallet credited: ${user.email} +N${amount}`);
+        }
+      } catch (e) {
+        console.error("Wallet funding webhook error:", e.message);
+      }
+      return res.status(200).json({ status: "success" });
+    }
 
     // Handle POD full payment (sent by admin at door)
     if (paymentData.metadata?.isPodPayment) {
