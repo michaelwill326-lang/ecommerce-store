@@ -402,14 +402,32 @@ const sendLowStockAlert = async (product) => {
   }
 };
 
-module.exports = {
-  sendOrderConfirmation,
-  sendWelcomeEmail,
-  sendShippingUpdate,
-  sendPasswordResetEmail,
-  sendAdminOrderNotification,
-  sendLowStockAlert,
-  sendOTPEmail,
+
+const sendOTPEmail = async (email, name, otp) => {
+  const client = new SibApiV3Sdk.TransactionalEmailsApi();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.subject = "Your TechMart Login OTP";
+  sendSmtpEmail.to = [{ email, name }];
+  sendSmtpEmail.sender = { name: "TechMart", email: "noreply@techmart.com" };
+  sendSmtpEmail.htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #f97316;">TechMart Security Code</h2>
+      <p>Hi ${name},</p>
+      <p>Your one-time login code is:</p>
+      <div style="background: #f97316; color: #fff; font-size: 36px; font-weight: 900; text-align: center; padding: 20px; border-radius: 10px; letter-spacing: 8px; margin: 20px 0;">
+        ${otp}
+      </div>
+      <p style="color: #888;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+      <p style="color: #888;">If you didn't request this, please ignore this email.</p>
+    </div>
+  `;
+  try {
+    await client.sendTransacEmail(sendSmtpEmail);
+    console.log("OTP email sent to:", email);
+  } catch (err) {
+    console.error("OTP email error:", err.message);
+    throw err;
+  }
 };
 const sendOTPEmail = async (email, name, otp) => {
   const client = new SibApiV3Sdk.TransactionalEmailsApi();
@@ -436,4 +454,14 @@ const sendOTPEmail = async (email, name, otp) => {
     console.error("OTP email error:", err.message);
     throw err;
   }
+};
+
+module.exports = {
+  sendOrderConfirmation,
+  sendWelcomeEmail,
+  sendShippingUpdate,
+  sendPasswordResetEmail,
+  sendAdminOrderNotification,
+  sendLowStockAlert,
+  sendOTPEmail,
 };
