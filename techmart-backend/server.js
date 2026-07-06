@@ -893,7 +893,10 @@ app.post("/api/pay/withdraw", auth, async (req, res) => {
     res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} withdrawal initiated. Arrives in 1-2 minutes.` });
   } catch (err) {
     console.error("Withdrawal error:", err.response?.data || err.message);
-    res.status(500).json({ error: "Withdrawal failed. Please try again." });
+    const msg = err.response?.data?.code === "transfer_unavailable"
+      ? "Bank withdrawals require a registered business account. This feature is coming soon!"
+      : "Withdrawal failed. Please try again.";
+    res.status(500).json({ error: msg });
   }
 });
 
