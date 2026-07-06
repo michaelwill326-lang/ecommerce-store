@@ -1092,10 +1092,37 @@ app.post("/api/pay/cabletv/verify", auth, async (req, res) => {
 app.get("/api/pay/cabletv/plans/:provider", auth, async (req, res) => {
   try {
     const { provider } = req.params;
-    const response = await axios.get(
-      `https://www.nellobytesystems.com/APIGetCableTVV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&CableTV=${provider}`
-    );
-    res.json({ success: true, plans: response.data });
+
+    const staticPlans = {
+      DSTV: [
+        { id: "DSTV-PADI", name: "DStv Padi", price: 2950 },
+        { id: "DSTV-YANGA", name: "DStv Yanga", price: 4100 },
+        { id: "DSTV-CONFAM", name: "DStv Confam", price: 6200 },
+        { id: "DSTV-COMPACT", name: "DStv Compact", price: 9000 },
+        { id: "DSTV-COMPACT-PLUS", name: "DStv Compact Plus", price: 14250 },
+        { id: "DSTV-PREMIUM", name: "DStv Premium", price: 24500 },
+      ],
+      GOTV: [
+        { id: "GOTV-SUPA-PLUS", name: "GOtv Supa+", price: 6400 },
+        { id: "GOTV-SUPA", name: "GOtv Supa", price: 5500 },
+        { id: "GOTV-MAX", name: "GOtv Max", price: 4850 },
+        { id: "GOTV-JOLLI", name: "GOtv Jolli", price: 3800 },
+        { id: "GOTV-JINJA", name: "GOtv Jinja", price: 2800 },
+        { id: "GOTV-SMALLIE", name: "GOtv Smallie", price: 1575 },
+      ],
+      STARTIMES: [
+        { id: "ST-NOVA", name: "Startimes Nova", price: 1300 },
+        { id: "ST-BASIC", name: "Startimes Basic", price: 2200 },
+        { id: "ST-SMART", name: "Startimes Smart", price: 3100 },
+        { id: "ST-CLASSIC", name: "Startimes Classic", price: 2500 },
+        { id: "ST-SUPER", name: "Startimes Super", price: 4900 },
+      ]
+    };
+
+    const plans = staticPlans[provider.toUpperCase()] || [];
+    if (plans.length === 0) return res.status(400).json({ error: "Invalid provider" });
+
+    res.json({ success: true, plans });
   } catch (err) {
     console.error("Cable TV plans error:", err.message);
     res.status(500).json({ error: "Failed to fetch cable TV plans" });
