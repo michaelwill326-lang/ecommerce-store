@@ -1,29 +1,32 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Suspense, lazy } from "react-router-dom";
 import { useEffect } from "react";
 import Navbar from "./components/Navbar"; 
-import Footer from "./components/Footer"; // Imported here
+import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
 
+// Eagerly loaded (above the fold)
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import ProductDetail from "./pages/ProductDetail";
-import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
-import Tracking from "./pages/Tracking";
-import Verify from "./pages/Verify";
-import Success from "./pages/Success";
-import Wishlist from "./pages/Wishlist";
-import Policy from "./pages/Policy";
-import ChatPage from "./pages/ChatPage";
-import SellerApply from "./pages/seller/SellerApply";
-import Account from "./pages/Account";
-import AISearch from "./pages/AISearch";
-import TechMartPay from "./pages/TechMartPay";
-import SellerLogin from "./pages/seller/SellerLogin";
-import SellerDashboard from "./pages/seller/SellerDashboard";
+
+// Lazy loaded (only when needed)
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Tracking = lazy(() => import("./pages/Tracking"));
+const Verify = lazy(() => import("./pages/Verify"));
+const Success = lazy(() => import("./pages/Success"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const Policy = lazy(() => import("./pages/Policy"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const SellerApply = lazy(() => import("./pages/seller/SellerApply"));
+const Account = lazy(() => import("./pages/Account"));
+const AISearch = lazy(() => import("./pages/AISearch"));
+const TechMartPay = lazy(() => import("./pages/TechMartPay"));
+const SellerLogin = lazy(() => import("./pages/seller/SellerLogin"));
+const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 
 export default function App() {
   useEffect(() => {
@@ -51,6 +54,7 @@ export default function App() {
 
       {/* Main Routing Architecture */}
       <main style={styles.mainContent}>
+        <Suspense fallback={<div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>Loading...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -73,6 +77,7 @@ export default function App() {
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
         </Routes>
+        </Suspense>
       </main>
 
       {/* Professional Legal Footer */}

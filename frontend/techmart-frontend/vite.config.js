@@ -1,24 +1,29 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
+const timestamp = Date.now();
+
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    // Forces Vite to pre-bundle Recharts and resolve internal CommonJS helper functions cleanly
     include: ['recharts'],
   },
   build: {
+    chunkSizeWarningLimit: 600,
     commonjsOptions: {
-      // Directs the bundler to transform internal dependencies seamlessly
       include: [/recharts/, /node_modules/],
     },
     rollupOptions: {
       output: {
-        // Generates completely unique filenames using a live timestamp to smash Render and Chrome's edge cache
-        entryFileNames: `assets/[name]-${Date.now()}.js`,
-        chunkFileNames: `assets/[name]-${Date.now()}.js`,
-        assetFileNames: `assets/[name]-${Date.now()}.[ext]`,
+        entryFileNames: `assets/[name]-${timestamp}.js`,
+        chunkFileNames: `assets/[name]-${timestamp}.js`,
+        assetFileNames: `assets/[name]-${timestamp}.[ext]`,
+        manualChunks: {
+          'react-core': ['react', 'react-dom', 'react-router-dom'],
+          'recharts': ['recharts'],
+          'axios': ['axios'],
+          'socket': ['socket.io-client'],
+        },
       },
     },
   },
