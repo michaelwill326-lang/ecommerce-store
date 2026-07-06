@@ -56,7 +56,8 @@ export default function TechMartPay() {
   const [betLoading, setBetLoading] = useState(false);
 
   // Virtual account state
-  const [vaLoading, setVaLoading] = useState(false);
+  const [fundLoading, setFundLoading] = useState(false);
+  const [fundAmount, setFundAmount] = useState("");
 
   useEffect(() => {
     if (!token) { navigate("/login"); return; }
@@ -80,15 +81,16 @@ export default function TechMartPay() {
     } catch {}
   };
 
-  const createVirtualAccount = async () => {
-    setVaLoading(true);
+  const fundWallet = async (amount) => {
+    const amt = amount || fundAmount;
+    if (!amt || Number(amt) < 100) return setMsg({ text: "Minimum deposit is N100", type: "error" });
+    setFundLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/virtual-account`, {}, { headers });
-      setDashboard(prev => ({ ...prev, virtualAccount: res.data.account }));
-      setMsg({ text: "Virtual account created!", type: "success" });
+      const res = await axios.post(`${API}/api/pay/fund-wallet`, { amount: amt }, { headers });
+      window.location.href = res.data.paymentUrl;
     } catch (err) {
-      setMsg({ text: err.response?.data?.error === "Failed to create virtual account" ? "Virtual account funding is coming soon. We're setting this up with our banking partner." : err.response?.data?.error, type: "error" });
-    } finally { setVaLoading(false); }
+      setMsg({ text: err.response?.data?.error || "Failed to initialize payment", type: "error" });
+    } finally { setFundLoading(false); }
   };
 
   const sendMoney = async () => {
@@ -371,11 +373,11 @@ export default function TechMartPay() {
               </div>
             ) : (
               <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "12px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
-                <p style={{ fontSize: "32px", margin: "0 0 8px" }}>🏦</p>
-                <p style={{ color: "#fff", fontWeight: "700", marginBottom: "8px" }}>Get Your Virtual Account</p>
-                <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Fund your wallet via bank transfer instantly</p>
-                <button onClick={createVirtualAccount} disabled={vaLoading} style={{ padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
-                  {vaLoading ? "Creating..." : "Create Virtual Account"}
+                <p style={{ fontSize: "32px", margin: "0 0 8px" }}>➕</p>
+                <p style={{ color: "#fff", fontWeight: "700", marginBottom: "8px" }}>Fund Your Wallet</p>
+                <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Pay via card, USSD, or bank transfer</p>
+                <button onClick={() => setTab("Add Money")} style={{ padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
+                  Add Money
                 </button>
               </div>
             )}
@@ -404,27 +406,23 @@ export default function TechMartPay() {
         {tab === "Add Money" && (
           <div>
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>Add Money to Wallet</h2>
-            {dashboard?.virtualAccount ? (
-              <div style={{ background: "#1a1a1a", border: "1px solid #22c55e", borderRadius: "12px", padding: "20px" }}>
-                <p style={{ color: "#22c55e", fontWeight: "700", marginBottom: "16px" }}>Transfer to this account to fund your wallet:</p>
-                <div style={{ background: "#111", borderRadius: "10px", padding: "16px", marginBottom: "12px" }}>
-                  <p style={{ color: "#888", fontSize: "12px", margin: "0 0 4px" }}>Account Number</p>
-                  <p style={{ color: "#fff", fontWeight: "900", fontSize: "24px", margin: "0 0 12px", letterSpacing: "3px" }}>{dashboard.virtualAccount.accountNumber}</p>
-                  <p style={{ color: "#888", fontSize: "12px", margin: "0 0 4px" }}>Bank</p>
-                  <p style={{ color: "#f97316", fontWeight: "700", fontSize: "16px", margin: "0 0 12px" }}>{dashboard.virtualAccount.bankName}</p>
-                  <p style={{ color: "#888", fontSize: "12px", margin: "0 0 4px" }}>Account Name</p>
-                  <p style={{ color: "#fff", fontWeight: "700", fontSize: "16px", margin: 0 }}>{dashboard.virtualAccount.accountName}</p>
-                </div>
-                <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>Transfers reflect in your wallet within 1-2 minutes.</p>
+            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Fund your wallet securely via card, USSD, or bank transfer</p>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+                {[500, 1000, 2000, 5000, 10000].map(a => (
+                  <button key={a} onClick={() => setFundAmount(String(a))} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${fundAmount === String(a) ? "#f97316" : "#333"}`, background: fundAmount === String(a) ? "#1a0a00" : "#111", color: fundAmount === String(a) ? "#f97316" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>N{a.toLocaleString()}</button>
+                ))}
               </div>
-            ) : (
-              <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "12px", padding: "20px", textAlign: "center" }}>
-                <p style={{ color: "#888", marginBottom: "16px" }}>You need a virtual account to fund your wallet via bank transfer.</p>
-                <button onClick={createVirtualAccount} disabled={vaLoading} style={{ padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
-                  {vaLoading ? "Creating..." : "Create Virtual Account"}
-                </button>
+              <input placeholder="Or enter custom amount (min N100)" type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)} style={inp} />
+              <div style={{ background: "#111", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px" }}>
+                <p style={{ color: "#888", fontSize: "12px", margin: "0 0 4px" }}>Payment methods accepted</p>
+                <p style={{ color: "#fff", fontSize: "13px", margin: 0 }}>💳 Card &nbsp;|&nbsp; 📱 USSD &nbsp;|&nbsp; 🏦 Bank Transfer &nbsp;|&nbsp; 📲 Mobile Money</p>
               </div>
-            )}
+              <button onClick={() => fundWallet()} disabled={fundLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+                {fundLoading ? "Redirecting..." : `Add N${Number(fundAmount || 0).toLocaleString()} to Wallet`}
+              </button>
+              <p style={{ color: "#888", fontSize: "11px", textAlign: "center", marginTop: "8px" }}>Powered by Paystack. Funds reflect instantly after payment.</p>
+            </div>
           </div>
         )}
 
