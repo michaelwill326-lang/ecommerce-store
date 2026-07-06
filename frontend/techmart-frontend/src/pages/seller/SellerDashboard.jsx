@@ -218,30 +218,58 @@ export default function SellerDashboard() {
       {/* ANALYTICS */}
       {tab === "Analytics" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>Revenue Analytics (Last 30 Days)</h2>
+          <h2 style={{ color: "#fff", marginBottom: "16px" }}>📊 Seller Analytics</h2>
+
+          {/* KPI CARDS */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
+            {[
+              { label: "Total Revenue", value: `N${(analytics?.totalRevenue || 0).toLocaleString()}`, color: "#f97316" },
+              { label: "Total Orders", value: analytics?.totalOrders || 0, color: "#3b82f6" },
+              { label: "Delivered", value: analytics?.delivered || 0, color: "#22c55e" },
+              { label: "Conversion Rate", value: `${analytics?.conversionRate || 0}%`, color: "#a855f7" },
+            ].map((k, i) => (
+              <div key={i} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                <p style={{ color: "#888", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
+                <p style={{ color: k.color, fontSize: "22px", fontWeight: "800", margin: 0 }}>{k.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* TOP PRODUCTS */}
           <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-              <div>
-                <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>Gross Revenue</p>
-                <p style={{ color: "#f97316", fontSize: "24px", fontWeight: "800", margin: 0 }}>N{(analytics?.revenue || 0).toLocaleString()}</p>
-              </div>
-              <div>
-                <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>Commission ({analytics?.commission}%)</p>
-                <p style={{ color: "#dc2626", fontSize: "24px", fontWeight: "800", margin: 0 }}>-N{(analytics?.commissionAmount || 0).toLocaleString()}</p>
-              </div>
-              <div>
-                <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>Net Revenue</p>
-                <p style={{ color: "#22c55e", fontSize: "24px", fontWeight: "800", margin: 0 }}>N{(analytics?.netRevenue || 0).toLocaleString()}</p>
-              </div>
-            </div>
-            <h3 style={{ color: "#fff", fontSize: "14px", marginBottom: "12px" }}>Daily Revenue</h3>
-            {Object.keys(analytics?.revenueByDate || {}).length === 0 ? (
+            <h3 style={{ color: "#fff", fontSize: "14px", marginBottom: "12px" }}>🏆 Top Products by Revenue</h3>
+            {(analytics?.topProducts || []).length === 0 ? (
+              <p style={{ color: "#888" }}>No sales yet.</p>
+            ) : (
+              analytics.topProducts.map((p, i) => {
+                const maxRev = analytics.topProducts[0]?.revenue || 1;
+                const pct = Math.round((p.revenue / maxRev) * 100);
+                return (
+                  <div key={i} style={{ marginBottom: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ color: "#fff", fontSize: "13px" }}>{p.name}</span>
+                      <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>N{p.revenue.toLocaleString()}</span>
+                    </div>
+                    <div style={{ background: "#333", borderRadius: "4px", height: "6px" }}>
+                      <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "4px", height: "6px", width: `${pct}%` }} />
+                    </div>
+                    <span style={{ color: "#888", fontSize: "11px" }}>{p.units} units sold</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* MONTHLY REVENUE */}
+          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+            <h3 style={{ color: "#fff", fontSize: "14px", marginBottom: "12px" }}>📅 Monthly Revenue</h3>
+            {Object.keys(analytics?.monthly || {}).length === 0 ? (
               <p style={{ color: "#888" }}>No revenue data yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "300px", overflowY: "auto" }}>
-                {Object.entries(analytics?.revenueByDate || {}).reverse().map(([date, rev], i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #222" }}>
-                    <span style={{ color: "#888", fontSize: "13px" }}>{date}</span>
+                {Object.entries(analytics?.monthly || {}).reverse().map(([month, rev], i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #222" }}>
+                    <span style={{ color: "#888", fontSize: "13px" }}>{month}</span>
                     <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>N{rev.toLocaleString()}</span>
                   </div>
                 ))}

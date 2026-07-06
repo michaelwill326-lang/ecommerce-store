@@ -249,6 +249,59 @@ export default function Tracking() {
                 </div>
               )}
 
+              {/* CANCEL ORDER BUTTON */}
+              {(order.status === "Pending" || order.status === "Processing") && (
+                <div style={{ marginTop: "16px" }}>
+                  <button onClick={async () => {
+                    const reason = window.prompt("Reason for cancellation (optional):");
+                    if (reason === null) return;
+                    try {
+                      const token = localStorage.getItem("token");
+                      const res = await fetch(`${API}/api/orders/${order._id}/cancel`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ reason })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        alert("Order cancelled. Refund added to your TechMart wallet.");
+                        window.location.reload();
+                      } else {
+                        alert(data.error || "Could not cancel order");
+                      }
+                    } catch { alert("Failed to cancel order"); }
+                  }} style={{ width: "100%", padding: "12px", background: "#2a0a0a", border: "1px solid #dc2626", color: "#f87171", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
+                    ❌ Cancel Order & Get Refund
+                  </button>
+                </div>
+              )}
+
+              {/* CONFIRM DELIVERY BUTTON */}
+              {order.status === "Shipped" && !order.buyerConfirmed && (
+                <div style={{ marginTop: "16px" }}>
+                  <button onClick={async () => {
+                    if (!window.confirm("Confirm you have received this order? This will release payment to the seller.")) return;
+                    try {
+                      const token = localStorage.getItem("token");
+                      const res = await fetch(`${API}/api/orders/${order._id}/confirm-delivery`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        alert("Delivery confirmed! Thank you for shopping on TechMart.");
+                        window.location.reload();
+                      } else {
+                        alert(data.error || "Could not confirm delivery");
+                      }
+                    } catch { alert("Failed to confirm delivery"); }
+                  }} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", color: "#fff", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
+                    ✅ Confirm Delivery & Release Payment
+                  </button>
+                  <p style={{ color: "#888", fontSize: "11px", textAlign: "center", marginTop: "6px" }}>Only confirm after you have received your order</p>
+                </div>
+              )}
+
               {/* ORDER ITEMS */}
               {order.items?.length > 0 && (
                 <div style={styles.itemsSection}>
