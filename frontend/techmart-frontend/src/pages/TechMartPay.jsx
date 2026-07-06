@@ -447,6 +447,11 @@ export default function TechMartPay() {
         {tab === "Withdraw" && (
           <div>
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>Withdraw to Bank</h2>
+            <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
+              <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
+              <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
+              <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>Bank withdrawals will be available once we complete business registration. Your wallet balance is safe!</p>
+            </div>
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
               <input placeholder="Amount (N) — minimum N500" type="number" value={withdrawForm.amount} onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})} style={inp} />
