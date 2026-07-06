@@ -184,6 +184,12 @@ const Order = mongoose.model(
     podPaymentReference: { type: String, default: "" },
     originalAmount: Number,
     couponCode: String,
+    escrow: { type: Boolean, default: false },
+    escrowStatus: { type: String, enum: ["holding", "released", "refunded", "none"], default: "none" },
+    escrowReleasedAt: { type: Date, default: null },
+    cancelledAt: { type: Date, default: null },
+    cancelReason: { type: String, default: "" },
+    buyerConfirmed: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
   })
 );
@@ -3600,6 +3606,130 @@ app.post("/api/admin/fraud/suspend/:userId", adminOnly, async (req, res) => {
     res.json({ success: true, message: "User suspended" });
   } catch (err) {
     res.status(500).json({ error: "Failed to suspend user" });
+  }
+});
+
+
+/* ===========================
+   ESCROW + CANCELLATION + SELLER ANALYTICS
+=========================== */
+
+// Buyer confirms delivery — releases escrow to seller wallet
+app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.email !== req.user.email) return res.status(403).json({ error: "Not your order" });
+    if (order.escrowStatus !== "holding") return res.status(400).json({ error: "No escrow funds to release" });
+    if (order.buyerConfirmed) return res.status(400).json({ error: "Delivery already confirmed" });
+
+    // Find seller and credit their wallet
+    const sellerId = order.items[0]?.vendorId;
+    if (sellerId) {
+      const seller = await User.findById(sellerId);
+      if (seller) {
+        seller.walletBalance = (seller.walletBalance || 0) + order.amount;
+        seller.walletTransactions = seller.walletTransactions || [];
+        seller.walletTransactions.push({
+          type: "credit",
+          amount: order.amount,
+          description: `Escrow released for order #${order.trackingNumber || order._id}`,
+          reference: "ESC-" + Date.now()
+        });
+        await seller.save();
+      }
+    }
+
+    order.escrowStatus = "released";
+    order.escrowReleasedAt = new Date();
+    order.buyerConfirmed = true;
+    order.status = "Delivered";
+    await order.save();
+
+    res.json({ success: true, message: "Delivery confirmed. Payment released to seller." });
+  } catch (err) {
+    console.error("Escrow release error:", err.message);
+    res.status(500).json({ error: "Failed to confirm delivery" });
+  }
+});
+
+// Cancel order and refund to wallet
+app.post("/api/orders/:orderId/cancel", auth, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const order = await Order.findById(req.params.orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.email !== req.user.email) return res.status(403).json({ error: "Not your order" });
+
+    const cancellableStatuses = ["Pending", "Processing"];
+    if (!cancellableStatuses.includes(order.status)) {
+      return res.status(400).json({ error: `Cannot cancel an order that is ${order.status}` });
+    }
+
+    // Refund to wallet
+    const buyer = await User.findOne({ email: order.email });
+    if (buyer) {
+      buyer.walletBalance = (buyer.walletBalance || 0) + order.amount;
+      buyer.walletTransactions = buyer.walletTransactions || [];
+      buyer.walletTransactions.push({
+        type: "credit",
+        amount: order.amount,
+        description: `Refund for cancelled order #${order.trackingNumber || order._id}`,
+        reference: "REF-" + Date.now()
+      });
+      await buyer.save();
+    }
+
+    order.status = "Cancelled";
+    order.cancelledAt = new Date();
+    order.cancelReason = reason || "Cancelled by buyer";
+    if (order.escrowStatus === "holding") order.escrowStatus = "refunded";
+    await order.save();
+
+    res.json({ success: true, message: "Order cancelled. Refund added to your TechMart wallet." });
+  } catch (err) {
+    console.error("Cancel error:", err.message);
+    res.status(500).json({ error: "Failed to cancel order" });
+  }
+});
+
+// Seller analytics
+app.get("/api/seller/analytics", auth, async (req, res) => {
+  try {
+    const orders = await Order.find({
+      "items.vendorId": req.user.id,
+      status: { $ne: "Cancelled" }
+    });
+
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+    const totalOrders = orders.length;
+    const delivered = orders.filter(o => o.status === "Delivered").length;
+    const conversionRate = totalOrders > 0 ? Math.round((delivered / totalOrders) * 100) : 0;
+
+    // Top products
+    const productMap = {};
+    orders.forEach(o => {
+      (o.items || []).forEach(item => {
+        if (item.vendorId === req.user.id) {
+          if (!productMap[item.name]) productMap[item.name] = { name: item.name, units: 0, revenue: 0 };
+          productMap[item.name].units += item.quantity || 1;
+          productMap[item.name].revenue += (item.price || 0) * (item.quantity || 1);
+        }
+      });
+    });
+    const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+
+    // Monthly revenue (last 6 months)
+    const monthly = {};
+    orders.forEach(o => {
+      const month = new Date(o.createdAt).toLocaleString("default", { month: "short", year: "numeric" });
+      monthly[month] = (monthly[month] || 0) + (o.amount || 0);
+    });
+
+    res.json({ success: true, totalRevenue, totalOrders, delivered, conversionRate, topProducts, monthly });
+  } catch (err) {
+    console.error("Seller analytics error:", err.message);
+    res.status(500).json({ error: "Failed to fetch analytics" });
   }
 });
 
