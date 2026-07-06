@@ -1780,34 +1780,6 @@ app.get("/api/ai/inventory-forecast", adminOnly, async (req, res) => {
 
 
 /* ===========================
-    });
-
-    const forecasts = products.map(p => {
-      const sold30Days = salesMap[p._id.toString()] || 0;
-      const dailyVelocity = sold30Days / 30;
-      const daysUntilStockout = dailyVelocity > 0 ? Math.floor(p.stock / dailyVelocity) : null;
-      const reorderSuggestion = dailyVelocity > 0 ? Math.ceil(dailyVelocity * 30) : 0;
-
-      return {
-        productId: p._id,
-        name: p.name,
-        currentStock: p.stock,
-        sold30Days,
-        dailyVelocity: dailyVelocity.toFixed(2),
-        daysUntilStockout,
-        reorderSuggestion,
-        status: daysUntilStockout === null ? "slow" : daysUntilStockout <= 7 ? "critical" : daysUntilStockout <= 14 ? "low" : "healthy"
-      };
-    }).sort((a, b) => (a.daysUntilStockout || 999) - (b.daysUntilStockout || 999));
-
-    res.json({ success: true, forecasts, generatedAt: new Date() });
-  } catch (err) {
-    console.error("AI forecast error:", err.message);
-    res.status(500).json({ error: "Failed to generate forecast" });
-  }
-});
-
-/* ===========================
    FLASH SALE ENDPOINTS
 =========================== */
 
