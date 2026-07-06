@@ -967,20 +967,52 @@ app.post("/api/pay/airtime", auth, async (req, res) => {
 app.get("/api/pay/data-plans/:network", auth, async (req, res) => {
   try {
     const { network } = req.params;
-    const networkMap = { MTN: "MTN", Airtel: "AIRTEL", Glo: "GLO", "9mobile": "9MOBILE" };
-    const networkCode = networkMap[network];
-    if (!networkCode) return res.status(400).json({ error: "Invalid network" });
-
-    const response = await axios.get(
-      `https://www.nellobytesystems.com/APIGetDataBundleV1.asp?UserID=${process.env.CLUBKONNECT_USER_ID}&APIKey=${process.env.CLUBKONNECT_API_KEY}&MobileNetwork=${networkCode}`
-    );
-    res.json({ success: true, plans: response.data });
+    const staticPlans = {
+      MTN: [
+        { id: "MTN-100MB-1D", name: "100MB - 1 Day", price: 100 },
+        { id: "MTN-200MB-3D", name: "200MB - 3 Days", price: 200 },
+        { id: "MTN-500MB-7D", name: "500MB - 7 Days", price: 300 },
+        { id: "MTN-1GB-1M", name: "1GB - 30 Days", price: 300 },
+        { id: "MTN-2GB-1M", name: "2GB - 30 Days", price: 500 },
+        { id: "MTN-5GB-1M", name: "5GB - 30 Days", price: 1500 },
+        { id: "MTN-10GB-1M", name: "10GB - 30 Days", price: 3000 },
+        { id: "MTN-20GB-1M", name: "20GB - 30 Days", price: 5000 },
+        { id: "MTN-50GB-1M", name: "50GB - 30 Days", price: 10000 },
+      ],
+      Airtel: [
+        { id: "AIR-100MB-1D", name: "100MB - 1 Day", price: 100 },
+        { id: "AIR-200MB-3D", name: "200MB - 3 Days", price: 200 },
+        { id: "AIR-1GB-1M", name: "1GB - 30 Days", price: 300 },
+        { id: "AIR-2GB-1M", name: "2GB - 30 Days", price: 500 },
+        { id: "AIR-5GB-1M", name: "5GB - 30 Days", price: 1500 },
+        { id: "AIR-10GB-1M", name: "10GB - 30 Days", price: 3000 },
+        { id: "AIR-20GB-1M", name: "20GB - 30 Days", price: 5000 },
+      ],
+      Glo: [
+        { id: "GLO-100MB-1D", name: "100MB - 1 Day", price: 50 },
+        { id: "GLO-200MB-5D", name: "200MB - 5 Days", price: 100 },
+        { id: "GLO-1GB-1M", name: "1GB - 30 Days", price: 300 },
+        { id: "GLO-2GB-1M", name: "2GB - 30 Days", price: 500 },
+        { id: "GLO-5GB-1M", name: "5GB - 30 Days", price: 1500 },
+        { id: "GLO-10GB-1M", name: "10GB - 30 Days", price: 2500 },
+        { id: "GLO-50GB-1M", name: "50GB - 30 Days", price: 8000 },
+      ],
+      "9mobile": [
+        { id: "9MB-150MB-1D", name: "150MB - 1 Day", price: 100 },
+        { id: "9MB-1GB-1M", name: "1GB - 30 Days", price: 300 },
+        { id: "9MB-2GB-1M", name: "2GB - 30 Days", price: 500 },
+        { id: "9MB-5GB-1M", name: "5GB - 30 Days", price: 1500 },
+        { id: "9MB-10GB-1M", name: "10GB - 30 Days", price: 3000 },
+      ]
+    };
+    const plans = staticPlans[network] || [];
+    if (plans.length === 0) return res.status(400).json({ error: "Invalid network" });
+    res.json({ success: true, plans });
   } catch (err) {
     console.error("Data plans error:", err.message);
     res.status(500).json({ error: "Failed to fetch data plans" });
   }
 });
-
 // 9. Purchase Data Bundle
 app.post("/api/pay/data", auth, async (req, res) => {
   try {
