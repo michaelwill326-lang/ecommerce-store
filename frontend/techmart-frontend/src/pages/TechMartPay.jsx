@@ -476,6 +476,12 @@ export default function TechMartPay() {
         {tab === "Airtime" && (
           <div>
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>Buy Airtime</h2>
+        <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
+          <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
+          <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
+          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+        </div>
+
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
                 {["MTN", "Airtel", "Glo", "9mobile"].map(n => (
@@ -501,6 +507,12 @@ export default function TechMartPay() {
         {tab === "Data" && (
           <div>
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>Buy Data Bundle</h2>
+        <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
+          <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
+          <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
+          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+        </div>
+
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
                 {["MTN", "Airtel", "Glo", "9mobile"].map(n => (
@@ -538,6 +550,12 @@ export default function TechMartPay() {
         {tab === "Electricity" && (
           <div>
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>⚡ Electricity Payment</h2>
+        <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
+          <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
+          <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
+          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+        </div>
+
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Distribution Company</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", marginBottom: "16px", width: "100%" }}>
@@ -626,6 +644,12 @@ export default function TechMartPay() {
         {tab === "Betting" && (
           <div>
             <h2 style={{ color: "#fff", marginBottom: "16px" }}>🎯 Fund Betting Wallet</h2>
+        <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
+          <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
+          <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
+          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+        </div>
+
             <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Platform</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
