@@ -13,7 +13,7 @@ const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert } = require("./utils/email");
+const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert, sendOTPEmail } = require("./utils/email");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
@@ -121,6 +121,9 @@ const User = mongoose.model(
     paystackCustomerCode: { type: String, default: null },
     walletPin: { type: String, default: null },
     walletPinSet: { type: Boolean, default: false },
+    otpCode: { type: String, default: null },
+    otpExpires: { type: Date, default: null },
+    twoFactorEnabled: { type: Boolean, default: false },
     fraudScore: { type: Number, default: 0 },
     isFlagged: { type: Boolean, default: false },
     fraudFlags: [{
@@ -192,6 +195,20 @@ const Order = mongoose.model(
     createdAt: { type: Date, default: Date.now }
   })
 );
+
+// Return Model
+const ReturnSchema = new mongoose.Schema({
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
+  buyerEmail: { type: String, required: true },
+  buyerName: { type: String },
+  reason: { type: String, required: true },
+  description: { type: String },
+  status: { type: String, enum: ["pending", "approved", "rejected", "completed"], default: "pending" },
+  refundAmount: { type: Number, default: 0 },
+  adminNote: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now }
+});
+const Return = mongoose.model("Return", ReturnSchema);
 
 // Coupon Model
 const CouponSchema = new mongoose.Schema({
@@ -3372,6 +3389,141 @@ app.get("/api/seller/analytics", auth, async (req, res) => {
   } catch (err) {
     console.error("Seller analytics error:", err.message);
     res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+
+/* ===========================
+   🛡️ TRUST & SAFETY
+=========================== */
+
+// Send OTP for 2FA
+app.post("/api/auth/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await User.findByIdAndUpdate(user._id, { otpCode: otp, otpExpires: expires });
+
+    await sendOTPEmail(user.email, user.name, otp);
+    res.json({ success: true, message: "OTP sent to your email" });
+  } catch (err) {
+    console.error("OTP error:", err.message);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// Verify OTP
+app.post("/api/auth/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user.otpCode || user.otpCode !== otp) return res.status(400).json({ error: "Invalid OTP" });
+    if (new Date() > new Date(user.otpExpires)) return res.status(400).json({ error: "OTP has expired. Please request a new one." });
+
+    await User.findByIdAndUpdate(user._id, { otpCode: null, otpExpires: null });
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error("OTP verify error:", err.message);
+    res.status(500).json({ error: "OTP verification failed" });
+  }
+});
+
+// Submit Return Request
+app.post("/api/returns", auth, async (req, res) => {
+  try {
+    const { orderId, reason, description } = req.body;
+    if (!orderId || !reason) return res.status(400).json({ error: "Order ID and reason are required" });
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.email !== req.user.email) return res.status(403).json({ error: "Not your order" });
+    if (!["Delivered", "Paid", "Shipped"].includes(order.status)) {
+      return res.status(400).json({ error: "Only delivered or shipped orders can be returned" });
+    }
+
+    const existing = await Return.findOne({ orderId, buyerEmail: req.user.email });
+    if (existing) return res.status(400).json({ error: "You already submitted a return for this order" });
+
+    const user = await User.findById(req.user.id);
+    const returnRequest = await Return.create({
+      orderId,
+      buyerEmail: req.user.email,
+      buyerName: user?.name || req.user.email,
+      reason,
+      description,
+      refundAmount: order.amount
+    });
+
+    res.json({ success: true, message: "Return request submitted. We will review it within 24 hours.", returnRequest });
+  } catch (err) {
+    console.error("Return error:", err.message);
+    res.status(500).json({ error: "Failed to submit return request" });
+  }
+});
+
+// Get buyer's return requests
+app.get("/api/returns/my", auth, async (req, res) => {
+  try {
+    const returns = await Return.find({ buyerEmail: req.user.email }).sort({ createdAt: -1 });
+    res.json(returns);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch returns" });
+  }
+});
+
+// Admin — get all returns
+app.get("/api/admin/returns", adminOnly, async (req, res) => {
+  try {
+    const returns = await Return.find().sort({ createdAt: -1 });
+    res.json(returns);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch returns" });
+  }
+});
+
+// Admin — approve/reject return
+app.put("/api/admin/returns/:id", adminOnly, async (req, res) => {
+  try {
+    const { status, adminNote, refundAmount } = req.body;
+    const returnReq = await Return.findByIdAndUpdate(
+      req.params.id,
+      { status, adminNote, refundAmount },
+      { new: true }
+    );
+    if (!returnReq) return res.status(404).json({ error: "Return not found" });
+
+    // If approved, credit buyer wallet
+    if (status === "approved") {
+      const buyer = await User.findOne({ email: returnReq.buyerEmail });
+      if (buyer) {
+        buyer.walletBalance = (buyer.walletBalance || 0) + Number(refundAmount || returnReq.refundAmount);
+        buyer.walletTransactions.push({
+          type: "credit",
+          amount: Number(refundAmount || returnReq.refundAmount),
+          description: `Refund approved for return request #${returnReq._id}`,
+          reference: "RET-" + Date.now()
+        });
+        await buyer.save();
+      }
+    }
+
+    res.json({ success: true, returnReq });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update return" });
   }
 });
 
