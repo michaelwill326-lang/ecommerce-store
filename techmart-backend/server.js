@@ -12,7 +12,6 @@ const rateLimit = require("express-rate-limit");
 const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 
-const aiRoutes = require("./routes/ai");
 const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert } = require("./utils/email");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
@@ -83,7 +82,6 @@ app.use(express.json({ limit: "10mb" }));
 /* ===========================
    🤖 AI ROUTES
 =========================== */
-app.use("/api/ai", aiRoutes);
 
 /* ===========================
    🧠 DATABASE
@@ -1523,6 +1521,50 @@ app.get("/api/seller/messages/customer", auth, async (req, res) => {
    AI COMMERCE ENDPOINTS
 
 // 1. AI SEARCH - Natural language product search
+
+// AI Chat Assistant
+app.post("/api/ai/chat", async (req, res) => {
+  try {
+    const { message, history = [], userEmail = "Guest", userName = "Guest" } = req.body;
+    if (!message) return res.status(400).json({ error: "Message is required" });
+
+    const liveProducts = await Product.find({ stock: { $gt: 0 } }).select("name price stock category description");
+    const catalogContext = liveProducts.map(p =>
+      `- ${p.name} (N${p.price.toLocaleString()}) | Category: ${p.category} | Stock: ${p.stock} left.`
+    ).join("\n");
+
+    const systemInstruction = {
+      role: "system",
+      content: `You are the AI Sales Assistant for TechMart, Nigeria's elite electronics store.
+CURRENT USER: ${userName !== "Guest" ? userName : "a guest"}.
+RULES:
+1. Always quote prices in Naira (N symbol).
+2. Only recommend products from the LIVE CATALOG below.
+3. Keep answers concise and helpful.
+LIVE CATALOG:
+${catalogContext}`
+    };
+
+    const messagesPayload = [
+      systemInstruction,
+      ...history.map(msg => ({ role: msg.sender === "user" ? "user" : "assistant", content: msg.text })),
+      { role: "user", content: message }
+    ];
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: messagesPayload,
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    res.json({ reply: completion.choices[0].message.content });
+  } catch (err) {
+    console.error("AI chat error:", err.message);
+    res.status(500).json({ error: "AI server error" });
+  }
+});
+
 app.post("/api/ai/search", async (req, res) => {
   try {
     const { query } = req.body;
