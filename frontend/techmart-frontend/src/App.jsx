@@ -1,5 +1,5 @@
-import { Routes, Route, Suspense, lazy } from "react-router-dom";
-import { useEffect } from "react";
+import { Routes, Route } from "react-router-dom";
+import { useEffect, Suspense, lazy } from "react";
 import Navbar from "./components/Navbar"; 
 import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
