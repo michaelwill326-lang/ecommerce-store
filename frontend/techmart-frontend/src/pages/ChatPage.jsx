@@ -35,18 +35,22 @@ export default function ChatPage() {
     setInput("");
     setTyping(true);
     try {
-      const response = await fetch(`${API}/api/ai/chat`, {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API}/api/ai/assistant`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, userEmail, userName }),
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ message, history: messages.slice(-6) }),
       });
       const data = await response.json();
       setTyping(false);
-      addMessage(data.reply || "No response", "bot");
-      if (data.products && data.products.length > 0) {
-        data.products.forEach((p) => {
-          addMessage(`<b>${p.name}</b> - N${p.price?.toLocaleString()}`, "bot");
+      addMessage(data.message || data.reply || "No response", "bot");
+      if (data.data?.type === "products" && data.data.items?.length > 0) {
+        data.data.items.forEach((p) => {
+          addMessage(`<b>${p.name}</b> - ₦${p.price?.toLocaleString()}`, "bot");
         });
+      }
+      if (data.data?.type === "balance") {
+        addMessage(`💰 Wallet Balance: ₦${data.data.balance?.toLocaleString()}`, "bot");
       }
     } catch (err) {
       setTyping(false);
