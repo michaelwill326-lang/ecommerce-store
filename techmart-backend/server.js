@@ -3527,6 +3527,195 @@ app.put("/api/admin/returns/:id", adminOnly, async (req, res) => {
   }
 });
 
+
+/* ===========================
+   🤖 AI PLATFORM ASSISTANT
+=========================== */
+app.post("/api/ai/assistant", auth, async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    const user = await User.findById(req.user.id);
+
+    // 1. Classify intent with Groq
+    const classifyRes = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{
+        role: "system",
+        content: `You are an intent classifier for TechMart, a Nigerian e-commerce platform.
+Classify the user message into ONE of these intents and extract parameters.
+Return ONLY valid JSON with no markdown.
+
+Intents:
+- find_product: search for products (params: query, maxPrice, category)
+- wallet_balance: check wallet balance (params: none)
+- wallet_transfer: transfer money (params: recipientEmail, amount, note)
+- track_order: track an order (params: reference or "last")
+- apply_coupon: apply best coupon (params: none)
+- start_return: start a return (params: orderId or "last")
+- show_orders: show recent orders (params: none)
+- compare_products: compare products (params: product1, product2)
+- generate_description: generate product description (params: productName, category)
+- create_flash_sale: create flash sale (params: productName, discount, endDate) - admin only
+- fund_wallet: add money to wallet (params: amount)
+- general_chat: general conversation (params: none)
+
+Example response: {"intent": "find_product", "params": {"query": "gaming laptop", "maxPrice": 800000}}`
+      }, {
+        role: "user",
+        content: message
+      }],
+      max_tokens: 200,
+      temperature: 0.1
+    });
+
+    let intent, params;
+    try {
+      const parsed = JSON.parse(classifyRes.choices[0].message.content.trim());
+      intent = parsed.intent;
+      params = parsed.params || {};
+    } catch {
+      intent = "general_chat";
+      params = {};
+    }
+
+    let responseData = { intent, message: "", data: null, action: null };
+
+    // 2. Execute intent
+    switch (intent) {
+      case "find_product": {
+        const query = { stock: { $gt: 0 } };
+        if (params.category) query.category = new RegExp(params.category, "i");
+        if (params.maxPrice) query.price = { $lte: Number(params.maxPrice) };
+        let products = await Product.find(query).limit(5);
+        if (params.query) {
+          products = await Product.find({
+            $text: { $search: params.query },
+            stock: { $gt: 0 },
+            ...(params.maxPrice ? { price: { $lte: Number(params.maxPrice) } } : {})
+          }).limit(5).catch(() => 
+            Product.find({ name: new RegExp(params.query, "i"), stock: { $gt: 0 } }).limit(5)
+          );
+        }
+        responseData.message = products.length > 0 
+          ? `Found ${products.length} product${products.length > 1 ? "s" : ""} for you:`
+          : "No products found matching your search.";
+        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category })) };
+        break;
+      }
+
+      case "wallet_balance": {
+        responseData.message = `Your TechMart wallet balance is ₦${(user.walletBalance || 0).toLocaleString()}.`;
+        responseData.data = { type: "balance", balance: user.walletBalance || 0 };
+        break;
+      }
+
+      case "wallet_transfer": {
+        if (!params.recipientEmail || !params.amount) {
+          responseData.message = "Please provide the recipient email and amount to transfer.";
+        } else {
+          responseData.message = `Ready to transfer ₦${Number(params.amount).toLocaleString()} to ${params.recipientEmail}. Confirm?`;
+          responseData.data = { type: "confirm_transfer", recipientEmail: params.recipientEmail, amount: params.amount, note: params.note };
+          responseData.action = "confirm_transfer";
+        }
+        break;
+      }
+
+      case "track_order": {
+        const orders = await Order.find({ email: user.email }).sort({ createdAt: -1 }).limit(5);
+        if (orders.length === 0) {
+          responseData.message = "You have no orders yet.";
+        } else {
+          const order = orders[0];
+          responseData.message = `Your last order (#${order.trackingNumber || order._id.toString().slice(-6)}) is currently **${order.status}**. Placed on ${new Date(order.createdAt).toLocaleDateString()}.`;
+          responseData.data = { type: "orders", items: orders.slice(0, 3).map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt })) };
+        }
+        break;
+      }
+
+      case "show_orders": {
+        const orders = await Order.find({ email: user.email }).sort({ createdAt: -1 }).limit(5);
+        responseData.message = orders.length > 0 ? `You have ${orders.length} recent orders:` : "You have no orders yet.";
+        responseData.data = { type: "orders", items: orders.map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt })) };
+        break;
+      }
+
+      case "apply_coupon": {
+        const coupons = await Coupon.find({ active: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).sort({ value: -1 }).limit(1);
+        if (coupons.length === 0) {
+          responseData.message = "No active coupons available right now.";
+        } else {
+          const best = coupons[0];
+          responseData.message = `Best available coupon: **${best.code}** — ${best.type === "percent" ? best.value + "% off" : "₦" + best.value + " off"}${best.minOrder ? " (min order ₦" + best.minOrder.toLocaleString() + ")" : ""}`;
+          responseData.data = { type: "coupon", code: best.code, value: best.value, type: best.type };
+          responseData.action = "apply_coupon";
+        }
+        break;
+      }
+
+      case "start_return": {
+        const orders = await Order.find({ email: user.email, status: { $in: ["Delivered", "Shipped"] } }).sort({ createdAt: -1 }).limit(1);
+        if (orders.length === 0) {
+          responseData.message = "No eligible orders found for return.";
+        } else {
+          responseData.message = `I can start a return for your last order (#${orders[0].trackingNumber || orders[0]._id.toString().slice(-6)}, ₦${orders[0].amount.toLocaleString()}). What is the reason for return?`;
+          responseData.data = { type: "start_return", orderId: orders[0]._id };
+          responseData.action = "start_return";
+        }
+        break;
+      }
+
+      case "fund_wallet": {
+        responseData.message = `I'll take you to the Add Money page to fund your wallet${params.amount ? " with ₦" + Number(params.amount).toLocaleString() : ""}.`;
+        responseData.data = { type: "navigate", path: "/pay", tab: "Add Money", amount: params.amount };
+        responseData.action = "navigate";
+        break;
+      }
+
+      case "generate_description": {
+        if (!params.productName) {
+          responseData.message = "Please provide the product name to generate a description.";
+        } else {
+          const descRes = await groq.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [{
+              role: "user",
+              content: `Write a compelling 2-3 sentence product description for "${params.productName}" ${params.category ? "in the " + params.category + " category" : ""} for a Nigerian e-commerce store. Focus on key features and benefits. Be concise and persuasive.`
+            }],
+            max_tokens: 150,
+            temperature: 0.7
+          });
+          responseData.message = descRes.choices[0].message.content.trim();
+          responseData.data = { type: "description", text: responseData.message };
+        }
+        break;
+      }
+
+      case "general_chat":
+      default: {
+        const products = await Product.find({ stock: { $gt: 0 } }).select("name price category").limit(20);
+        const catalog = products.map(p => `${p.name} (₦${p.price?.toLocaleString()}) - ${p.category}`).join("\n");
+        const chatRes = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: `You are TechMart AI Assistant for ${user.name}. You can help with shopping, wallet, orders, and platform features. Be helpful, concise and friendly. Current wallet: ₦${(user.walletBalance || 0).toLocaleString()}. Available products:\n${catalog}` },
+            ...history.map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
+            { role: "user", content: message }
+          ],
+          max_tokens: 300,
+          temperature: 0.7
+        });
+        responseData.message = chatRes.choices[0].message.content.trim();
+        break;
+      }
+    }
+
+    res.json({ success: true, ...responseData });
+  } catch (err) {
+    console.error("AI Assistant error:", err.message);
+    res.status(500).json({ error: "AI Assistant failed", message: "Sorry, I encountered an error. Please try again." });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
