@@ -1,5 +1,14 @@
 import { Routes, Route } from "react-router-dom";
 import { useEffect, Suspense, lazy } from "react";
+
+// Register service worker
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").then(() => {
+      console.log("SW registered");
+    }).catch(() => {});
+  });
+}
 import Navbar from "./components/Navbar"; 
 import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import FlashSaleBanner from "../components/FlashSaleBanner";
 
@@ -22,6 +22,10 @@ export default function Home() {
   const [maxPrice, setMaxPrice] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const recent = JSON.parse(localStorage.getItem("recent")) || [];
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+  const observerRef = useRef(null);
+  const loaderRef = useRef(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/api/products`)
@@ -50,12 +54,31 @@ export default function Home() {
   }, [products, search, category, sortBy, minPrice, maxPrice]);
 
   const isFiltering = search || category !== "All" || minPrice || maxPrice || sortBy !== "newest";
+  const paginatedProducts = useMemo(() => filtered.slice(0, page * ITEMS_PER_PAGE), [filtered, page]);
+  const hasMore = paginatedProducts.length < filtered.length;
+
+  const handleObserver = useCallback((entries) => {
+    const target = entries[0];
+    if (target.isIntersecting && hasMore) {
+      setPage(prev => prev + 1);
+    }
+  }, [hasMore]);
+
+  useEffect(() => {
+    const option = { root: null, rootMargin: "20px", threshold: 0 };
+    observerRef.current = new IntersectionObserver(handleObserver, option);
+    if (loaderRef.current) observerRef.current.observe(loaderRef.current);
+    return () => { if (observerRef.current) observerRef.current.disconnect(); };
+  }, [handleObserver]);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [search, category, sortBy, minPrice, maxPrice]);
   const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 
   const ProductCard = ({ p }) => (
     <Link to={`/product/${p._id}`} className="tm-card">
       <div style={{ position: "relative" }}>
-        <img src={p.images?.[0]||FALLBACK} alt={p.name} onError={e=>e.target.src=FALLBACK} className="tm-card-img" />
+        <img src={p.images?.[0]||FALLBACK} alt={p.name} onError={e=>e.target.src=FALLBACK} loading="lazy" decoding="async" className="tm-card-img" />
         {p.stock === 0 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#dc2626", color: "#fff", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Out of Stock</span>}
         {p.stock > 0 && p.stock <= 5 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#f59e0b", color: "#fff", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Only {p.stock} left</span>}
       </div>
@@ -160,7 +183,11 @@ export default function Home() {
             )}
             <section>
               <h2 className="tm-title">�� All Products</h2>
-              <div className="tm-grid">{products.map(p=><ProductCard key={p._id} p={p}/>)}</div>
+              <div className="tm-grid">{paginatedProducts.map(p=><ProductCard key={p._id} p={p}/>)}</div>
+              <div ref={loaderRef} style={{ padding: "20px", textAlign: "center" }}>
+                {hasMore && <div style={{ width: "30px", height: "30px", border: "3px solid #333", borderTop: "3px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />}
+                {!hasMore && filtered.length > ITEMS_PER_PAGE && <p style={{ color: "#888", fontSize: "13px" }}>All {filtered.length} products loaded</p>}
+              </div>
             </section>
             {recent.length > 0 && (
               <section>
