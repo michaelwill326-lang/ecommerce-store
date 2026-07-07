@@ -404,25 +404,26 @@ const sendLowStockAlert = async (product) => {
 
 
 const sendOTPEmail = async (email, name, otp) => {
-  const client = new SibApiV3Sdk.TransactionalEmailsApi();
-  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-  sendSmtpEmail.subject = "Your TechMart Login OTP";
-  sendSmtpEmail.to = [{ email, name }];
-  sendSmtpEmail.sender = { name: "TechMart", email: "noreply@techmart.com" };
-  sendSmtpEmail.htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #f97316;">TechMart Security Code</h2>
-      <p>Hi ${name},</p>
-      <p>Your one-time login code is:</p>
-      <div style="background: #f97316; color: #fff; font-size: 36px; font-weight: 900; text-align: center; padding: 20px; border-radius: 10px; letter-spacing: 8px; margin: 20px 0;">
-        ${otp}
-      </div>
-      <p style="color: #888;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
-      <p style="color: #888;">If you didn't request this, please ignore this email.</p>
-    </div>
-  `;
   try {
-    await client.sendTransacEmail(sendSmtpEmail);
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #0a0a0a;">
+        <h1 style="color: #f97316; text-align: center;">TechMart</h1>
+        <h2 style="color: #fff; text-align: center;">Security Code</h2>
+        <p style="color: #aaa;">Hi ${name},</p>
+        <p style="color: #aaa;">Your one-time login code is:</p>
+        <div style="background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; font-size: 36px; font-weight: 900; text-align: center; padding: 20px; border-radius: 10px; letter-spacing: 8px; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #888;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+        <p style="color: #888;">If you did not request this, please ignore this email.</p>
+      </div>
+    `;
+    await brevo.transactionalEmails.sendTransacEmail({
+      sender: FROM,
+      to: [{ email, name }],
+      subject: "Your TechMart Login Code",
+      htmlContent: html,
+    });
     console.log("OTP email sent to:", email);
   } catch (err) {
     console.error("OTP email error:", err.message);
