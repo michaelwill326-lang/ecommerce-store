@@ -276,6 +276,33 @@ export default function Tracking() {
                 </div>
               )}
 
+              {/* REQUEST RETURN BUTTON */}
+              {(order.status === "Delivered" || order.buyerConfirmed) && (
+                <div style={{ marginTop: "16px" }}>
+                  <button onClick={async () => {
+                    const reason = prompt("Reason for return (e.g. wrong item, damaged, not as described):");
+                    if (!reason) return;
+                    const description = prompt("Additional details (optional):");
+                    try {
+                      const token = localStorage.getItem("token");
+                      const res = await fetch(`${API}/api/returns`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ orderId: order._id, reason, description })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        alert("Return request submitted! We will review it within 24 hours.");
+                      } else {
+                        alert(data.error || "Could not submit return request");
+                      }
+                    } catch { alert("Failed to submit return request"); }
+                  }} style={{ width: "100%", padding: "12px", background: "#1a1a2a", border: "1px solid #3b82f6", color: "#60a5fa", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
+                    ↩️ Request Return / Refund
+                  </button>
+                </div>
+              )}
+
               {/* CONFIRM DELIVERY BUTTON */}
               {order.status === "Shipped" && !order.buyerConfirmed && (
                 <div style={{ marginTop: "16px" }}>

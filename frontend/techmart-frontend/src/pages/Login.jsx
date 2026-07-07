@@ -8,7 +8,9 @@ export default function Login() {
   const navigate = useNavigate();
   
   // Auth view switcher state: "login" | "forgot" | "reset"
-  const [view, setView] = useState("login"); 
+  const [view, setView] = useState("login");
+  const [otpStep, setOtpStep] = useState(false);
+  const [otp, setOtp] = useState("");
   
   // Shared Form inputs
   const [email, setEmail] = useState("");
@@ -28,13 +30,34 @@ export default function Login() {
     setError("");
     try {
       setLoading(true);
+      // First verify credentials
       const response = await axios.post(`${API}/api/auth/login`, { email, password });
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      navigate("/");
+      // Send OTP
+      await axios.post(`${API}/api/auth/send-otp`, { email });
+      // Store temp user data and show OTP step
+      localStorage.setItem("_tempUser", JSON.stringify(response.data));
+      setOtpStep(true);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1b. Verify OTP and complete login
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      setLoading(true);
+      const res = await axios.post(`${API}/api/auth/verify-otp`, { email, otp });
+      localStorage.removeItem("_tempUser");
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      navigate("/");
+    } catch (err) {
+      setError(err.response?.data?.error || "Invalid or expired OTP");
     } finally {
       setLoading(false);
     }
@@ -94,7 +117,38 @@ export default function Login() {
         </div>
 
         {/* CONDITIONALLY RENDER INTERFACES BASED ON ACTIVE STATE */}
-        {view === "login" && (
+        {otpStep && (
+          <>
+            <h2 style={styles.title}>Check your email 📧</h2>
+            <p style={styles.subtitle}>We sent a 6-digit code to {email}</p>
+            {error && <div style={styles.errorBox}>⚠️ {error}</div>}
+            <form onSubmit={handleVerifyOtp}>
+              <div style={styles.fieldWrap}>
+                <label style={styles.label}>Enter OTP</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                  style={{ ...styles.input, textAlign: "center", fontSize: "24px", letterSpacing: "8px" }}
+                  autoFocus
+                />
+              </div>
+              <button type="submit" disabled={loading} style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Verifying..." : "Verify OTP"}
+              </button>
+            </form>
+            <p style={{ color: "#888", fontSize: "13px", textAlign: "center", marginTop: "12px" }}>
+              Didn't receive it?{" "}
+              <span onClick={async () => { await axios.post(`${API}/api/auth/send-otp`, { email }); setError(""); }} style={{ color: "#f97316", cursor: "pointer" }}>Resend OTP</span>
+            </p>
+            <p style={{ color: "#888", fontSize: "13px", textAlign: "center", marginTop: "8px" }}>
+              <span onClick={() => { setOtpStep(false); setOtp(""); setError(""); }} style={{ color: "#888", cursor: "pointer" }}>← Back to login</span>
+            </p>
+          </>
+        )}
+        {!otpStep && view === "login" && (
           <>
             <h2 style={styles.title}>Welcome back 👋</h2>
             <p style={styles.subtitle}>Login to your account</p>

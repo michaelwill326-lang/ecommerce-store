@@ -177,11 +177,18 @@ export default function ProductDetail() {
         {/* RIGHT — DETAILS */}
         <div style={styles.detailsCol}>
           {product.vendorName && (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
               <span style={{ color: "#888", fontSize: "13px" }}>Sold by</span>
               <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>{product.vendorName}</span>
+              <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "20px" }}>✓ Verified Seller</span>
             </div>
           )}
+          {/* BUYER PROTECTION BADGE */}
+          <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+            <span style={{ background: "#0a1a2a", border: "1px solid #3b82f6", color: "#60a5fa", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>🛡️ Buyer Protected</span>
+            <span style={{ background: "#1a0a00", border: "1px solid #f97316", color: "#f97316", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>↩️ Easy Returns</span>
+            <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>⚡ Fast Delivery</span>
+          </div>
 
           {/* CATEGORY */}
           <span style={styles.categoryBadge}>{product.category}</span>

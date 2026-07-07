@@ -9,7 +9,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ export default function Admin() {
   const [pendingReviews, setPendingReviews] = useState([]);
   const [flaggedReviews, setFlaggedReviews] = useState([]);
   const [flaggedUsers, setFlaggedUsers] = useState([]);
+  const [returns, setReturns] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [reviewTab, setReviewTab] = useState("pending");
   const [coupons, setCoupons] = useState([]);
@@ -248,6 +249,7 @@ export default function Admin() {
             {t === "Users" && "👥 "}
             {t === "Reviews" && "⭐ "}
             {t === "Fraud" && "🚨 "}
+            {t === "Returns" && "↩️ "}
             {t}
           </button>
         ))}
@@ -672,6 +674,57 @@ ${url}`);
                           setFlaggedUsers(flaggedUsers.filter(x => x._id !== u._id));
                         }
                       }} style={{ ...styles.deleteBtn }}>Suspend</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* RETURNS TAB */}
+      {tab === "Returns" && (
+        <div style={styles.tableCard}>
+          <h2 style={{ color: "#f97316", marginBottom: 16 }}>↩️ Return Requests</h2>
+          <button onClick={async () => {
+            try {
+              const res = await axios.get(`${API}/api/admin/returns`, { headers });
+              setReturns(res.data);
+            } catch { alert("Failed to load returns"); }
+          }} style={{ ...styles.addBtn, marginBottom: 16 }}>Load Return Requests</button>
+          {returns.length === 0 ? (
+            <p style={{ color: "#888" }}>No return requests yet. Click Load to fetch.</p>
+          ) : (
+            <table style={styles.table}>
+              <thead><tr>
+                <th style={styles.th}>Buyer</th>
+                <th style={styles.th}>Reason</th>
+                <th style={styles.th}>Amount</th>
+                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Actions</th>
+              </tr></thead>
+              <tbody>
+                {returns.map(r => (
+                  <tr key={r._id}>
+                    <td style={styles.td}>{r.buyerName}<br/><span style={{color:"#888",fontSize:11}}>{r.buyerEmail}</span></td>
+                    <td style={styles.td}>{r.reason}<br/><span style={{color:"#888",fontSize:11}}>{r.description}</span></td>
+                    <td style={styles.td}>N{(r.refundAmount||0).toLocaleString()}</td>
+                    <td style={styles.td}>
+                      <span style={{color: r.status==="approved"?"#22c55e":r.status==="rejected"?"#dc2626":"#f97316", fontWeight:700}}>{r.status}</span>
+                    </td>
+                    <td style={styles.td}>
+                      {r.status === "pending" && (<>
+                        <button onClick={async () => {
+                          await axios.put(`${API}/api/admin/returns/${r._id}`, { status: "approved", refundAmount: r.refundAmount }, { headers });
+                          setReturns(returns.map(x => x._id === r._id ? {...x, status: "approved"} : x));
+                        }} style={{...styles.approveBtn, marginRight:6}}>Approve & Refund</button>
+                        <button onClick={async () => {
+                          const note = prompt("Reason for rejection:");
+                          await axios.put(`${API}/api/admin/returns/${r._id}`, { status: "rejected", adminNote: note }, { headers });
+                          setReturns(returns.map(x => x._id === r._id ? {...x, status: "rejected"} : x));
+                        }} style={styles.deleteBtn}>Reject</button>
+                      </>)}
                     </td>
                   </tr>
                 ))}
