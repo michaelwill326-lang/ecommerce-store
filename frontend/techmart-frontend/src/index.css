@@ -243,3 +243,65 @@
     width: 350px; /* Snaps to a neat desktop pop-up notification window */
   }
 }
+/* ===========================
+   CROSS-BROWSER FIXES
+=========================== */
+
+/* Hide scrollbars cross-browser (Chrome + Firefox) */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Global scrollbar styling for Chrome/Windows */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #111;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Fix font rendering on Windows Chrome */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix input styling on Windows Chrome */
+input, textarea, select, button {
+  -webkit-appearance: none;
+  font-family: inherit;
+}
+
+/* Fix tap highlight on mobile Chrome */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Fix flex gap on older Chrome versions */
+.tm-grid {
+  display: grid;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Fix position sticky on Windows Chrome */
+.sticky-nav {
+  position: -webkit-sticky;
+  position: sticky;
+}

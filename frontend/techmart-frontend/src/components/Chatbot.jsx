@@ -62,8 +62,11 @@ export default function Chatbot() {
     window.speechSynthesis.cancel();
     const clean = text.replace(/\*\*/g, "").replace(/₦/g, "naira ").replace(/\n/g, ". ");
     const utterance = new SpeechSynthesisUtterance(clean);
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang.startsWith("en")) || voices[0];
+    if (preferred) utterance.voice = preferred;
     utterance.lang = "en-NG";
-    utterance.rate = 0.95;
+    utterance.rate = 0.9;
     utterance.onstart = () => setSpeaking(true);
     utterance.onend = () => setSpeaking(false);
     window.speechSynthesis.speak(utterance);
@@ -75,6 +78,8 @@ export default function Chatbot() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     const recognition = new SR();
     recognition.lang = "en-NG";
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
     recognition.interimResults = false;
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
@@ -335,7 +340,7 @@ export default function Chatbot() {
           </div>
 
           {/* QUICK ACTIONS */}
-          <div style={{ padding:"6px 10px", borderTop:"1px solid #1a1a1a", display:"flex", gap:5, overflowX:"auto", flexShrink:0 }}>
+          <div className="hide-scrollbar" style={{ padding:"6px 10px", borderTop:"1px solid #1a1a1a", display:"flex", gap:5, overflowX:"auto", flexShrink:0 }}>
             {quickActions.map((q, i) => (
               <button key={i} onClick={() => sendMessage(q.msg)}
                 style={{ whiteSpace:"nowrap", padding:"4px 10px", background:"#1a1a1a", border:"1px solid #333", borderRadius:20, color:"#888", fontSize:11, cursor:"pointer", flexShrink:0 }}>

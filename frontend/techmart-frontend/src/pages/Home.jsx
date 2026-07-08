@@ -123,7 +123,7 @@ export default function Home() {
         </div>
 
         {/* CATEGORY PILLS */}
-        <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "8px", marginBottom: "12px", scrollbarWidth: "none" }}>
+        <div className="hide-scrollbar" style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "8px", marginBottom: "12px" }}>
           {CATEGORIES.map(cat => (
             <button key={cat} className={`tm-cat-btn${category === cat ? " active" : ""}`} onClick={() => setCategory(cat)}>{cat}</button>
           ))}

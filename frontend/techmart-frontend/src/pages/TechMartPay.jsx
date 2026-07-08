@@ -347,7 +347,7 @@ export default function TechMartPay() {
         </div>
 
         {/* TABS */}
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", overflowX: "auto", paddingBottom: "4px" }}>
+        <div className="hide-scrollbar" style={{ display: "flex", gap: "6px", marginBottom: "20px", overflowX: "auto", paddingBottom: "4px" }}>
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "12px", whiteSpace: "nowrap", background: tab === t ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a", color: tab === t ? "#fff" : "#888" }}>{t}</button>
           ))}
