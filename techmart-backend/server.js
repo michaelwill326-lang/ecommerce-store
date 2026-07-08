@@ -124,6 +124,7 @@ const User = mongoose.model(
     otpCode: { type: String, default: null },
     otpExpires: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
+    aiPreferences: { type: Object, default: {} },
     fraudScore: { type: Number, default: 0 },
     isFlagged: { type: Boolean, default: false },
     fraudFlags: [{
@@ -3867,6 +3868,430 @@ Current message: ${message}`
     res.status(500).json({ error: "AI Assistant failed", message: "Sorry, I encountered an error. Please try again." });
   }
 });
+
+/* ===========================
+   🧠 AI AGENT - TOOL CALLING
+=========================== */
+
+// Tool definitions for Groq function calling
+const TECHMART_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "search_products",
+      description: "Search for products on TechMart by name, category, or price range",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Product name or keywords" },
+          category: { type: "string", description: "Product category" },
+          maxPrice: { type: "number", description: "Maximum price in Naira" },
+          minPrice: { type: "number", description: "Minimum price in Naira" },
+          limit: { type: "number", description: "Number of results (default 5)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_wallet_info",
+      description: "Get user wallet balance and recent transactions",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "transfer_money",
+      description: "Transfer money from wallet to another TechMart user",
+      parameters: {
+        type: "object",
+        properties: {
+          recipientEmail: { type: "string", description: "Recipient email address" },
+          amount: { type: "number", description: "Amount in Naira" },
+          note: { type: "string", description: "Optional note" }
+        },
+        required: ["recipientEmail", "amount"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_orders",
+      description: "Get user recent orders and their status",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: { type: "number", description: "Number of orders to return" },
+          status: { type: "string", description: "Filter by status" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_best_coupon",
+      description: "Get the best available coupon code",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_spending_summary",
+      description: "Get wallet spending summary for a period",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", description: "Period e.g. this month, last week, today" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_low_stock_products",
+      description: "Get products with low stock (for sellers and admins)",
+      parameters: {
+        type: "object",
+        properties: {
+          threshold: { type: "number", description: "Stock threshold (default 5)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_admin_stats",
+      description: "Get admin dashboard stats including today revenue and orders",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_flagged_users",
+      description: "Get users flagged for suspicious activity (admin only)",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_product_description",
+      description: "Generate a compelling product description using AI",
+      parameters: {
+        type: "object",
+        properties: {
+          productName: { type: "string", description: "Product name" },
+          category: { type: "string", description: "Product category" }
+        },
+        required: ["productName"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_preference",
+      description: "Save a user preference or memory for future conversations",
+      parameters: {
+        type: "object",
+        properties: {
+          key: { type: "string", description: "Preference key e.g. preferred_network, budget" },
+          value: { type: "string", description: "Preference value" }
+        },
+        required: ["key", "value"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "compare_products",
+      description: "Compare two products side by side",
+      parameters: {
+        type: "object",
+        properties: {
+          product1: { type: "string", description: "First product name or ID" },
+          product2: { type: "string", description: "Second product name or ID" }
+        },
+        required: ["product1", "product2"]
+      }
+    }
+  }
+];
+
+// Tool executor
+async function executeTool(toolName, toolArgs, user) {
+  switch (toolName) {
+    case "search_products": {
+      const query = { stock: { $gt: 0 } };
+      if (toolArgs.category) query.category = new RegExp(toolArgs.category, "i");
+      if (toolArgs.maxPrice) query.price = { ...(query.price||{}), $lte: toolArgs.maxPrice };
+      if (toolArgs.minPrice) query.price = { ...(query.price||{}), $gte: toolArgs.minPrice };
+      const limit = toolArgs.limit || 5;
+      let products;
+      if (toolArgs.query) {
+        products = await Product.find({ name: new RegExp(toolArgs.query, "i"), stock: { $gt: 0 }, ...query }).limit(limit);
+        if (!products.length) products = await Product.find({ description: new RegExp(toolArgs.query, "i"), stock: { $gt: 0 }, ...query }).limit(limit);
+      } else {
+        products = await Product.find(query).limit(limit);
+      }
+      return { products: products.map(p => ({ _id: p._id, name: p.name, price: p.price, category: p.category, stock: p.stock, image: p.images?.[0] })) };
+    }
+
+    case "get_wallet_info": {
+      const recent = (user.walletTransactions || []).slice(-5).reverse();
+      return { balance: user.walletBalance || 0, recentTransactions: recent };
+    }
+
+    case "transfer_money": {
+      const recipient = await User.findOne({ email: toolArgs.recipientEmail });
+      if (!recipient) return { error: "Recipient not found" };
+      if ((user.walletBalance || 0) < toolArgs.amount) return { error: "Insufficient balance" };
+      const reference = "TXF-" + Date.now();
+      user.walletBalance -= toolArgs.amount;
+      user.walletTransactions.push({ type: "debit", amount: toolArgs.amount, description: `Transfer to ${recipient.name}${toolArgs.note ? " — " + toolArgs.note : ""}`, reference });
+      await user.save();
+      recipient.walletBalance = (recipient.walletBalance || 0) + toolArgs.amount;
+      recipient.walletTransactions.push({ type: "credit", amount: toolArgs.amount, description: `Transfer from ${user.name}`, reference });
+      await recipient.save();
+      return { success: true, message: `Transferred ₦${toolArgs.amount.toLocaleString()} to ${recipient.name}`, reference };
+    }
+
+    case "get_orders": {
+      const query = { email: user.email };
+      if (toolArgs.status) query.status = toolArgs.status;
+      const orders = await Order.find(query).sort({ createdAt: -1 }).limit(toolArgs.limit || 5);
+      return { orders: orders.map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt, items: o.items?.length })) };
+    }
+
+    case "get_best_coupon": {
+      const coupon = await Coupon.findOne({ active: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).sort({ value: -1 });
+      if (!coupon) return { error: "No active coupons" };
+      return { code: coupon.code, type: coupon.type, value: coupon.value, minOrder: coupon.minOrder };
+    }
+
+    case "get_spending_summary": {
+      const start = new Date();
+      start.setDate(1);
+      const txns = (user.walletTransactions || []).filter(t => new Date(t.createdAt) >= start);
+      const spent = txns.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
+      const received = txns.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
+      return { period: toolArgs.period || "this month", totalSpent: spent, totalReceived: received, transactionCount: txns.length };
+    }
+
+    case "get_low_stock_products": {
+      const threshold = toolArgs.threshold || 5;
+      const query = { stock: { $lte: threshold, $gt: 0 } };
+      if (user.role === "seller") query.vendorId = user._id.toString();
+      const products = await Product.find(query).sort({ stock: 1 }).limit(10);
+      return { products: products.map(p => ({ _id: p._id, name: p.name, stock: p.stock, price: p.price })) };
+    }
+
+    case "get_admin_stats": {
+      if (user.role !== "admin") return { error: "Admin access required" };
+      const today = new Date(); today.setHours(0,0,0,0);
+      const orders = await Order.find({ createdAt: { $gte: today }, status: { $nin: ["Cancelled"] } });
+      const revenue = orders.reduce((s, o) => s + (o.amount || 0), 0);
+      const totalUsers = await User.countDocuments();
+      const flagged = await User.countDocuments({ isFlagged: true });
+      return { todayRevenue: revenue, todayOrders: orders.length, totalUsers, flaggedUsers: flagged };
+    }
+
+    case "get_flagged_users": {
+      if (user.role !== "admin") return { error: "Admin access required" };
+      const flagged = await User.find({ isFlagged: true }).select("name email fraudScore").sort({ fraudScore: -1 }).limit(10);
+      return { users: flagged.map(u => ({ _id: u._id, name: u.name, email: u.email, fraudScore: u.fraudScore })) };
+    }
+
+    case "generate_product_description": {
+      const res = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: `Write a compelling 2-3 sentence product description for "${toolArgs.productName}" ${toolArgs.category ? "in the " + toolArgs.category + " category" : ""} for a Nigerian e-commerce store. Be concise and persuasive.` }],
+        max_tokens: 150, temperature: 0.7
+      });
+      return { description: res.choices[0].message.content.trim() };
+    }
+
+    case "save_preference": {
+      const prefs = user.aiPreferences || {};
+      prefs[toolArgs.key] = toolArgs.value;
+      await User.findByIdAndUpdate(user._id, { aiPreferences: prefs });
+      return { success: true, message: `Saved preference: ${toolArgs.key} = ${toolArgs.value}` };
+    }
+
+    case "compare_products": {
+      const [p1, p2] = await Promise.all([
+        Product.findOne({ $or: [{ _id: toolArgs.product1.length === 24 ? toolArgs.product1 : null }, { name: new RegExp(toolArgs.product1, "i") }] }),
+        Product.findOne({ $or: [{ _id: toolArgs.product2.length === 24 ? toolArgs.product2 : null }, { name: new RegExp(toolArgs.product2, "i") }] })
+      ]);
+      if (!p1 || !p2) return { error: "Could not find one or both products" };
+      return {
+        product1: { _id: p1._id, name: p1.name, price: p1.price, category: p1.category, stock: p1.stock, rating: p1.rating, image: p1.images?.[0] },
+        product2: { _id: p2._id, name: p2.name, price: p2.price, category: p2.category, stock: p2.stock, rating: p2.rating, image: p2.images?.[0] },
+        cheaper: p1.price < p2.price ? p1._id : p2._id,
+        recommendation: p1.price < p2.price ? p1.name : p2.name
+      };
+    }
+
+    default:
+      return { error: "Unknown tool" };
+  }
+}
+
+// AI Agent endpoint with tool calling loop
+app.post("/api/ai/agent", auth, async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    const user = await User.findById(req.user.id);
+    const prefs = user.aiPreferences || {};
+
+    // Build system prompt with user context
+    const systemPrompt = `You are TechMart AI Agent for ${user.name} (${user.role}).
+Wallet: ₦${(user.walletBalance || 0).toLocaleString()}
+Preferences: ${JSON.stringify(prefs)}
+Date: ${new Date().toLocaleDateString("en-NG")}
+
+You are an autonomous AI agent that can plan and execute multi-step tasks across TechMart.
+Use tools to gather information before responding. Chain multiple tools when needed.
+For sensitive actions (transfers, purchases), always confirm with the user first.
+Be concise, helpful, and proactive. Speak naturally like a smart Nigerian assistant.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...history.slice(-10).map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
+      { role: "user", content: message }
+    ];
+
+    let toolResults = [];
+    let finalMessage = "";
+    let finalData = null;
+    let iterations = 0;
+    const MAX_ITERATIONS = 5;
+
+    // Agentic loop — keep calling tools until done
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages,
+        tools: TECHMART_TOOLS,
+        tool_choice: "auto",
+        max_tokens: 1000,
+        temperature: 0.3
+      });
+
+      const choice = response.choices[0];
+
+      // If no tool calls, we have the final answer
+      if (!choice.message.tool_calls || choice.message.tool_calls.length === 0) {
+        finalMessage = choice.message.content || "";
+        break;
+      }
+
+      // Execute all tool calls
+      messages.push({ role: "assistant", content: choice.message.content || "", tool_calls: choice.message.tool_calls });
+
+      for (const toolCall of choice.message.tool_calls) {
+        const toolName = toolCall.function.name;
+        let toolArgs = {};
+        try { toolArgs = JSON.parse(toolCall.function.arguments); } catch {}
+
+        console.log(`🔧 Agent calling tool: ${toolName}`, toolArgs);
+        const result = await executeTool(toolName, toolArgs, user);
+        toolResults.push({ tool: toolName, args: toolArgs, result });
+
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result)
+        });
+
+        // Build rich data response for frontend
+        if (toolName === "search_products" && result.products) {
+          finalData = { type: "products", items: result.products };
+        }
+        if (toolName === "compare_products" && result.product1) {
+          finalData = { type: "compare", items: [result.product1, result.product2], cheaper: result.cheaper };
+        }
+        if (toolName === "get_wallet_info") {
+          finalData = { type: "balance", balance: result.balance };
+        }
+        if (toolName === "get_orders" && result.orders) {
+          finalData = { type: "orders", items: result.orders };
+        }
+        if (toolName === "get_best_coupon" && result.code) {
+          finalData = { type: "coupon", code: result.code, value: result.value, discountType: result.type };
+        }
+        if (toolName === "get_flagged_users" && result.users) {
+          finalData = { type: "users", items: result.users };
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: finalMessage,
+      data: finalData,
+      toolsUsed: toolResults.map(t => t.tool),
+      iterations
+    });
+
+  } catch (err) {
+    console.error("AI Agent error:", err.message);
+    res.status(500).json({ error: "Agent failed", message: "Sorry, I encountered an error. Please try again." });
+  }
+});
+
+// Streaming agent endpoint
+app.post("/api/ai/agent/stream", auth, async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    const user = await User.findById(req.user.id);
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const systemPrompt = `You are TechMart AI Agent for ${user.name}. Wallet: ₦${(user.walletBalance || 0).toLocaleString()}. Be helpful, concise and natural.`;
+
+    const stream = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...history.slice(-6).map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
+        { role: "user", content: message }
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+      stream: true
+    });
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content || "";
+      if (delta) res.write(`data: ${JSON.stringify({ token: delta })}
+
+`);
+    }
+
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } catch (err) {
+    console.error("Stream error:", err.message);
+    res.write(`data: ${JSON.stringify({ error: err.message })}
+
+`);
+    res.end();
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
