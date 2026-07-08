@@ -3529,42 +3529,62 @@ app.put("/api/admin/returns/:id", adminOnly, async (req, res) => {
 
 
 /* ===========================
-   🤖 AI PLATFORM ASSISTANT
+   🤖 AI PLATFORM ASSISTANT V2
 =========================== */
 app.post("/api/ai/assistant", auth, async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message, history = [], context = {} } = req.body;
     const user = await User.findById(req.user.id);
+    const isAdmin = user.role === "admin";
+    const isSeller = user.role === "seller";
 
-    // 1. Classify intent with Groq
+    // 1. Classify intent with full context
     const classifyRes = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [{
         role: "system",
         content: `You are an intent classifier for TechMart, a Nigerian e-commerce platform.
-Classify the user message into ONE of these intents and extract parameters.
+Classify the user message into ONE intent. Use conversation history and context to resolve pronouns like "it", "that", "the cheaper one", "the first one".
 Return ONLY valid JSON with no markdown.
 
-Intents:
-- find_product: search for products (params: query, maxPrice, category)
-- wallet_balance: check wallet balance (params: none)
-- wallet_transfer: transfer money (params: recipientEmail, amount, note)
-- track_order: track an order (params: reference or "last")
-- apply_coupon: apply best coupon (params: none)
-- start_return: start a return (params: orderId or "last")
-- show_orders: show recent orders (params: none)
-- compare_products: compare products (params: product1, product2)
-- generate_description: generate product description (params: productName, category)
-- create_flash_sale: create flash sale (params: productName, discount, endDate) - admin only
-- fund_wallet: add money to wallet (params: amount)
-- general_chat: general conversation (params: none)
+Context from previous turn: ${JSON.stringify(context)}
 
-Example response: {"intent": "find_product", "params": {"query": "gaming laptop", "maxPrice": 800000}}`
+Intents:
+- find_product: search products (params: query, maxPrice, minPrice, category)
+- add_to_cart: add product to cart (params: productId, productName, quantity)
+- buy_now: buy product immediately with wallet (params: productId, productName, price)
+- compare_products: compare two products (params: product1, product2)
+- wallet_balance: check balance
+- wallet_transfer: transfer money (params: recipientEmail, amount, note)
+- wallet_split: split money between people (params: amount, recipients[])
+- wallet_spending: show spending summary (params: period e.g. "this month")
+- wallet_cashback: show cashback earned
+- fund_wallet: add money to wallet (params: amount)
+- track_order: track orders
+- show_orders: list recent orders
+- apply_coupon: apply best coupon
+- place_order: complete checkout with wallet (params: couponCode)
+- start_return: start return (params: orderId)
+- generate_description: generate product description (params: productName, category)
+- seller_flash_sale: create flash sale (params: productName, discount, endDate) - seller/admin only
+- seller_low_stock: show low stock products - seller/admin only
+- seller_reorder: suggest reorder products - seller/admin only
+- seller_descriptions: generate descriptions for all new products - seller/admin only
+- admin_revenue: show today revenue - admin only
+- admin_suspicious: list suspicious transactions - admin only
+- admin_payouts: show/approve pending payouts - admin only
+- admin_flag_accounts: show high risk accounts - admin only
+- proactive_check: check for alerts (low balance, stock, coupons)
+- general_chat: conversation
+
+Example: {"intent": "add_to_cart", "params": {"productId": "abc123", "quantity": 1}}`
       }, {
         role: "user",
-        content: message
+        content: `History: ${JSON.stringify(history.slice(-4).map(m => m.text))}
+
+Current message: ${message}`
       }],
-      max_tokens: 200,
+      max_tokens: 300,
       temperature: 0.1
     });
 
@@ -3578,131 +3598,263 @@ Example response: {"intent": "find_product", "params": {"query": "gaming laptop"
       params = {};
     }
 
-    let responseData = { intent, message: "", data: null, action: null };
+    let responseData = { intent, message: "", data: null, action: null, context: {} };
 
-    // 2. Execute intent
     switch (intent) {
+
       case "find_product": {
         const query = { stock: { $gt: 0 } };
         if (params.category) query.category = new RegExp(params.category, "i");
-        if (params.maxPrice) query.price = { $lte: Number(params.maxPrice) };
-        let products = await Product.find(query).limit(5);
-        if (params.query) {
-          products = await Product.find({
-            $text: { $search: params.query },
-            stock: { $gt: 0 },
-            ...(params.maxPrice ? { price: { $lte: Number(params.maxPrice) } } : {})
-          }).limit(5).catch(() => 
-            Product.find({ name: new RegExp(params.query, "i"), stock: { $gt: 0 } }).limit(5)
-          );
+        if (params.maxPrice) query.price = { ...(query.price||{}), $lte: Number(params.maxPrice) };
+        if (params.minPrice) query.price = { ...(query.price||{}), $gte: Number(params.minPrice) };
+        let products = params.query
+          ? await Product.find({ name: new RegExp(params.query, "i"), stock: { $gt: 0 }, ...query }).limit(5)
+          : await Product.find(query).limit(5);
+        responseData.message = products.length > 0 ? `Found ${products.length} product${products.length > 1 ? "s" : ""}:` : "No products found.";
+        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock })) };
+        responseData.context = { lastProducts: products.map(p => ({ _id: p._id, name: p.name, price: p.price })) };
+        break;
+      }
+
+      case "compare_products": {
+        const p1 = params.product1 || context.lastProducts?.[0]?.name;
+        const p2 = params.product2 || context.lastProducts?.[1]?.name;
+        if (!p1 || !p2) { responseData.message = "Please specify two products to compare."; break; }
+        const [prod1, prod2] = await Promise.all([
+          Product.findOne({ name: new RegExp(p1, "i") }),
+          Product.findOne({ name: new RegExp(p2, "i") })
+        ]);
+        if (!prod1 || !prod2) { responseData.message = "Could not find both products to compare."; break; }
+        const cheaper = prod1.price < prod2.price ? prod1 : prod2;
+        responseData.message = `Comparing **${prod1.name}** vs **${prod2.name}**:`;
+        responseData.data = { type: "compare", items: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock, rating: p.rating })), cheaper: cheaper._id };
+        responseData.context = { lastProducts: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price })), cheaperProduct: { _id: cheaper._id, name: cheaper.name, price: cheaper.price } };
+        break;
+      }
+
+      case "add_to_cart": {
+        let product = null;
+        if (params.productId) product = await Product.findById(params.productId);
+        else if (params.productName) product = await Product.findOne({ name: new RegExp(params.productName, "i") });
+        else if (context.cheaperProduct) product = await Product.findById(context.cheaperProduct._id);
+        else if (context.lastProducts?.[0]) product = await Product.findById(context.lastProducts[0]._id);
+        if (!product) { responseData.message = "Could not find the product to add to cart."; break; }
+        responseData.message = `Added **${product.name}** (₦${product.price?.toLocaleString()}) to your cart!`;
+        responseData.data = { type: "add_to_cart", product: { _id: product._id, name: product.name, price: product.price, images: product.images } };
+        responseData.action = "add_to_cart";
+        responseData.context = { ...context, cartProduct: { _id: product._id, name: product.name, price: product.price } };
+        break;
+      }
+
+      case "buy_now": {
+        let product = null;
+        if (params.productId) product = await Product.findById(params.productId);
+        else if (context.cartProduct) product = await Product.findById(context.cartProduct._id);
+        else if (context.cheaperProduct) product = await Product.findById(context.cheaperProduct._id);
+        if (!product) { responseData.message = "Which product would you like to buy?"; break; }
+        if ((user.walletBalance || 0) < product.price) {
+          responseData.message = `Insufficient wallet balance. You need ₦${product.price?.toLocaleString()} but have ₦${(user.walletBalance||0).toLocaleString()}. Would you like to add money to your wallet?`;
+          responseData.data = { type: "navigate", path: "/pay", tab: "Add Money" };
+          break;
         }
-        responseData.message = products.length > 0 
-          ? `Found ${products.length} product${products.length > 1 ? "s" : ""} for you:`
-          : "No products found matching your search.";
-        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category })) };
+        responseData.message = `Ready to buy **${product.name}** for ₦${product.price?.toLocaleString()} from your wallet. Confirm?`;
+        responseData.data = { type: "confirm_buy", product: { _id: product._id, name: product.name, price: product.price } };
+        responseData.action = "confirm_buy";
         break;
       }
 
       case "wallet_balance": {
-        responseData.message = `Your TechMart wallet balance is ₦${(user.walletBalance || 0).toLocaleString()}.`;
-        responseData.data = { type: "balance", balance: user.walletBalance || 0 };
+        const recent = (user.walletTransactions || []).slice(-3).reverse();
+        responseData.message = `Your wallet balance is ₦${(user.walletBalance || 0).toLocaleString()}.`;
+        responseData.data = { type: "balance", balance: user.walletBalance || 0, recent };
+        break;
+      }
+
+      case "wallet_split": {
+        const { amount, recipients = [] } = params;
+        if (!amount || recipients.length === 0) { responseData.message = "Please specify the amount and recipients. E.g. 'Split ₦30,000 between john@gmail.com, jane@gmail.com, bob@gmail.com'"; break; }
+        const share = Math.floor(Number(amount) / recipients.length);
+        responseData.message = `Split ₦${Number(amount).toLocaleString()} between ${recipients.length} people: each gets ₦${share.toLocaleString()}. Confirm transfers?`;
+        responseData.data = { type: "confirm_split", amount, recipients, share };
+        responseData.action = "confirm_split";
+        break;
+      }
+
+      case "wallet_spending": {
+        const period = params.period || "this month";
+        const startDate = new Date();
+        startDate.setDate(1);
+        const txns = (user.walletTransactions || []).filter(t => new Date(t.createdAt) >= startDate);
+        const totalSpent = txns.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
+        const totalIn = txns.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
+        responseData.message = `This month: spent ₦${totalSpent.toLocaleString()}, received ₦${totalIn.toLocaleString()}. Net: ${totalIn > totalSpent ? "+" : ""}₦${(totalIn - totalSpent).toLocaleString()}.`;
+        responseData.data = { type: "spending", totalSpent, totalIn, txns: txns.slice(-5) };
+        break;
+      }
+
+      case "wallet_cashback": {
+        const cashbackTxns = (user.walletTransactions || []).filter(t => t.description?.toLowerCase().includes("cashback"));
+        const total = cashbackTxns.reduce((s, t) => s + t.amount, 0);
+        responseData.message = `You have earned ₦${total.toLocaleString()} in cashback across ${cashbackTxns.length} transaction${cashbackTxns.length !== 1 ? "s" : ""}.`;
+        responseData.data = { type: "cashback", total, count: cashbackTxns.length };
         break;
       }
 
       case "wallet_transfer": {
-        if (!params.recipientEmail || !params.amount) {
-          responseData.message = "Please provide the recipient email and amount to transfer.";
-        } else {
-          responseData.message = `Ready to transfer ₦${Number(params.amount).toLocaleString()} to ${params.recipientEmail}. Confirm?`;
-          responseData.data = { type: "confirm_transfer", recipientEmail: params.recipientEmail, amount: params.amount, note: params.note };
-          responseData.action = "confirm_transfer";
-        }
-        break;
-      }
-
-      case "track_order": {
-        const orders = await Order.find({ email: user.email }).sort({ createdAt: -1 }).limit(5);
-        if (orders.length === 0) {
-          responseData.message = "You have no orders yet.";
-        } else {
-          const order = orders[0];
-          responseData.message = `Your last order (#${order.trackingNumber || order._id.toString().slice(-6)}) is currently **${order.status}**. Placed on ${new Date(order.createdAt).toLocaleDateString()}.`;
-          responseData.data = { type: "orders", items: orders.slice(0, 3).map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt })) };
-        }
-        break;
-      }
-
-      case "show_orders": {
-        const orders = await Order.find({ email: user.email }).sort({ createdAt: -1 }).limit(5);
-        responseData.message = orders.length > 0 ? `You have ${orders.length} recent orders:` : "You have no orders yet.";
-        responseData.data = { type: "orders", items: orders.map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt })) };
+        if (!params.recipientEmail || !params.amount) { responseData.message = "Please provide recipient email and amount."; break; }
+        responseData.message = `Transfer ₦${Number(params.amount).toLocaleString()} to ${params.recipientEmail}. Confirm?`;
+        responseData.data = { type: "confirm_transfer", recipientEmail: params.recipientEmail, amount: params.amount, note: params.note };
+        responseData.action = "confirm_transfer";
         break;
       }
 
       case "apply_coupon": {
         const coupons = await Coupon.find({ active: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).sort({ value: -1 }).limit(1);
-        if (coupons.length === 0) {
-          responseData.message = "No active coupons available right now.";
-        } else {
-          const best = coupons[0];
-          responseData.message = `Best available coupon: **${best.code}** — ${best.type === "percent" ? best.value + "% off" : "₦" + best.value + " off"}${best.minOrder ? " (min order ₦" + best.minOrder.toLocaleString() + ")" : ""}`;
-          responseData.data = { type: "coupon", code: best.code, value: best.value, type: best.type };
-          responseData.action = "apply_coupon";
-        }
+        if (!coupons.length) { responseData.message = "No active coupons available right now."; break; }
+        const best = coupons[0];
+        responseData.message = `Best coupon: **${best.code}** — ${best.type === "percent" ? best.value + "% off" : "₦" + best.value + " off"}. Tap to copy!`;
+        responseData.data = { type: "coupon", code: best.code, value: best.value, discountType: best.type };
+        responseData.action = "apply_coupon";
+        break;
+      }
+
+      case "track_order": {
+        const orders = await Order.find({ email: user.email }).sort({ createdAt: -1 }).limit(5);
+        if (!orders.length) { responseData.message = "You have no orders yet."; break; }
+        const o = orders[0];
+        responseData.message = `Last order (#${o.trackingNumber || o._id.toString().slice(-6)}) is **${o.status}** — ₦${o.amount?.toLocaleString()}.`;
+        responseData.data = { type: "orders", items: orders.slice(0, 3).map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt })) };
+        break;
+      }
+
+      case "show_orders": {
+        const orders = await Order.find({ email: user.email }).sort({ createdAt: -1 }).limit(5);
+        responseData.message = orders.length ? `Your ${orders.length} most recent orders:` : "No orders yet.";
+        responseData.data = { type: "orders", items: orders.map(o => ({ _id: o._id, status: o.status, amount: o.amount, trackingNumber: o.trackingNumber, createdAt: o.createdAt })) };
         break;
       }
 
       case "start_return": {
         const orders = await Order.find({ email: user.email, status: { $in: ["Delivered", "Shipped"] } }).sort({ createdAt: -1 }).limit(1);
-        if (orders.length === 0) {
-          responseData.message = "No eligible orders found for return.";
-        } else {
-          responseData.message = `I can start a return for your last order (#${orders[0].trackingNumber || orders[0]._id.toString().slice(-6)}, ₦${orders[0].amount.toLocaleString()}). What is the reason for return?`;
-          responseData.data = { type: "start_return", orderId: orders[0]._id };
-          responseData.action = "start_return";
-        }
-        break;
-      }
-
-      case "fund_wallet": {
-        responseData.message = `I'll take you to the Add Money page to fund your wallet${params.amount ? " with ₦" + Number(params.amount).toLocaleString() : ""}.`;
-        responseData.data = { type: "navigate", path: "/pay", tab: "Add Money", amount: params.amount };
-        responseData.action = "navigate";
+        if (!orders.length) { responseData.message = "No eligible orders for return."; break; }
+        responseData.message = `Start return for order #${orders[0].trackingNumber || orders[0]._id.toString().slice(-6)} (₦${orders[0].amount?.toLocaleString()})? What is the reason?`;
+        responseData.data = { type: "start_return", orderId: orders[0]._id };
+        responseData.action = "start_return";
         break;
       }
 
       case "generate_description": {
-        if (!params.productName) {
-          responseData.message = "Please provide the product name to generate a description.";
-        } else {
-          const descRes = await groq.chat.completions.create({
+        const name = params.productName || "this product";
+        const descRes = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: `Write a compelling 2-3 sentence product description for "${name}" ${params.category ? "in the " + params.category + " category" : ""} for a Nigerian e-commerce store. Focus on key features and value. Be concise and persuasive.` }],
+          max_tokens: 150, temperature: 0.7
+        });
+        responseData.message = descRes.choices[0].message.content.trim();
+        responseData.data = { type: "description", text: responseData.message };
+        break;
+      }
+
+      case "seller_low_stock": {
+        const query = isSeller ? { vendorId: req.user.id, stock: { $lte: 5 } } : { stock: { $lte: 5 } };
+        const products = await Product.find(query).sort({ stock: 1 }).limit(10);
+        responseData.message = products.length ? `${products.length} products with low stock:` : "No low stock products.";
+        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, stock: p.stock, image: p.images?.[0] })) };
+        break;
+      }
+
+      case "seller_reorder": {
+        const query = isSeller ? { vendorId: req.user.id, stock: { $lte: 10 } } : { stock: { $lte: 10 } };
+        const products = await Product.find(query).sort({ stock: 1 }).limit(5);
+        responseData.message = products.length ? `I recommend reordering these ${products.length} products:` : "All products have sufficient stock.";
+        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, stock: p.stock, image: p.images?.[0] })) };
+        break;
+      }
+
+      case "seller_descriptions": {
+        const query = isSeller ? { vendorId: req.user.id, description: { $in: [null, "", "No description"] } } : { description: { $in: [null, "", "No description"] } };
+        const products = await Product.find(query).limit(3);
+        if (!products.length) { responseData.message = "All products have descriptions."; break; }
+        const descriptions = await Promise.all(products.map(async p => {
+          const r = await groq.chat.completions.create({
             model: "llama-3.3-70b-versatile",
-            messages: [{
-              role: "user",
-              content: `Write a compelling 2-3 sentence product description for "${params.productName}" ${params.category ? "in the " + params.category + " category" : ""} for a Nigerian e-commerce store. Focus on key features and benefits. Be concise and persuasive.`
-            }],
-            max_tokens: 150,
-            temperature: 0.7
+            messages: [{ role: "user", content: `Write a 2-sentence product description for "${p.name}" (${p.category}) for a Nigerian electronics store.` }],
+            max_tokens: 100, temperature: 0.7
           });
-          responseData.message = descRes.choices[0].message.content.trim();
-          responseData.data = { type: "description", text: responseData.message };
-        }
+          return { _id: p._id, name: p.name, description: r.choices[0].message.content.trim() };
+        }));
+        responseData.message = `Generated descriptions for ${descriptions.length} products:`;
+        responseData.data = { type: "descriptions", items: descriptions };
+        break;
+      }
+
+      case "admin_revenue": {
+        if (!isAdmin) { responseData.message = "Admin access required."; break; }
+        const today = new Date(); today.setHours(0,0,0,0);
+        const orders = await Order.find({ createdAt: { $gte: today }, status: { $nin: ["Cancelled"] } });
+        const revenue = orders.reduce((s, o) => s + (o.amount || 0), 0);
+        responseData.message = `Today's revenue: ₦${revenue.toLocaleString()} from ${orders.length} order${orders.length !== 1 ? "s" : ""}.`;
+        responseData.data = { type: "revenue", revenue, orders: orders.length, date: today };
+        break;
+      }
+
+      case "admin_suspicious": {
+        if (!isAdmin) { responseData.message = "Admin access required."; break; }
+        const flagged = await User.find({ isFlagged: true }).select("name email fraudScore fraudFlags").sort({ fraudScore: -1 }).limit(5);
+        responseData.message = flagged.length ? `${flagged.length} suspicious account${flagged.length !== 1 ? "s" : ""} flagged:` : "No suspicious accounts detected.";
+        responseData.data = { type: "users", items: flagged.map(u => ({ _id: u._id, name: u.name, email: u.email, fraudScore: u.fraudScore, reason: u.fraudFlags?.[0]?.reason })) };
+        break;
+      }
+
+      case "admin_payouts": {
+        if (!isAdmin) { responseData.message = "Admin access required."; break; }
+        const Payout = mongoose.models.Payout;
+        if (!Payout) { responseData.message = "Payout system not initialized."; break; }
+        const payouts = await Payout.find({ status: "pending" }).limit(5);
+        responseData.message = payouts.length ? `${payouts.length} pending payout${payouts.length !== 1 ? "s" : ""} awaiting approval.` : "No pending payouts.";
+        responseData.data = { type: "payouts", items: payouts, action: "navigate", path: "/admin" };
+        break;
+      }
+
+      case "admin_flag_accounts": {
+        if (!isAdmin) { responseData.message = "Admin access required."; break; }
+        const high = await User.find({ fraudScore: { $gte: 60 } }).select("name email fraudScore").sort({ fraudScore: -1 }).limit(5);
+        responseData.message = high.length ? `${high.length} high-risk account${high.length !== 1 ? "s" : ""}:` : "No high-risk accounts.";
+        responseData.data = { type: "users", items: high.map(u => ({ _id: u._id, name: u.name, email: u.email, fraudScore: u.fraudScore })) };
+        break;
+      }
+
+      case "proactive_check": {
+        const alerts = [];
+        if ((user.walletBalance || 0) < 500) alerts.push("💰 Your wallet balance is low (₦" + (user.walletBalance||0).toLocaleString() + ").");
+        const coupon = await Coupon.findOne({ active: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] });
+        if (coupon) alerts.push(`🎟 Active coupon available: **${coupon.code}**`);
+        const lowStock = await Product.find({ stock: { $lte: 3, $gt: 0 }, ...(isSeller ? { vendorId: req.user.id } : {}) }).limit(2);
+        lowStock.forEach(p => alerts.push(`⚠️ Low stock: **${p.name}** (${p.stock} left)`));
+        responseData.message = alerts.length ? alerts.join(" | ") : "Everything looks good! No alerts at this time.";
+        responseData.data = { type: "alerts", items: alerts };
+        break;
+      }
+
+      case "fund_wallet": {
+        responseData.message = `Taking you to Add Money${params.amount ? " to fund ₦" + Number(params.amount).toLocaleString() : ""}.`;
+        responseData.data = { type: "navigate", path: "/pay", tab: "Add Money", amount: params.amount };
+        responseData.action = "navigate";
         break;
       }
 
       case "general_chat":
       default: {
         const products = await Product.find({ stock: { $gt: 0 } }).select("name price category").limit(20);
-        const catalog = products.map(p => `${p.name} (₦${p.price?.toLocaleString()}) - ${p.category}`).join("\n");
+        const catalog = products.map(p => p.name + " (" + "N" + p.price?.toLocaleString() + ") - " + p.category).join(", ");
         const chatRes = await groq.chat.completions.create({
           model: "llama-3.3-70b-versatile",
           messages: [
-            { role: "system", content: `You are TechMart AI Assistant for ${user.name}. You can help with shopping, wallet, orders, and platform features. Be helpful, concise and friendly. Current wallet: ₦${(user.walletBalance || 0).toLocaleString()}. Available products:\n${catalog}` },
-            ...history.map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
+            { role: "system", content: `You are TechMart AI for ${user.name}. Wallet: N${(user.walletBalance||0).toLocaleString()}. Role: ${user.role}. Products: ${catalog}. Be helpful and concise.` },
+            ...history.slice(-6).map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
             { role: "user", content: message }
           ],
-          max_tokens: 300,
-          temperature: 0.7
+          max_tokens: 300, temperature: 0.7
         });
         responseData.message = chatRes.choices[0].message.content.trim();
         break;
@@ -3715,7 +3867,6 @@ Example response: {"intent": "find_product", "params": {"query": "gaming laptop"
     res.status(500).json({ error: "AI Assistant failed", message: "Sorry, I encountered an error. Please try again." });
   }
 });
-
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
