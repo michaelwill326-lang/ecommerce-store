@@ -4292,6 +4292,243 @@ app.post("/api/ai/agent/stream", auth, async (req, res) => {
   }
 });
 
+
+/* ===========================
+   🛒 BUNDLE + ESCROW FLOW
+=========================== */
+
+// 1. Add bundle to cart (returns bundle items for frontend)
+app.post("/api/orders/bundle", auth, async (req, res) => {
+  try {
+    const { productIds } = req.body;
+    if (!productIds || !productIds.length) return res.status(400).json({ error: "No products provided" });
+    const products = await Product.find({ _id: { $in: productIds }, stock: { $gt: 0 } });
+    if (!products.length) return res.status(404).json({ error: "No products found" });
+    const total = products.reduce((s, p) => s + p.price, 0);
+    const discount = Math.round(total * 0.05);
+    res.json({
+      success: true,
+      items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, images: p.images, category: p.category, quantity: 1, vendorId: p.vendorId, vendorName: p.vendorName })),
+      total,
+      discount,
+      bundlePrice: total - discount
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch bundle" });
+  }
+});
+
+// 2. Checkout with escrow (wallet payment)
+app.post("/api/orders/checkout-escrow", auth, async (req, res) => {
+  try {
+    const { items, amount, deliveryAddress, phone, couponCode, deliveryFee, deliveryZone } = req.body;
+    if (!items || !items.length || !amount) return res.status(400).json({ error: "Items and amount are required" });
+    if (!deliveryAddress) return res.status(400).json({ error: "Delivery address is required" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) {
+      return res.status(400).json({ error: `Insufficient wallet balance. You need ₦${Number(amount).toLocaleString()} but have ₦${(user.walletBalance || 0).toLocaleString()}` });
+    }
+
+    // Check stock availability
+    for (const item of items) {
+      const product = await Product.findById(item._id);
+      if (!product || product.stock < (item.quantity || 1)) {
+        return res.status(400).json({ error: `${item.name} is out of stock` });
+      }
+    }
+
+    const reference = "ESC-" + Date.now();
+    const trackingNumber = "TM" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // Debit wallet and hold in escrow
+    user.walletBalance = (user.walletBalance || 0) - Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `Escrow hold for order ${trackingNumber}`,
+      reference
+    });
+    await user.save();
+
+    // Deduct stock atomically
+    for (const item of items) {
+      await Product.findByIdAndUpdate(item._id, { $inc: { stock: -(item.quantity || 1) } });
+    }
+
+    // Create order with escrow
+    const order = await Order.create({
+      email: req.user.email,
+      items,
+      amount: Number(amount),
+      originalAmount: Number(amount),
+      deliveryFee: deliveryFee || 0,
+      deliveryZone: deliveryZone || "",
+      deliveryAddress,
+      phone: phone || "",
+      couponCode: couponCode || "",
+      reference,
+      trackingNumber,
+      status: "Paid",
+      paymentMethod: "TechMart Wallet",
+      escrow: true,
+      escrowStatus: "holding"
+    });
+
+    // Notify via socket
+    io.emit("orderUpdated", { orderId: order._id, status: "Paid", trackingNumber });
+
+    res.json({ success: true, order, message: `Order placed! ₦${Number(amount).toLocaleString()} held in escrow until delivery confirmed.` });
+  } catch (err) {
+    console.error("Escrow checkout error:", err.message);
+    res.status(500).json({ error: "Checkout failed" });
+  }
+});
+
+// 3. Mark order as Shipped (admin or seller)
+app.post("/api/orders/:orderId/ship", auth, async (req, res) => {
+  try {
+    const { trackingNumber, courierName } = req.body;
+    const order = await Order.findById(req.params.orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!["admin", "seller"].includes(req.user.role)) return res.status(403).json({ error: "Not authorized" });
+    if (!["Paid", "Processing"].includes(order.status)) return res.status(400).json({ error: "Order cannot be marked as shipped" });
+
+    order.status = "Shipped";
+    if (trackingNumber) order.trackingNumber = trackingNumber;
+    if (courierName) order.courierName = courierName;
+    await order.save();
+
+    io.emit("orderUpdated", { orderId: order._id, status: "Shipped", trackingNumber: order.trackingNumber });
+    res.json({ success: true, order, message: "Order marked as shipped" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to mark as shipped" });
+  }
+});
+
+// 4. Admin force release escrow (manual override)
+app.post("/api/orders/:orderId/release-escrow", adminOnly, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.escrowStatus !== "holding") return res.status(400).json({ error: "No escrow funds to release" });
+
+    // Credit seller wallet
+    const sellerId = order.items?.[0]?.vendorId;
+    if (sellerId) {
+      const seller = await User.findById(sellerId);
+      if (seller) {
+        seller.walletBalance = (seller.walletBalance || 0) + order.amount;
+        seller.walletTransactions = seller.walletTransactions || [];
+        seller.walletTransactions.push({
+          type: "credit",
+          amount: order.amount,
+          description: `Escrow released (admin) for order #${order.trackingNumber}`,
+          reference: "ESC-REL-" + Date.now()
+        });
+        await seller.save();
+      }
+    }
+
+    order.escrowStatus = "released";
+    order.escrowReleasedAt = new Date();
+    order.status = "Delivered";
+    await order.save();
+
+    res.json({ success: true, message: "Escrow released to seller wallet" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to release escrow" });
+  }
+});
+
+// 5. Seller requests withdrawal from wallet
+app.post("/api/seller/withdraw", auth, async (req, res) => {
+  try {
+    const { amount, bankCode, accountNumber, accountName, bankName } = req.body;
+    if (!amount || !bankCode || !accountNumber || !accountName) return res.status(400).json({ error: "All fields are required" });
+    if (Number(amount) < 1000) return res.status(400).json({ error: "Minimum seller withdrawal is ₦1,000" });
+
+    const seller = await User.findById(req.user.id);
+    if (!["seller", "admin"].includes(seller.role)) return res.status(403).json({ error: "Only sellers can withdraw" });
+    if ((seller.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    // Create payout request
+    const Payout = mongoose.models.Payout || mongoose.model("Payout", new mongoose.Schema({
+      sellerId: String,
+      sellerName: String,
+      sellerEmail: String,
+      amount: Number,
+      bankCode: String,
+      accountNumber: String,
+      accountName: String,
+      bankName: String,
+      status: { type: String, default: "pending" },
+      reference: String,
+      createdAt: { type: Date, default: Date.now }
+    }));
+
+    const reference = "PAY-" + Date.now();
+    await Payout.create({
+      sellerId: seller._id,
+      sellerName: seller.name,
+      sellerEmail: seller.email,
+      amount: Number(amount),
+      bankCode,
+      accountNumber,
+      accountName,
+      bankName: bankName || "",
+      reference
+    });
+
+    // Debit wallet
+    seller.walletBalance = (seller.walletBalance || 0) - Number(amount);
+    seller.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `Withdrawal request to ${accountName} (${accountNumber})`,
+      reference
+    });
+    await seller.save();
+
+    res.json({ success: true, reference, message: `Withdrawal of ₦${Number(amount).toLocaleString()} requested. Processing within 24 hours.` });
+  } catch (err) {
+    console.error("Seller withdrawal error:", err.message);
+    res.status(500).json({ error: "Withdrawal request failed" });
+  }
+});
+
+// 6. Get seller wallet balance + earnings
+app.get("/api/seller/wallet", auth, async (req, res) => {
+  try {
+    const seller = await User.findById(req.user.id).select("walletBalance walletTransactions name email");
+    const earnings = (seller.walletTransactions || [])
+      .filter(t => t.type === "credit" && t.description?.includes("Escrow"))
+      .reduce((s, t) => s + t.amount, 0);
+    const withdrawn = (seller.walletTransactions || [])
+      .filter(t => t.type === "debit" && t.description?.includes("Withdrawal"))
+      .reduce((s, t) => s + t.amount, 0);
+    res.json({
+      success: true,
+      balance: seller.walletBalance || 0,
+      totalEarnings: earnings,
+      totalWithdrawn: withdrawn,
+      recentTransactions: (seller.walletTransactions || []).slice(-10).reverse()
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch wallet" });
+  }
+});
+
+// 7. Admin get all escrow orders
+app.get("/api/admin/escrow", adminOnly, async (req, res) => {
+  try {
+    const orders = await Order.find({ escrow: true }).sort({ createdAt: -1 }).limit(50);
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch escrow orders" });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
