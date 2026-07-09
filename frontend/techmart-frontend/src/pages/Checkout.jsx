@@ -123,6 +123,30 @@ export default function Checkout() {
     } finally { setPodLoading(false); }
   };
 
+  const handleEscrowCheckout = async () => {
+    if (!address.trim()) return alert("Please enter your delivery address");
+    if (!phone.trim()) return alert("Please enter your phone number");
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API}/api/orders/checkout-escrow`, {
+        items: cart,
+        amount: finalTotal,
+        deliveryAddress: address,
+        phone,
+        couponCode: couponStatus?.discount ? couponCode : null,
+        deliveryFee,
+        deliveryZone
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
+        clearCart();
+        navigate(`/tracking?ref=${res.data.order.reference}&escrow=true`);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Checkout failed");
+    } finally { setLoading(false); }
+  };
+
   const handlePayment = async () => {
     setError("");
     if (!token || !user) { navigate("/login"); return; }
@@ -336,6 +360,13 @@ export default function Checkout() {
                   <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>{podEligible ? "Pay delivery fee now, rest on arrival" : "Complete 1 order to unlock"}</p>
                 </div>
               </div>
+              {walletBalance >= finalTotal && finalTotal > 0 && (
+                <div onClick={() => setPaymentMethod("escrow")} style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "escrow" ? "#f97316" : "#333"}`, background: paymentMethod === "escrow" ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 2px", fontSize: "18px" }}>🔐</p>
+                  <p style={{ color: paymentMethod === "escrow" ? "#f97316" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay with Wallet (Escrow)</p>
+                  <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>Funds held safely until you confirm delivery</p>
+                </div>
+              )}
             </div>
             {/* WALLET */}
             {walletBalance > 0 && (
@@ -374,6 +405,16 @@ export default function Checkout() {
             </div>
             {couponStatus?.message && <p style={{ color: "#22c55e", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.message}</p>}
             {couponStatus?.error && <p style={{ color: "#ef4444", fontSize: "13px", marginBottom: "8px" }}>{couponStatus.error}</p>}
+            {paymentMethod === "escrow" && (
+              <div>
+                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", fontSize: "13px", margin: 0 }}>🔐 ₦{finalTotal.toLocaleString()} will be held in escrow until you confirm delivery. Funds are released to the seller only after you receive your order.</p>
+                </div>
+                <button onClick={handleEscrowCheckout} disabled={loading} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #22c55e, #16a34a)", opacity: loading ? 0.7 : 1 }}>
+                  {loading ? "Processing..." : `🔐 Pay ₦${finalTotal.toLocaleString()} with Escrow →`}
+                </button>
+              </div>
+            )}
             {paymentMethod === "online" ? (
               <button onClick={handlePayment} disabled={loading || !user} style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}>
                 {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} Online →`}

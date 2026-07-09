@@ -9,7 +9,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow"];
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ export default function Admin() {
   const [flaggedReviews, setFlaggedReviews] = useState([]);
   const [flaggedUsers, setFlaggedUsers] = useState([]);
   const [returns, setReturns] = useState([]);
+  const [escrowOrders, setEscrowOrders] = useState([]);
   const [sentiment, setSentiment] = useState(null);
   const [reviewTab, setReviewTab] = useState("pending");
   const [coupons, setCoupons] = useState([]);
@@ -250,6 +251,7 @@ export default function Admin() {
             {t === "Reviews" && "⭐ "}
             {t === "Fraud" && "🚨 "}
             {t === "Returns" && "↩️ "}
+            {t === "Escrow" && "🔐 "}
             {t}
           </button>
         ))}

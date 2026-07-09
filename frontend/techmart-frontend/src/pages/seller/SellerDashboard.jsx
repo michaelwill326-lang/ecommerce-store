@@ -133,10 +133,16 @@ export default function SellerDashboard() {
     } catch { setMsg("Failed to send reply"); }
   };
 
+  const [sellerWallet, setSellerWallet] = useState(null);
+  const [withdrawForm, setWithdrawForm] = useState({ amount: "", bankCode: "", accountNumber: "", accountName: "", bankName: "" });
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [banks, setBanks] = useState([]);
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
+
   if (loading) return <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>Loading...</div>;
 
   const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
-  const TABS = ["Overview", "Analytics", "Products", "Storefront", "Payouts", "Disputes", "Messages"];
+  const TABS = ["Overview", "Analytics", "Products", "Storefront", "Wallet", "Payouts", "Disputes", "Messages"];
 
   const statCards = [
     { label: "Revenue", value: `N${(analytics?.revenue || 0).toLocaleString()}`, color: "#f97316" },
@@ -355,6 +361,98 @@ export default function SellerDashboard() {
       )}
 
       {/* PAYOUTS */}
+      {/* WALLET TAB */}
+      {tab === "Wallet" && (
+        <div>
+          <h2 style={{ color: "#fff", marginBottom: "16px" }}>💰 Seller Wallet</h2>
+          {!sellerWallet ? (
+            <button onClick={async () => {
+              try {
+                const res = await axios.get(`${API}/api/seller/wallet`, { headers });
+                setSellerWallet(res.data);
+                const banksRes = await axios.get(`${API}/api/pay/banks`);
+                setBanks(banksRes.data || []);
+              } catch { setMsg("Failed to load wallet"); }
+            }} style={{ padding: "12px 24px", background: "linear-gradient(135deg,#f97316,#dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "16px" }}>
+              Load Wallet
+            </button>
+          ) : (
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "10px", marginBottom: "20px" }}>
+                {[
+                  { label: "Available Balance", value: `N${(sellerWallet.balance||0).toLocaleString()}`, color: "#22c55e" },
+                  { label: "Total Earnings", value: `N${(sellerWallet.totalEarnings||0).toLocaleString()}`, color: "#f97316" },
+                  { label: "Total Withdrawn", value: `N${(sellerWallet.totalWithdrawn||0).toLocaleString()}`, color: "#3b82f6" },
+                ].map((k,i) => (
+                  <div key={i} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                    <p style={{ color: "#888", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
+                    <p style={{ color: k.color, fontSize: "20px", fontWeight: "800", margin: 0 }}>{k.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+                <h3 style={{ color: "#fff", marginBottom: "16px", fontSize: "15px" }}>Withdraw to Bank</h3>
+                <select value={withdrawForm.bankCode} onChange={async e => {
+                  const bank = banks.find(b => b.code === e.target.value);
+                  setWithdrawForm({...withdrawForm, bankCode: e.target.value, bankName: bank?.name || "", accountName: ""});
+                }} style={{ ...inp, marginBottom: "12px" }}>
+                  <option value="">Select Bank</option>
+                  {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+                </select>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input placeholder="Account Number" value={withdrawForm.accountNumber} onChange={e => setWithdrawForm({...withdrawForm, accountNumber: e.target.value, accountName: ""})} style={{ ...inp, flex: 1 }} maxLength={10} />
+                  <button onClick={async () => {
+                    if (!withdrawForm.bankCode || withdrawForm.accountNumber.length !== 10) return;
+                    setVerifyingAccount(true);
+                    try {
+                      const res = await axios.post(`${API}/api/pay/verify-account`, { accountNumber: withdrawForm.accountNumber, bankCode: withdrawForm.bankCode }, { headers });
+                      setWithdrawForm(prev => ({...prev, accountName: res.data.accountName}));
+                    } catch { setMsg("Could not verify account"); }
+                    finally { setVerifyingAccount(false); }
+                  }} disabled={verifyingAccount || withdrawForm.accountNumber.length !== 10} style={{ padding: "12px 16px", background: "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap", height: "48px" }}>
+                    {verifyingAccount ? "..." : "Verify"}
+                  </button>
+                </div>
+                {withdrawForm.accountName && (
+                  <div style={{ background: "#0a2a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px", marginBottom: "12px" }}>
+                    <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ {withdrawForm.accountName}</p>
+                  </div>
+                )}
+                <input placeholder="Amount (min N1,000)" type="number" value={withdrawForm.amount} onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})} style={inp} />
+                <button onClick={async () => {
+                  if (!withdrawForm.accountName) return setMsg("Please verify your account first");
+                  if (!withdrawForm.amount || Number(withdrawForm.amount) < 1000) return setMsg("Minimum withdrawal is N1,000");
+                  setWithdrawLoading(true);
+                  try {
+                    const res = await axios.post(`${API}/api/seller/withdraw`, withdrawForm, { headers });
+                    setMsg(res.data.message);
+                    setSellerWallet(prev => ({...prev, balance: prev.balance - Number(withdrawForm.amount)}));
+                    setWithdrawForm({ amount: "", bankCode: "", accountNumber: "", accountName: "", bankName: "" });
+                  } catch (err) { setMsg(err.response?.data?.error || "Withdrawal failed"); }
+                  finally { setWithdrawLoading(false); }
+                }} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: withdrawForm.accountName ? "linear-gradient(135deg,#f97316,#dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: withdrawForm.accountName ? "pointer" : "not-allowed", fontWeight: "700" }}>
+                  {withdrawLoading ? "Processing..." : `Withdraw N${Number(withdrawForm.amount||0).toLocaleString()}`}
+                </button>
+              </div>
+
+              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                <h3 style={{ color: "#fff", marginBottom: "12px", fontSize: "15px" }}>Recent Transactions</h3>
+                {(sellerWallet.recentTransactions||[]).map((t,i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #222" }}>
+                    <div>
+                      <p style={{ color: "#fff", fontSize: "13px", margin: "0 0 2px" }}>{t.description}</p>
+                      <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>{new Date(t.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <p style={{ color: t.type==="credit"?"#22c55e":"#f87171", fontWeight: "700", margin: 0 }}>{t.type==="credit"?"+":"-"}N{t.amount?.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === "Payouts" && (
         <div>
           <h2 style={{ color: "#fff", marginBottom: "16px" }}>Payout Requests</h2>
