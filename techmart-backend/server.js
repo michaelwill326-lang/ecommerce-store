@@ -125,6 +125,7 @@ const User = mongoose.model(
     otpExpires: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
     aiPreferences: { type: Object, default: {} },
+    savedCart: { type: Array, default: [] },
     fraudScore: { type: Number, default: 0 },
     isFlagged: { type: Boolean, default: false },
     fraudFlags: [{
@@ -2414,6 +2415,50 @@ app.post("/api/seller/products", sellerAuth, adminUploader.array("images", 5), a
   }
 });
 
+
+// Seller update product
+app.put("/api/seller/products/:id", sellerAuth, adminUploader.array("images", 5), async (req, res) => {
+  try {
+    const product = await Product.findOne({ _id: req.params.id, vendorId: req.seller.id });
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const updates = {
+      name: req.body.name || product.name,
+      price: req.body.price ? Number(req.body.price) : product.price,
+      description: req.body.description || product.description,
+      stock: req.body.stock !== undefined ? Number(req.body.stock) : product.stock,
+      category: req.body.category || product.category,
+    };
+
+    // Upload new images if provided
+    if (req.files && req.files.length > 0) {
+      const imageUrls = [];
+      for (const file of req.files) {
+        const result = await cloudinaryCloud.uploader.upload(file.path, {
+          folder: "techmart_products",
+          transformation: [{ width: 800, height: 800, crop: "limit" }, { quality: "auto" }]
+        });
+        imageUrls.push(result.secure_url);
+      }
+      updates.images = imageUrls;
+    }
+
+    // Keep existing images if new ones sent as JSON string
+    if (req.body.existingImages) {
+      try {
+        const existing = JSON.parse(req.body.existingImages);
+        updates.images = updates.images ? [...existing, ...updates.images] : existing;
+      } catch {}
+    }
+
+    const updated = await Product.findByIdAndUpdate(req.params.id, updates, { new: true });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("Product update error:", err.message);
+    res.status(500).json({ error: "Failed to update product" });
+  }
+});
+
 // Seller get their products
 app.get("/api/seller/products", sellerAuth, async (req, res) => {
   try {
@@ -4526,6 +4571,44 @@ app.get("/api/admin/escrow", adminOnly, async (req, res) => {
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch escrow orders" });
+  }
+});
+
+
+/* ===========================
+   🛒 CART PERSISTENCE
+=========================== */
+// Add cartItems to User schema handled via existing walletTransactions pattern
+// We'll store cart in a simple field
+
+// Sync cart to server
+app.post("/api/cart/sync", auth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    await User.findByIdAndUpdate(req.user.id, { savedCart: items || [] });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to sync cart" });
+  }
+});
+
+// Get cart from server
+app.get("/api/cart", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("savedCart");
+    res.json({ items: user.savedCart || [] });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get cart" });
+  }
+});
+
+// Clear cart on server
+app.delete("/api/cart/clear", auth, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user.id, { savedCart: [] });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to clear cart" });
   }
 });
 
