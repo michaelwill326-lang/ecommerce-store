@@ -321,13 +321,7 @@ export default function SellerDashboard() {
                   ))}
                 </div>
               )}
-              <label style={{ display: "none" }}
-              </label>
-              {images.length > 0 && (
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
-                  {images.map((url, i) => <img key={i} src={url} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px" }} />)}
-                </div>
-              )}
+
               <button onClick={addProduct} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Add Product</button>
             </div>
           )}
