@@ -68,7 +68,8 @@ export default function SellerDashboard() {
       files.forEach(f => formData.append("images", f));
       const res = await axios.post(`${API}/api/admin/products/upload-images`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       setImages(prev => [...prev, ...res.data.urls]);
-    } catch { setMsg("Image upload failed"); }
+      setMsg(`✅ ${res.data.urls.length} image${res.data.urls.length > 1 ? "s" : ""} uploaded successfully!`);
+    } catch { setMsg("❌ Image upload failed. Max 5MB per image, JPG/PNG only."); }
     finally { setUploading(false); }
   };
 
@@ -307,7 +308,20 @@ export default function SellerDashboard() {
               />
               <label style={{ display: "inline-block", padding: "10px 20px", background: "#333", color: "#fff", borderRadius: "8px", cursor: "pointer", marginBottom: "12px" }}>
                 {uploading ? "Uploading..." : "Upload Images"}
-                <input type="file" accept="image/*" multiple onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
+                <input type="file" accept=".jpg,.jpeg,.png,.webp" multiple onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
+              </label>
+              <p style={{ color: "#888", fontSize: "11px", margin: "4px 0 8px" }}>Max 5MB per image • JPG, PNG, WebP only</p>
+              {images.length > 0 && (
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+                  {images.map((url, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <img src={url} alt="" style={{ width: "60px", height: "60px", borderRadius: "6px", objectFit: "cover", border: "1px solid #333" }} />
+                      <button onClick={() => setImages(images.filter((_, j) => j !== i))} style={{ position: "absolute", top: "-6px", right: "-6px", background: "#dc2626", border: "none", color: "#fff", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", cursor: "pointer", lineHeight: 1 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label style={{ display: "none" }}
               </label>
               {images.length > 0 && (
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>

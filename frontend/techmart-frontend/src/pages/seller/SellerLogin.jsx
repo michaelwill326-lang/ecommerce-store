@@ -6,6 +6,7 @@ const API = "https://techmart-backend-ecbi.onrender.com";
 export default function SellerLogin() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,7 +37,12 @@ export default function SellerLogin() {
           <h2 style={{ color: "#fff", fontSize: "22px", fontWeight: "800", marginBottom: "24px" }}>Seller Login</h2>
           {error && <div style={{ background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}>{error}</div>}
           <input placeholder="Email Address" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} style={inp} />
-          <input placeholder="Password" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} onKeyPress={e => e.key === "Enter" && handleLogin()} style={inp} />
+          <div style={{ position: "relative", marginBottom: "12px" }}>
+            <input placeholder="Password" type={showPassword ? "text" : "password"} value={form.password} onChange={e => setForm({...form, password: e.target.value})} onKeyPress={e => e.key === "Enter" && handleLogin()} style={{ ...inp, marginBottom: 0, paddingRight: "44px" }} />
+            <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "16px", padding: "4px", lineHeight: 1 }}>
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
           <button onClick={handleLogin} disabled={loading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
             {loading ? "Logging in..." : "Login"}
           </button>

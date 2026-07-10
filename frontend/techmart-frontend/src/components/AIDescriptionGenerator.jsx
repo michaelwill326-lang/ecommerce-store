@@ -14,7 +14,6 @@ export default function AIDescriptionGenerator({ onGenerated }) {
     try {
       const res = await axios.post(`${API}/api/ai/generate-description`, form);
       setResult(res.data.description);
-      if (onGenerated) onGenerated(res.data.description);
     } catch { setResult("Failed to generate description"); }
     finally { setLoading(false); }
   };

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
+import { useToast } from "../App";
 import { useWishlist } from "../context/WishlistContext";
 import axios from "axios";
 import ReviewSection from "../components/ReviewSection";
@@ -15,6 +16,8 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { cart, addToCart } = useContext(CartContext);
+  const showToast = useToast();
+  const [cartLoading, setCartLoading] = useState(false);
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const [product, setProduct] = useState(null);
@@ -76,11 +79,14 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = () => {
+    if (cartLoading) return;
+    setCartLoading(true);
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
     setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    if (showToast) showToast(`${product.name} added to cart!`);
+    setTimeout(() => { setAdded(false); setCartLoading(false); }, 1500);
   };
 
   const handleWishlist = () => {
@@ -249,18 +255,19 @@ export default function ProductDetail() {
           {/* ADD TO CART */}
           <button
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
+            disabled={product.stock === 0 || cartLoading}
             style={{
               ...styles.addBtn,
               background: added
                 ? "linear-gradient(135deg, #22c55e, #16a34a)"
-                : product.stock === 0
+                : product.stock === 0 || cartLoading
                 ? "#333"
                 : "linear-gradient(135deg, #f97316, #dc2626)",
-              cursor: product.stock === 0 ? "not-allowed" : "pointer",
+              cursor: product.stock === 0 || cartLoading ? "not-allowed" : "pointer",
+              opacity: cartLoading ? 0.7 : 1,
             }}
           >
-            {added ? "✅ Added to Cart!" : product.stock === 0 ? "Out of Stock" : "🛒 Add to Cart"}
+            {cartLoading ? "Adding..." : added ? "✅ Added to Cart!" : product.stock === 0 ? "Out of Stock" : "🛒 Add to Cart"}
           </button>
 
           {/* WISHLIST BUTTON */}

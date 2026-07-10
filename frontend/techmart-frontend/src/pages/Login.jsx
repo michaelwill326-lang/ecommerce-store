@@ -11,6 +11,7 @@ export default function Login() {
   const [view, setView] = useState("login");
   const [otpStep, setOtpStep] = useState(false);
   const [otp, setOtp] = useState("");
+  const [otpTimer, setOtpTimer] = useState(0);
   
   // Shared Form inputs
   const [email, setEmail] = useState("");
@@ -34,9 +35,10 @@ export default function Login() {
       const response = await axios.post(`${API}/api/auth/login`, { email, password });
       // Send OTP
       await axios.post(`${API}/api/auth/send-otp`, { email });
-      // Store temp user data and show OTP step
       localStorage.setItem("_tempUser", JSON.stringify(response.data));
       setOtpStep(true);
+      setOtpTimer(120);
+      const interval = setInterval(() => setOtpTimer(prev => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; }), 1000);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Invalid email or password");
@@ -139,10 +141,16 @@ export default function Login() {
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
             </form>
-            <p style={{ color: "#888", fontSize: "13px", textAlign: "center", marginTop: "12px" }}>
-              Didn't receive it?{" "}
-              <span onClick={async () => { await axios.post(`${API}/api/auth/send-otp`, { email }); setError(""); }} style={{ color: "#f97316", cursor: "pointer" }}>Resend OTP</span>
-            </p>
+            <div style={{ textAlign: "center", marginTop: "12px" }}>
+              {otpTimer > 0 ? (
+                <p style={{ color: "#888", fontSize: "13px" }}>Resend in <strong style={{ color: "#f97316" }}>{Math.floor(otpTimer/60)}:{String(otpTimer%60).padStart(2,"0")}</strong></p>
+              ) : (
+                <p style={{ color: "#888", fontSize: "13px" }}>
+                  Didn't receive it?{" "}
+                  <span onClick={async () => { await axios.post(`${API}/api/auth/send-otp`, { email }); setOtpTimer(120); setError(""); }} style={{ color: "#f97316", cursor: "pointer", fontWeight: "700" }}>Resend OTP</span>
+                </p>
+              )}
+            </div>
             <p style={{ color: "#888", fontSize: "13px", textAlign: "center", marginTop: "8px" }}>
               <span onClick={() => { setOtpStep(false); setOtp(""); setError(""); }} style={{ color: "#888", cursor: "pointer" }}>← Back to login</span>
             </p>

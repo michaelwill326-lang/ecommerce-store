@@ -1,85 +1,110 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useCallback } from "react";
+const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 export const CartContext = createContext();
+
 export function CartProvider({ children }) {
+  const isLoggedIn = () => !!localStorage.getItem("token");
   const [cart, setCart] = useState(() => {
     if (!localStorage.getItem("token")) return [];
     const saved = localStorage.getItem("cart");
     return saved ? JSON.parse(saved) : [];
   });
-  // Save cart to localStorage only when logged in
+
+  // Save to localStorage whenever cart changes
   useEffect(() => {
-    if (localStorage.getItem("token")) {
+    if (isLoggedIn()) {
       localStorage.setItem("cart", JSON.stringify(cart));
     }
   }, [cart]);
-  // Clear cart on logout
+
+  // Sync cart to backend when user logs in
+  const syncCartToServer = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token || !cart.length) return;
+    try {
+      await fetch(`${API}/api/cart/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ items: cart })
+      });
+    } catch {}
+  }, [cart]);
+
+  // Load cart from backend on login
+  const loadCartFromServer = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/api/cart`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.items && data.items.length > 0) {
+        setCart(data.items);
+      }
+    } catch {}
+  }, []);
+
+  // Handle storage events (login/logout)
   useEffect(() => {
     const handleStorage = (e) => {
-      if (e.key === "token" && !e.newValue) {
-        setCart([]);
-        localStorage.removeItem("cart");
+      if (e.key === "token") {
+        if (!e.newValue) {
+          // Logged out — clear cart
+          setCart([]);
+          localStorage.removeItem("cart");
+        } else {
+          // Logged in — load from server
+          loadCartFromServer();
+        }
       }
     };
     window.addEventListener("storage", handleStorage);
+    // Load on mount if logged in
+    if (isLoggedIn()) loadCartFromServer();
     return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-  // ADD TO CART
+  }, [loadCartFromServer]);
+
+  // Sync to server on cart change (debounced)
+  useEffect(() => {
+    if (!isLoggedIn() || !cart.length) return;
+    const timer = setTimeout(() => syncCartToServer(), 2000);
+    return () => clearTimeout(timer);
+  }, [cart, syncCartToServer]);
+
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item._id === product._id);
-
       if (existing) {
         return prev.map((item) =>
-          item._id === product._id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-
       return [...prev, { ...product, quantity: 1 }];
     });
   };
 
-  // REMOVE ITEM
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => item._id !== id));
-  };
+  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item._id !== id));
 
-  // UPDATE QUANTITY
   const updateQuantity = (id, quantity) => {
     if (quantity < 1) return;
-
-    setCart((prev) =>
-      prev.map((item) =>
-        item._id === id
-          ? { ...item, quantity }
-          : item
-      )
-    );
+    setCart((prev) => prev.map((item) => item._id === id ? { ...item, quantity } : item));
   };
 
-  // CLEAR CART
   const clearCart = () => {
     setCart([]);
+    localStorage.removeItem("cart");
+    // Clear from server too
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`${API}/api/cart/clear`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    }
   };
 
-  // TOTAL PRICE
-  const cartTotal = cart.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        cartTotal,
-      }}
-    >
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal }}>
       {children}
     </CartContext.Provider>
   );

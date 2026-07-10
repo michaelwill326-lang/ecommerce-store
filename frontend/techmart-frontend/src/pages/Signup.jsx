@@ -29,8 +29,9 @@ export default function Signup() {
       return setError("Phone number is required for dispatch updates");
     }
 
-    if (password.length < 6) {
-      return setError("Password must be at least 6 characters");
+    const pwdRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])(.{8,})$/;
+    if (!pwdRegex.test(password)) {
+      return setError("Password must be 8+ characters with at least one number and symbol (e.g. !@#$%)");
     }
 
     if (password !== confirm) {
@@ -62,8 +63,10 @@ export default function Signup() {
 
   const getPasswordStrength = () => {
     if (password.length === 0) return null;
-    if (password.length < 6) return { label: "Weak", color: "#dc2626", width: "33%" };
-    if (password.length < 10) return { label: "Medium", color: "#f97316", width: "66%" };
+    const hasNum = /[0-9]/.test(password);
+    const hasSym = /[!@#$%^&*]/.test(password);
+    if (password.length < 8 || !hasNum || !hasSym) return { label: "Weak", color: "#dc2626", width: "33%" };
+    if (password.length < 12) return { label: "Medium", color: "#f97316", width: "66%" };
     return { label: "Strong", color: "#22c55e", width: "100%" };
   };
 

@@ -1,5 +1,8 @@
 import { Routes, Route } from "react-router-dom";
-import { useEffect, Suspense, lazy } from "react";
+import { useEffect, Suspense, lazy, useState, createContext, useContext } from "react";
+
+export const ToastContext = createContext(null);
+export function useToast() { return useContext(ToastContext); }
 
 // Register service worker
 if ("serviceWorker" in navigator) {
@@ -37,6 +40,29 @@ const TechMartPay = lazy(() => import("./pages/TechMartPay"));
 const SellerLogin = lazy(() => import("./pages/seller/SellerLogin"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+  const showToast = (msg, type = "success") => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, msg, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+  };
+  return (
+    <ToastContext.Provider value={showToast}>
+      {children}
+      <div style={{ position: "fixed", bottom: "80px", left: "50%", transform: "translateX(-50%)", zIndex: 99999, display: "flex", flexDirection: "column", gap: "8px", alignItems: "center", pointerEvents: "none" }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{ background: t.type === "error" ? "#dc2626" : t.type === "warning" ? "#f59e0b" : "#22c55e", color: "#fff", padding: "10px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "700", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", animation: "slideUp 0.3s ease", whiteSpace: "nowrap" }}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}{t.msg}
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    </ToastContext.Provider>
+    </ToastProvider>
+  );
+}
+
 export default function App() {
   useEffect(() => {
     let timer;
@@ -57,6 +83,7 @@ export default function App() {
     };
   }, []);
   return (
+    <ToastProvider>
     <div style={styles.appContainer}>
       {/* Navigation Bar across all views */}
       <Navbar />
@@ -99,6 +126,7 @@ export default function App() {
       <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style={{width:"32px",height:"32px"}} />
     </a>
     </div>
+    </ToastProvider>
   );
 }
 
