@@ -208,7 +208,7 @@ export default function Admin() {
   if (loading) return (
     <div style={styles.centered}>
       <div style={styles.spinner} />
-      <p style={{ color: "#888", marginTop: "16px" }}>Loading dashboard...</p>
+      <p style={{ color: "var(--text-muted)", marginTop: "16px" }}>Loading dashboard...</p>
     </div>
   );
 
@@ -288,8 +288,8 @@ export default function Admin() {
                   <XAxis dataKey="date" stroke="#888" fontSize={12} />
                   <YAxis stroke="#888" fontSize={12} />
                   <Tooltip
-                    contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "8px" }}
-                    labelStyle={{ color: "#fff" }}
+                    contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "8px" }}
+                    labelStyle={{ color: "var(--text-primary)" }}
                     formatter={(v) => [`₦${v.toLocaleString()}`, "Revenue"]}
                   />
                   <Line type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} dot={{ fill: "#f97316" }} />
@@ -380,7 +380,7 @@ ${url}`);
                             alert("Failed to generate payment link");
                           }
                         }}
-                        style={{ marginTop: "6px", width: "100%", padding: "6px 8px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}
+                        style={{ marginTop: "6px", width: "100%", padding: "6px 8px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "var(--text-primary)", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}
                       >
                         Send Payment Link
                       </button>
@@ -417,7 +417,7 @@ ${url}`);
             {/* ADD/EDIT FORM */}
             {showAddProduct && (
               <div style={styles.formCard}>
-                <h3 style={{ color: "#fff", marginBottom: "16px" }}>
+                <h3 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>
                   {editProduct ? "✏️ Edit Product" : "➕ Add New Product"}
                 </h3>
                 <div style={styles.formGrid}>
@@ -454,7 +454,7 @@ ${url}`);
                           <img src={url} alt={`Preview ${idx + 1}`} style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "2px solid #ddd" }} />
                           <button
                             onClick={() => setNewProduct(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
-                            style={{ position: "absolute", top: "-6px", right: "-6px", background: "red", color: "#fff", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", fontSize: "12px", lineHeight: "20px", textAlign: "center", padding: 0 }}
+                            style={{ position: "absolute", top: "-6px", right: "-6px", background: "red", color: "var(--text-primary)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", fontSize: "12px", lineHeight: "20px", textAlign: "center", padding: 0 }}
                           >x</button>
                         </div>
                       ))}
@@ -588,16 +588,16 @@ ${url}`);
       ===================== */}
       {tab === "Payouts" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Seller Payout Requests</h2>
-          {payouts.length === 0 ? <p style={{ color: "#888" }}>No payout requests yet.</p> : (
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>Seller Payout Requests</h2>
+          {payouts.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No payout requests yet.</p> : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {payouts.map(p => (
-                <div key={p._id} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                <div key={p._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                     <div>
-                      <p style={{ color: "#fff", fontWeight: "700", fontSize: "16px", margin: "0 0 4px" }}>N{p.amount.toLocaleString()} — {p.storeName}</p>
-                      <p style={{ color: "#888", fontSize: "13px", margin: "0 0 2px" }}>{p.bankName} | {p.accountNumber} | {p.accountName}</p>
-                      <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>{new Date(p.createdAt).toLocaleDateString()}</p>
+                      <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "16px", margin: "0 0 4px" }}>N{p.amount.toLocaleString()} — {p.storeName}</p>
+                      <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 2px" }}>{p.bankName} | {p.accountNumber} | {p.accountName}</p>
+                      <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>{new Date(p.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                       <span style={{ padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "700", background: p.status === "paid" ? "#0a2a1a" : p.status === "rejected" ? "#2a1010" : "#1a1a0a", color: p.status === "paid" ? "#22c55e" : p.status === "rejected" ? "#f87171" : "#fbbf24" }}>{p.status.toUpperCase()}</span>
@@ -606,13 +606,13 @@ ${url}`);
                           <button onClick={async () => {
                             const res = await axios.put(`${API}/api/admin/payouts/${p._id}`, { status: "paid" }, { headers });
                             setPayouts(payouts.map(x => x._id === p._id ? res.data.data : x));
-                          }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Mark Paid</button>
+                          }} style={{ background: "#22c55e", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Mark Paid</button>
                           <button onClick={async () => {
                             const note = prompt("Reason for rejection:");
                             if (!note) return;
                             const res = await axios.put(`${API}/api/admin/payouts/${p._id}`, { status: "rejected", note }, { headers });
                             setPayouts(payouts.map(x => x._id === p._id ? res.data.data : x));
-                          }} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Reject</button>
+                          }} style={{ background: "#dc2626", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Reject</button>
                         </>
                       )}
                     </div>
@@ -636,7 +636,7 @@ ${url}`);
             } catch { alert("Failed to load flagged users"); }
           }} style={{ ...styles.addBtn, marginBottom: 16 }}>Load Flagged Users</button>
           {flaggedUsers.length === 0 ? (
-            <p style={{ color: "#888" }}>No flagged users yet. Click Load to fetch.</p>
+            <p style={{ color: "var(--text-muted)" }}>No flagged users yet. Click Load to fetch.</p>
           ) : (
             <table style={styles.table}>
               <thead><tr>
@@ -696,7 +696,7 @@ ${url}`);
             } catch { alert("Failed to load returns"); }
           }} style={{ ...styles.addBtn, marginBottom: 16 }}>Load Return Requests</button>
           {returns.length === 0 ? (
-            <p style={{ color: "#888" }}>No return requests yet. Click Load to fetch.</p>
+            <p style={{ color: "var(--text-muted)" }}>No return requests yet. Click Load to fetch.</p>
           ) : (
             <table style={styles.table}>
               <thead><tr>
@@ -709,8 +709,8 @@ ${url}`);
               <tbody>
                 {returns.map(r => (
                   <tr key={r._id}>
-                    <td style={styles.td}>{r.buyerName}<br/><span style={{color:"#888",fontSize:11}}>{r.buyerEmail}</span></td>
-                    <td style={styles.td}>{r.reason}<br/><span style={{color:"#888",fontSize:11}}>{r.description}</span></td>
+                    <td style={styles.td}>{r.buyerName}<br/><span style={{color:"var(--text-muted)",fontSize:11}}>{r.buyerEmail}</span></td>
+                    <td style={styles.td}>{r.reason}<br/><span style={{color:"var(--text-muted)",fontSize:11}}>{r.description}</span></td>
                     <td style={styles.td}>N{(r.refundAmount||0).toLocaleString()}</td>
                     <td style={styles.td}>
                       <span style={{color: r.status==="approved"?"#22c55e":r.status==="rejected"?"#dc2626":"#f97316", fontWeight:700}}>{r.status}</span>
@@ -738,58 +738,58 @@ ${url}`);
 
       {tab === "AI Forecast" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "8px" }}>AI Inventory Forecast</h2>
-          <p style={{ color: "#888", marginBottom: "20px" }}>AI analyzes your sales velocity to predict stockouts and suggest reorder quantities.</p>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>AI Inventory Forecast</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>AI analyzes your sales velocity to predict stockouts and suggest reorder quantities.</p>
           <AIInventoryForecast headers={headers} />
         </div>
       )}
       {tab === "Disputes" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Customer Disputes</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>Customer Disputes</h2>
           {selectedDispute ? (
             <div>
-              <button onClick={() => setSelectedDispute(null)} style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>Back</button>
-              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                <h3 style={{ color: "#fff", margin: "0 0 8px" }}>{selectedDispute.subject}</h3>
-                <p style={{ color: "#888", fontSize: "13px", margin: "0 0 4px" }}>Customer: {selectedDispute.customerEmail}</p>
-                <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>Seller: {selectedDispute.sellerName}</p>
+              <button onClick={() => setSelectedDispute(null)} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>Back</button>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>{selectedDispute.subject}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 4px" }}>Customer: {selectedDispute.customerEmail}</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Seller: {selectedDispute.sellerName}</p>
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
                   {["resolved", "closed"].map(s => (
                     <button key={s} onClick={async () => {
                       const res = await axios.put(`${API}/api/admin/disputes/${selectedDispute._id}`, { status: s }, { headers });
                       setSelectedDispute(res.data.data);
                       setDisputes(disputes.map(d => d._id === selectedDispute._id ? res.data.data : d));
-                    }} style={{ padding: "6px 14px", background: s === "resolved" ? "#22c55e" : "#333", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>{s.charAt(0).toUpperCase() + s.slice(1)}</button>
+                    }} style={{ padding: "6px 14px", background: s === "resolved" ? "#22c55e" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>{s.charAt(0).toUpperCase() + s.slice(1)}</button>
                   ))}
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
                 {selectedDispute.messages.map((m, i) => (
-                  <div key={i} style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "10px", padding: "12px" }}>
+                  <div key={i} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "12px" }}>
                     <p style={{ color: "#f97316", fontSize: "11px", fontWeight: "700", margin: "0 0 4px" }}>{m.sender} ({m.senderType})</p>
-                    <p style={{ color: "#fff", fontSize: "14px", margin: 0 }}>{m.message}</p>
+                    <p style={{ color: "var(--text-primary)", fontSize: "14px", margin: 0 }}>{m.message}</p>
                   </div>
                 ))}
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
-                <input value={disputeReply} onChange={e => setDisputeReply(e.target.value)} placeholder="Admin response..." style={{ flex: 1, padding: "10px 14px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "#fff", outline: "none" }} />
+                <input value={disputeReply} onChange={e => setDisputeReply(e.target.value)} placeholder="Admin response..." style={{ flex: 1, padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "8px", color: "var(--text-primary)", outline: "none" }} />
                 <button onClick={async () => {
                   if (!disputeReply.trim()) return;
                   const res = await axios.post(`${API}/api/disputes/${selectedDispute._id}/reply`, { message: disputeReply, sender: "TechMart Admin", senderType: "admin" });
                   setSelectedDispute(res.data.data);
                   setDisputeReply("");
-                }} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700" }}>Send</button>
+                }} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700" }}>Send</button>
               </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {disputes.length === 0 ? <p style={{ color: "#888" }}>No disputes yet.</p> : disputes.map(d => (
-                <div key={d._id} onClick={() => setSelectedDispute(d)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
+              {disputes.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No disputes yet.</p> : disputes.map(d => (
+                <div key={d._id} onClick={() => setSelectedDispute(d)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{d.subject}</p>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{d.subject}</p>
                     <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: "700", background: d.status === "resolved" ? "#0a2a1a" : "#2a1a0a", color: d.status === "resolved" ? "#22c55e" : "#fbbf24" }}>{d.status}</span>
                   </div>
-                  <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>{d.customerEmail} vs {d.sellerName}</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{d.customerEmail} vs {d.sellerName}</p>
                 </div>
               ))}
             </div>
@@ -798,8 +798,8 @@ ${url}`);
       )}
       {tab === "Flash Sales" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Flash Sales</h2>
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>Flash Sales</h2>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Create Flash Sale</h3>
             {flashMsg && <p style={{ color: flashMsg.includes("success") ? "#22c55e" : "#f87171", marginBottom: "12px" }}>{flashMsg}</p>}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
@@ -831,9 +831,9 @@ ${url}`);
               } catch (err) { setFlashMsg(err.response?.data?.error || "Failed to create flash sale"); }
             }} style={styles.orangeBtn}>Create Flash Sale</button>
           </div>
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Active & Upcoming Sales</h3>
-            {flashSales.length === 0 ? <p style={{ color: "#888" }}>No flash sales yet.</p> : (
+            {flashSales.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No flash sales yet.</p> : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {flashSales.map(s => {
                   const now = new Date();
@@ -841,17 +841,17 @@ ${url}`);
                   const isExpired = new Date(s.endTime) < now;
                   const discount = Math.round(((s.originalPrice - s.salePrice) / s.originalPrice) * 100);
                   return (
-                    <div key={s._id} style={{ background: "#111", borderRadius: "10px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                    <div key={s._id} style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                       <div>
-                        <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{s.productName}</p>
-                        <p style={{ color: "#888", fontSize: "13px", margin: "0 0 4px" }}>
+                        <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{s.productName}</p>
+                        <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 4px" }}>
                           <span style={{ textDecoration: "line-through" }}>N{s.originalPrice?.toLocaleString()}</span>
                           {" → "}
                           <span style={{ color: "#f97316", fontWeight: "700" }}>N{s.salePrice?.toLocaleString()}</span>
                           {" "}
                           <span style={{ color: "#22c55e" }}>{discount}% off</span>
                         </p>
-                        <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>
+                        <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>
                           {new Date(s.startTime).toLocaleString()} → {new Date(s.endTime).toLocaleString()}
                         </p>
                       </div>
@@ -863,7 +863,7 @@ ${url}`);
                           if (!window.confirm("Delete this flash sale?")) return;
                           await axios.delete(`${API}/api/admin/flash-sales/${s._id}`, { headers });
                           setFlashSales(flashSales.filter(x => x._id !== s._id));
-                        }} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px" }}>Delete</button>
+                        }} style={{ background: "#dc2626", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px" }}>Delete</button>
                       </div>
                     </div>
                   );
@@ -875,11 +875,11 @@ ${url}`);
       )}
       {tab === "Wallets" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "8px" }}>Wallet Management</h2>
-          <p style={{ color: "#888", marginBottom: "20px" }}>Total in circulation: <span style={{ color: "#f97316", fontWeight: "700" }}>₦{(wallets.totalInCirculation || 0).toLocaleString()}</span></p>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>Wallet Management</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>Total in circulation: <span style={{ color: "#f97316", fontWeight: "700" }}>₦{(wallets.totalInCirculation || 0).toLocaleString()}</span></p>
 
           {/* Manual Credit/Debit */}
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Manual Wallet Adjustment</h3>
             {walletMsg && <p style={{ color: walletMsg.includes("success") ? "#22c55e" : "#f87171", marginBottom: "12px" }}>{walletMsg}</p>}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
@@ -913,9 +913,9 @@ ${url}`);
           </div>
 
           {/* Wallet List */}
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Customer Wallets</h3>
-            {wallets.users.length === 0 ? <p style={{ color: "#888" }}>No wallets with balance yet.</p> : (
+            {wallets.users.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No wallets with balance yet.</p> : (
               <table style={styles.table}>
                 <thead><tr>
                   <th style={styles.th}>Customer</th>
@@ -940,19 +940,19 @@ ${url}`);
       )}
       {tab === "Sellers" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Seller Applications</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>Seller Applications</h2>
           {sellers.length === 0 ? (
-            <p style={{ color: "#888" }}>No seller applications yet.</p>
+            <p style={{ color: "var(--text-muted)" }}>No seller applications yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {sellers.map(s => (
-                <div key={s._id} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+                <div key={s._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                     <div>
-                      <p style={{ color: "#fff", fontWeight: "700", fontSize: "16px", margin: "0 0 4px" }}>{s.storeName}</p>
-                      <p style={{ color: "#888", fontSize: "13px", margin: "0 0 4px" }}>{s.name} - {s.email}</p>
-                      <p style={{ color: "#888", fontSize: "13px", margin: "0 0 8px" }}>{s.phone}</p>
-                      {s.storeDescription && <p style={{ color: "#aaa", fontSize: "13px", margin: "0 0 8px" }}>{s.storeDescription}</p>}
+                      <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "16px", margin: "0 0 4px" }}>{s.storeName}</p>
+                      <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 4px" }}>{s.name} - {s.email}</p>
+                      <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 8px" }}>{s.phone}</p>
+                      {s.storeDescription && <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: "0 0 8px" }}>{s.storeDescription}</p>}
                       <span style={{
                         padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "700",
                         background: s.status === "approved" ? "#0a2a1a" : s.status === "rejected" ? "#2a1010" : "#1a1a0a",
@@ -965,29 +965,29 @@ ${url}`);
                         <button onClick={async () => {
                           const res = await axios.put(`${API}/api/admin/sellers/${s._id}`, { status: "approved" }, { headers });
                           setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
-                        }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Approve</button>
+                        }} style={{ background: "#22c55e", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Approve</button>
                       )}
                       <button onClick={async () => {
                         const res = await axios.put(`${API}/api/admin/sellers/${s._id}/verify`, { verified: !s.verified }, { headers });
                         setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
-                      }} style={{ background: s.verified ? "#1d4ed8" : "#333", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>{s.verified ? "Unverify" : "Verify"}</button>
+                      }} style={{ background: s.verified ? "#1d4ed8" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>{s.verified ? "Unverify" : "Verify"}</button>
                       <button onClick={async () => {
                         const commission = prompt("Set commission % (current: " + (s.commission || 10) + "%):");
                         if (!commission) return;
                         const res = await axios.put(`${API}/api/admin/sellers/${s._id}/commission`, { commission }, { headers });
                         setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
-                      }} style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Commission</button>
+                      }} style={{ background: "#f59e0b", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Commission</button>
                       {s.status !== "rejected" && (
                         <button onClick={async () => {
                           const res = await axios.put(`${API}/api/admin/sellers/${s._id}`, { status: "rejected" }, { headers });
                           setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
-                        }} style={{ background: "#f59e0b", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Reject</button>
+                        }} style={{ background: "#f59e0b", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Reject</button>
                       )}
                       <button onClick={async () => {
                         if (!window.confirm("Delete this seller?")) return;
                         await axios.delete(`${API}/api/admin/sellers/${s._id}`, { headers });
                         setSellers(sellers.filter(x => x._id !== s._id));
-                      }} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Delete</button>
+                      }} style={{ background: "#dc2626", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Delete</button>
                     </div>
                   </div>
                 </div>
@@ -998,9 +998,9 @@ ${url}`);
       )}
       {tab === "Coupons" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "20px" }}>Coupon Codes</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>Coupon Codes</h2>
           {/* Create Coupon Form */}
-          <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+          <div style={{ background: "var(--bg-card)", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Create New Coupon</h3>
             {couponMsg && <p style={{ color: couponMsg.startsWith("Error") ? "red" : "green", marginBottom: "12px" }}>{couponMsg}</p>}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
@@ -1034,9 +1034,9 @@ ${url}`);
             }} style={styles.orangeBtn}>Create Coupon</button>
           </div>
           {/* Coupons Table */}
-          <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "20px" }}>
+          <div style={{ background: "var(--bg-card)", borderRadius: "12px", padding: "20px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Active Coupons</h3>
-            {coupons.length === 0 ? <p style={{ color: "#888" }}>No coupons yet.</p> : (
+            {coupons.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No coupons yet.</p> : (
               <table style={styles.table}>
                 <thead><tr>
                   <th style={styles.th}>Code</th>
@@ -1059,7 +1059,7 @@ ${url}`);
                           if (!window.confirm("Delete this coupon?")) return;
                           await axios.delete(`${API}/api/admin/coupons/${c._id}`, { headers });
                           setCoupons(coupons.filter(x => x._id !== c._id));
-                        }} style={{ background: "red", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 10px", cursor: "pointer" }}>Delete</button>
+                        }} style={{ background: "red", color: "var(--text-primary)", border: "none", borderRadius: "6px", padding: "4px 10px", cursor: "pointer" }}>Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -1077,20 +1077,20 @@ ${url}`);
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px", marginBottom: "24px" }}>
                 {[
                   { label: "Positive", value: sentiment.stats.positive, color: "#22c55e", emoji: "😊" },
-                  { label: "Neutral", value: sentiment.stats.neutral, color: "#888", emoji: "😐" },
+                  { label: "Neutral", value: sentiment.stats.neutral, color: "var(--text-muted)", emoji: "😐" },
                   { label: "Negative", value: sentiment.stats.negative, color: "#dc2626", emoji: "😞" },
                   { label: "Total Reviews", value: sentiment.stats.total, color: "#f97316", emoji: "⭐" },
                 ].map(s => (
-                  <div key={s.label} style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                  <div key={s.label} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-light)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
                     <p style={{ fontSize: "28px", margin: 0 }}>{s.emoji}</p>
                     <p style={{ color: s.color, fontSize: "24px", fontWeight: "800", margin: "8px 0 4px" }}>{s.value}</p>
-                    <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>{s.label}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{s.label}</p>
                   </div>
                 ))}
               </div>
               {sentiment.productSentiments.length > 0 && (
                 <>
-                  <h3 style={{ color: "#fff", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}>Product Sentiment Rankings</h3>
+                  <h3 style={{ color: "var(--text-primary)", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}>Product Sentiment Rankings</h3>
                   <table style={styles.table}>
                     <thead>
                       <tr>
@@ -1104,7 +1104,7 @@ ${url}`);
                         <tr key={i} style={styles.tr}>
                           <td style={styles.td}>{p.name}</td>
                           <td style={{ ...styles.td, color: "#22c55e" }}>{p.positive}</td>
-                          <td style={{ ...styles.td, color: "#888" }}>{p.neutral}</td>
+                          <td style={{ ...styles.td, color: "var(--text-muted)" }}>{p.neutral}</td>
                           <td style={{ ...styles.td, color: "#dc2626" }}>{p.negative}</td>
                           <td style={styles.td}>
                             <span style={{ ...styles.badge, background: p.score > 0 ? "#22c55e" : p.score < 0 ? "#dc2626" : "#333" }}>
@@ -1142,15 +1142,15 @@ ${url}`);
 
             {reviewTab === "pending" && (
               pendingReviews.length === 0 ? (
-                <p style={{ color: "#888", textAlign: "center", padding: "40px 0" }}>✅ No pending reviews!</p>
+                <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px 0" }}>✅ No pending reviews!</p>
               ) : (
                 pendingReviews.map((r, i) => (
-                  <div key={i} style={{ background: "#111", border: "1px solid #222", borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
+                  <div key={i} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-light)", borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                       <div style={{ flex: 1 }}>
                         <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{r.productName}</p>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                          <p style={{ color: "#fff", fontWeight: "600", fontSize: "13px", margin: 0 }}>{r.user}</p>
+                          <p style={{ color: "var(--text-primary)", fontWeight: "600", fontSize: "13px", margin: 0 }}>{r.user}</p>
                           {r.verified && <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", padding: "2px 8px", borderRadius: "999px", fontSize: "11px" }}>✅ Verified</span>}
                         </div>
                         <div style={{ display: "flex", gap: "2px", marginBottom: "8px" }}>
@@ -1158,7 +1158,7 @@ ${url}`);
                             <span key={s} style={{ color: s <= r.stars ? "#f97316" : "#333", fontSize: "14px" }}>★</span>
                           ))}
                         </div>
-                        <p style={{ color: "#aaa", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
+                        <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
                         <span style={{ color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888", fontSize: "12px", fontWeight: "600" }}>
                           🧠 {r.sentiment}
                         </span>
@@ -1175,20 +1175,20 @@ ${url}`);
 
             {reviewTab === "flagged" && (
               flaggedReviews.length === 0 ? (
-                <p style={{ color: "#888", textAlign: "center", padding: "40px 0" }}>✅ No flagged reviews!</p>
+                <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px 0" }}>✅ No flagged reviews!</p>
               ) : (
                 flaggedReviews.map((r, i) => (
                   <div key={i} style={{ background: "#2a1010", border: "1px solid #dc2626", borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                       <div style={{ flex: 1 }}>
                         <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{r.productName}</p>
-                        <p style={{ color: "#fff", fontWeight: "600", fontSize: "13px", margin: "0 0 8px" }}>{r.user}</p>
+                        <p style={{ color: "var(--text-primary)", fontWeight: "600", fontSize: "13px", margin: "0 0 8px" }}>{r.user}</p>
                         <div style={{ display: "flex", gap: "2px", marginBottom: "8px" }}>
                           {[1,2,3,4,5].map(s => (
                             <span key={s} style={{ color: s <= r.stars ? "#f97316" : "#333", fontSize: "14px" }}>★</span>
                           ))}
                         </div>
-                        <p style={{ color: "#aaa", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
+                        <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: "0 0 8px" }}>{r.comment}</p>
                         <span style={{ color: r.sentiment === "positive" ? "#22c55e" : r.sentiment === "negative" ? "#dc2626" : "#888", fontSize: "12px", fontWeight: "600" }}>
                           🧠 {r.sentiment}
                         </span>
@@ -1214,36 +1214,36 @@ const styles = {
   page: { maxWidth: "1200px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px", flexWrap: "wrap", gap: "16px" },
-  title: { color: "#fff", fontSize: "28px", fontWeight: "800", margin: 0 },
-  subtitle: { color: "#888", fontSize: "14px", marginTop: "4px" },
-  backBtn: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
+  title: { color: "var(--text-primary)", fontSize: "28px", fontWeight: "800", margin: 0 },
+  subtitle: { color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" },
+  backBtn: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
   tabRow: { display: "flex", gap: "10px", marginBottom: "32px", flexWrap: "wrap" },
   tabBtn: { padding: "10px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
   statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px", marginBottom: "32px" },
-  statCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", display: "flex", alignItems: "center", gap: "16px" },
+  statCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", display: "flex", alignItems: "center", gap: "16px" },
   statValue: { fontSize: "24px", fontWeight: "800", margin: 0 },
-  statLabel: { color: "#888", fontSize: "13px", margin: 0 },
-  chartCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
-  tableCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px", overflowX: "auto" },
-  sectionTitle: { color: "#fff", fontSize: "18px", fontWeight: "700", margin: "0 0 20px" },
+  statLabel: { color: "var(--text-muted)", fontSize: "13px", margin: 0 },
+  chartCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
+  tableCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px", overflowX: "auto" },
+  sectionTitle: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", margin: "0 0 20px" },
   table: { width: "100%", borderCollapse: "collapse" },
-  th: { color: "#888", fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", padding: "12px 16px", textAlign: "left", borderBottom: "1px solid #222" },
+  th: { color: "var(--text-muted)", fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", padding: "12px 16px", textAlign: "left", borderBottom: "1px solid var(--border-light)" },
   tr: { borderBottom: "1px solid #1e1e1e" },
-  td: { color: "#fff", fontSize: "14px", padding: "14px 16px" },
-  badge: { color: "#fff", padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" },
-  select: { background: "#222", border: "1px solid #333", color: "#fff", padding: "6px 10px", borderRadius: "8px", fontSize: "13px", cursor: "pointer" },
-  formCard: { background: "#111", border: "1px solid #333", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
+  td: { color: "var(--text-primary)", fontSize: "14px", padding: "14px 16px" },
+  badge: { color: "var(--text-primary)", padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" },
+  select: { background: "var(--bg-input)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "6px 10px", borderRadius: "8px", fontSize: "13px", cursor: "pointer" },
+  formCard: { background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
   formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" },
-  input: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
+  input: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
   uploadWrap: { marginBottom: "16px" },
-  uploadLabel: { color: "#aaa", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" },
+  uploadLabel: { color: "var(--text-secondary)", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" },
   previewWrap: { position: "relative", width: "120px", height: "120px", marginBottom: "12px", borderRadius: "12px", overflow: "hidden" },
   previewImg: { width: "100%", height: "100%", objectFit: "cover" },
   uploadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" },
-  uploadBtn: { display: "inline-block", padding: "10px 20px", background: "#1a1a1a", border: "1px solid #f97316", color: "#f97316", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600" },
-  orangeBtn: { padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
+  uploadBtn: { display: "inline-block", padding: "10px 20px", background: "var(--bg-card)", border: "1px solid #f97316", color: "#f97316", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600" },
+  orangeBtn: { padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
   editBtn: { padding: "6px 12px", background: "#1e3a5f", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
   deleteBtn: { padding: "6px 12px", background: "#3f0f0f", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
   spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
-  avatar: { background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800" },
+  avatar: { background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800" },
 };

@@ -27,7 +27,7 @@ function Countdown({ endTime }) {
       {[{ label: "HRS", value: timeLeft.hours }, { label: "MIN", value: timeLeft.minutes }, { label: "SEC", value: timeLeft.seconds }].map((unit, i) => (
         <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: "6px", padding: "4px 8px", minWidth: "36px", textAlign: "center" }}>
-            <span style={{ color: "#fff", fontWeight: "800", fontSize: "18px" }}>{pad(unit.value)}</span>
+            <span style={{ color: "var(--text-primary)", fontWeight: "800", fontSize: "18px" }}>{pad(unit.value)}</span>
           </div>
           <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "9px", marginTop: "2px" }}>{unit.label}</span>
         </div>
@@ -63,12 +63,12 @@ export default function FlashSaleBanner() {
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <span style={{ fontSize: "28px" }}>⚡</span>
         <div>
-          <p style={{ color: "#fff", fontWeight: "900", fontSize: "12px", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "1px" }}>Flash Sale</p>
-          <p style={{ color: "#fff", fontWeight: "700", fontSize: "15px", margin: "0 0 4px" }}>{sale.productName}</p>
+          <p style={{ color: "var(--text-primary)", fontWeight: "900", fontSize: "12px", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "1px" }}>Flash Sale</p>
+          <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 4px" }}>{sale.productName}</p>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "13px", textDecoration: "line-through" }}>N{sale.originalPrice?.toLocaleString()}</span>
-            <span style={{ color: "#fff", fontWeight: "900", fontSize: "18px" }}>N{sale.salePrice?.toLocaleString()}</span>
-            <span style={{ background: "rgba(0,0,0,0.3)", color: "#fff", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>{discount}% OFF</span>
+            <span style={{ color: "var(--text-primary)", fontWeight: "900", fontSize: "18px" }}>N{sale.salePrice?.toLocaleString()}</span>
+            <span style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-primary)", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>{discount}% OFF</span>
           </div>
         </div>
       </div>

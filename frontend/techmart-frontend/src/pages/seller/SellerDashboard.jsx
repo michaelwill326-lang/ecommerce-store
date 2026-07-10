@@ -140,9 +140,9 @@ export default function SellerDashboard() {
   const [banks, setBanks] = useState([]);
   const [verifyingAccount, setVerifyingAccount] = useState(false);
 
-  if (loading) return <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>Loading...</div>;
+  if (loading) return <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-primary)" }}>Loading...</div>;
 
-  const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
+  const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
   const TABS = ["Overview", "Analytics", "Products", "Storefront", "Wallet", "Payouts", "Disputes", "Messages"];
 
   const statCards = [
@@ -155,7 +155,7 @@ export default function SellerDashboard() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", padding: "16px", paddingBottom: "40px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "16px", paddingBottom: "40px" }}>
       {/* HEADER */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -163,13 +163,13 @@ export default function SellerDashboard() {
           <div>
             <h1 style={{ color: "#f97316", fontSize: "20px", fontWeight: "900", margin: 0 }}>{seller.storeName}</h1>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              {data?.seller?.verified && <span style={{ background: "#1d4ed8", color: "#fff", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>VERIFIED</span>}
-              <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>{seller.email}</p>
+              {data?.seller?.verified && <span style={{ background: "#1d4ed8", color: "var(--text-primary)", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>VERIFIED</span>}
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>{seller.email}</p>
             </div>
           </div>
         </div>
         <button onClick={() => { localStorage.removeItem("sellerToken"); localStorage.removeItem("seller"); navigate("/seller/login"); }}
-          style={{ background: "#1a1a1a", border: "1px solid #333", color: "#888", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "13px" }}>
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "13px" }}>
           Logout
         </button>
       </div>
@@ -188,34 +188,34 @@ export default function SellerDashboard() {
         <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginBottom: "20px" }}>
             {statCards.map((s, i) => (
-              <div key={i} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-                <p style={{ color: "#888", fontSize: "11px", margin: "0 0 6px", textTransform: "uppercase" }}>{s.label}</p>
+              <div key={i} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 6px", textTransform: "uppercase" }}>{s.label}</p>
                 <p style={{ color: s.color, fontSize: "20px", fontWeight: "800", margin: 0 }}>{s.value}</p>
               </div>
             ))}
           </div>
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-            <h3 style={{ color: "#fff", marginBottom: "12px", fontSize: "15px" }}>Top Products</h3>
-            {(analytics?.topProducts || []).length === 0 ? <p style={{ color: "#888" }}>No sales yet.</p> : (
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+            <h3 style={{ color: "var(--text-primary)", marginBottom: "12px", fontSize: "15px" }}>Top Products</h3>
+            {(analytics?.topProducts || []).length === 0 ? <p style={{ color: "var(--text-muted)" }}>No sales yet.</p> : (
               analytics.topProducts.map((p, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #222" }}>
-                  <span style={{ color: "#fff", fontSize: "14px" }}>{p.name}</span>
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-light)" }}>
+                  <span style={{ color: "var(--text-primary)", fontSize: "14px" }}>{p.name}</span>
                   <span style={{ color: "#f97316", fontWeight: "700", fontSize: "14px" }}>N{p.revenue.toLocaleString()}</span>
                 </div>
               ))
             )}
           </div>
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-            <h3 style={{ color: "#fff", marginBottom: "12px", fontSize: "15px" }}>Performance</h3>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+            <h3 style={{ color: "var(--text-primary)", marginBottom: "12px", fontSize: "15px" }}>Performance</h3>
             {[
               { label: "Total Reviews", value: analytics?.totalReviews || 0 },
               { label: "Open Disputes", value: analytics?.disputes || 0 },
               { label: "Resolved Disputes", value: analytics?.resolvedDisputes || 0 },
               { label: "Commission Rate", value: `${analytics?.commission || 10}%` },
             ].map((item, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #222" }}>
-                <span style={{ color: "#888", fontSize: "13px" }}>{item.label}</span>
-                <span style={{ color: "#fff", fontWeight: "700", fontSize: "13px" }}>{item.value}</span>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-light)" }}>
+                <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>{item.label}</span>
+                <span style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px" }}>{item.value}</span>
               </div>
             ))}
           </div>
@@ -225,7 +225,7 @@ export default function SellerDashboard() {
       {/* ANALYTICS */}
       {tab === "Analytics" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>📊 Seller Analytics</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>📊 Seller Analytics</h2>
 
           {/* KPI CARDS */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
@@ -235,18 +235,18 @@ export default function SellerDashboard() {
               { label: "Delivered", value: analytics?.delivered || 0, color: "#22c55e" },
               { label: "Conversion Rate", value: `${analytics?.conversionRate || 0}%`, color: "#a855f7" },
             ].map((k, i) => (
-              <div key={i} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-                <p style={{ color: "#888", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
+              <div key={i} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
                 <p style={{ color: k.color, fontSize: "22px", fontWeight: "800", margin: 0 }}>{k.value}</p>
               </div>
             ))}
           </div>
 
           {/* TOP PRODUCTS */}
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-            <h3 style={{ color: "#fff", fontSize: "14px", marginBottom: "12px" }}>🏆 Top Products by Revenue</h3>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+            <h3 style={{ color: "var(--text-primary)", fontSize: "14px", marginBottom: "12px" }}>🏆 Top Products by Revenue</h3>
             {(analytics?.topProducts || []).length === 0 ? (
-              <p style={{ color: "#888" }}>No sales yet.</p>
+              <p style={{ color: "var(--text-muted)" }}>No sales yet.</p>
             ) : (
               analytics.topProducts.map((p, i) => {
                 const maxRev = analytics.topProducts[0]?.revenue || 1;
@@ -254,13 +254,13 @@ export default function SellerDashboard() {
                 return (
                   <div key={i} style={{ marginBottom: "12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                      <span style={{ color: "#fff", fontSize: "13px" }}>{p.name}</span>
+                      <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</span>
                       <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>N{p.revenue.toLocaleString()}</span>
                     </div>
                     <div style={{ background: "#333", borderRadius: "4px", height: "6px" }}>
                       <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "4px", height: "6px", width: `${pct}%` }} />
                     </div>
-                    <span style={{ color: "#888", fontSize: "11px" }}>{p.units} units sold</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>{p.units} units sold</span>
                   </div>
                 );
               })
@@ -268,15 +268,15 @@ export default function SellerDashboard() {
           </div>
 
           {/* MONTHLY REVENUE */}
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-            <h3 style={{ color: "#fff", fontSize: "14px", marginBottom: "12px" }}>📅 Monthly Revenue</h3>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+            <h3 style={{ color: "var(--text-primary)", fontSize: "14px", marginBottom: "12px" }}>📅 Monthly Revenue</h3>
             {Object.keys(analytics?.monthly || {}).length === 0 ? (
-              <p style={{ color: "#888" }}>No revenue data yet.</p>
+              <p style={{ color: "var(--text-muted)" }}>No revenue data yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "300px", overflowY: "auto" }}>
                 {Object.entries(analytics?.monthly || {}).reverse().map(([month, rev], i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #222" }}>
-                    <span style={{ color: "#888", fontSize: "13px" }}>{month}</span>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-light)" }}>
+                    <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>{month}</span>
                     <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>N{rev.toLocaleString()}</span>
                   </div>
                 ))}
@@ -290,13 +290,13 @@ export default function SellerDashboard() {
       {tab === "Products" && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h2 style={{ color: "#fff", margin: 0 }}>My Products</h2>
-            <button onClick={() => setShowAddProduct(!showAddProduct)} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
+            <h2 style={{ color: "var(--text-primary)", margin: 0 }}>My Products</h2>
+            <button onClick={() => setShowAddProduct(!showAddProduct)} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
               {showAddProduct ? "Cancel" : "+ Add Product"}
             </button>
           </div>
           {showAddProduct && (
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
               <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Add New Product</h3>
               <input placeholder="Product Name *" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} style={inp} />
               <input placeholder="Price (N) *" type="number" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} style={inp} />
@@ -306,37 +306,37 @@ export default function SellerDashboard() {
               <AIDescriptionGenerator
                 onGenerated={(desc) => setNewProduct(prev => ({...prev, description: desc}))}
               />
-              <label style={{ display: "inline-block", padding: "10px 20px", background: "#333", color: "#fff", borderRadius: "8px", cursor: "pointer", marginBottom: "12px" }}>
+              <label style={{ display: "inline-block", padding: "10px 20px", background: "#333", color: "var(--text-primary)", borderRadius: "8px", cursor: "pointer", marginBottom: "12px" }}>
                 {uploading ? "Uploading..." : "Upload Images"}
                 <input type="file" accept=".jpg,.jpeg,.png,.webp" multiple onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
               </label>
-              <p style={{ color: "#888", fontSize: "11px", margin: "4px 0 8px" }}>Max 5MB per image • JPG, PNG, WebP only</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "4px 0 8px" }}>Max 5MB per image • JPG, PNG, WebP only</p>
               {images.length > 0 && (
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
                   {images.map((url, i) => (
                     <div key={i} style={{ position: "relative" }}>
-                      <img src={url} alt="" style={{ width: "60px", height: "60px", borderRadius: "6px", objectFit: "cover", border: "1px solid #333" }} />
-                      <button onClick={() => setImages(images.filter((_, j) => j !== i))} style={{ position: "absolute", top: "-6px", right: "-6px", background: "#dc2626", border: "none", color: "#fff", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", cursor: "pointer", lineHeight: 1 }}>✕</button>
+                      <img src={url} alt="" style={{ width: "60px", height: "60px", borderRadius: "6px", objectFit: "cover", border: "1px solid var(--border-color)" }} />
+                      <button onClick={() => setImages(images.filter((_, j) => j !== i))} style={{ position: "absolute", top: "-6px", right: "-6px", background: "#dc2626", border: "none", color: "var(--text-primary)", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", cursor: "pointer", lineHeight: 1 }}>✕</button>
                     </div>
                   ))}
                 </div>
               )}
 
-              <button onClick={addProduct} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Add Product</button>
+              <button onClick={addProduct} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Add Product</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {(data?.products || []).length === 0 ? (
-              <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>No products yet.</p>
+              <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px" }}>No products yet.</p>
             ) : (data?.products || []).map(p => (
-              <div key={p._id} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", display: "flex", gap: "16px", alignItems: "center" }}>
+              <div key={p._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", display: "flex", gap: "16px", alignItems: "center" }}>
                 <img src={p.images?.[0] || "https://placehold.co/60x60?text=No+Image"} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 2px" }}>{p.name}</p>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 2px" }}>{p.name}</p>
                   <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 2px" }}>N{p.price?.toLocaleString()}</p>
-                  <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>Stock: {p.stock} | Rating: {p.rating || 0}</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Stock: {p.stock} | Rating: {p.rating || 0}</p>
                 </div>
-                <button onClick={() => deleteProduct(p._id)} style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 12px", cursor: "pointer", fontSize: "13px" }}>Delete</button>
+                <button onClick={() => deleteProduct(p._id)} style={{ background: "#dc2626", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 12px", cursor: "pointer", fontSize: "13px" }}>Delete</button>
               </div>
             ))}
           </div>
@@ -346,22 +346,22 @@ export default function SellerDashboard() {
       {/* STOREFRONT */}
       {tab === "Storefront" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>Customize Your Storefront</h2>
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Customize Your Storefront</h2>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
             <div style={{ background: storefront.storeColor || "#f97316", borderRadius: "12px", padding: "24px", marginBottom: "20px", textAlign: "center" }}>
               {storefront.storeLogo && <img src={storefront.storeLogo} style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover", marginBottom: "8px" }} />}
-              <h2 style={{ color: "#fff", margin: 0 }}>{seller.storeName}</h2>
+              <h2 style={{ color: "var(--text-primary)", margin: 0 }}>{seller.storeName}</h2>
               <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "14px" }}>{storefront.storeDescription || "Add your store description"}</p>
             </div>
             <input placeholder="Store Logo URL" value={storefront.storeLogo} onChange={e => setStorefront({...storefront, storeLogo: e.target.value})} style={inp} />
             <input placeholder="Store Banner URL" value={storefront.storeBanner} onChange={e => setStorefront({...storefront, storeBanner: e.target.value})} style={inp} />
             <div style={{ marginBottom: "12px" }}>
-              <label style={{ color: "#aaa", fontSize: "13px", display: "block", marginBottom: "6px" }}>Store Color</label>
+              <label style={{ color: "var(--text-secondary)", fontSize: "13px", display: "block", marginBottom: "6px" }}>Store Color</label>
               <input type="color" value={storefront.storeColor} onChange={e => setStorefront({...storefront, storeColor: e.target.value})} style={{ width: "60px", height: "40px", border: "none", borderRadius: "8px", cursor: "pointer" }} />
             </div>
             <textarea placeholder="Store Description" value={storefront.storeDescription} onChange={e => setStorefront({...storefront, storeDescription: e.target.value})} style={{ ...inp, height: "100px", resize: "vertical" }} />
-            <button onClick={saveStorefront} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Save Storefront</button>
-            <p style={{ color: "#888", fontSize: "13px", marginTop: "12px", textAlign: "center" }}>
+            <button onClick={saveStorefront} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Save Storefront</button>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginTop: "12px", textAlign: "center" }}>
               Your store: <a href={`/store/${seller.id}`} style={{ color: "#f97316" }}>View Storefront</a>
             </p>
           </div>
@@ -372,7 +372,7 @@ export default function SellerDashboard() {
       {/* WALLET TAB */}
       {tab === "Wallet" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>💰 Seller Wallet</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>💰 Seller Wallet</h2>
           {!sellerWallet ? (
             <button onClick={async () => {
               try {
@@ -381,7 +381,7 @@ export default function SellerDashboard() {
                 const banksRes = await axios.get(`${API}/api/pay/banks`);
                 setBanks(banksRes.data || []);
               } catch { setMsg("Failed to load wallet"); }
-            }} style={{ padding: "12px 24px", background: "linear-gradient(135deg,#f97316,#dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "16px" }}>
+            }} style={{ padding: "12px 24px", background: "linear-gradient(135deg,#f97316,#dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "16px" }}>
               Load Wallet
             </button>
           ) : (
@@ -392,15 +392,15 @@ export default function SellerDashboard() {
                   { label: "Total Earnings", value: `N${(sellerWallet.totalEarnings||0).toLocaleString()}`, color: "#f97316" },
                   { label: "Total Withdrawn", value: `N${(sellerWallet.totalWithdrawn||0).toLocaleString()}`, color: "#3b82f6" },
                 ].map((k,i) => (
-                  <div key={i} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-                    <p style={{ color: "#888", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
+                  <div key={i} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
                     <p style={{ color: k.color, fontSize: "20px", fontWeight: "800", margin: 0 }}>{k.value}</p>
                   </div>
                 ))}
               </div>
 
-              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
-                <h3 style={{ color: "#fff", marginBottom: "16px", fontSize: "15px" }}>Withdraw to Bank</h3>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+                <h3 style={{ color: "var(--text-primary)", marginBottom: "16px", fontSize: "15px" }}>Withdraw to Bank</h3>
                 <select value={withdrawForm.bankCode} onChange={async e => {
                   const bank = banks.find(b => b.code === e.target.value);
                   setWithdrawForm({...withdrawForm, bankCode: e.target.value, bankName: bank?.name || "", accountName: ""});
@@ -418,7 +418,7 @@ export default function SellerDashboard() {
                       setWithdrawForm(prev => ({...prev, accountName: res.data.accountName}));
                     } catch { setMsg("Could not verify account"); }
                     finally { setVerifyingAccount(false); }
-                  }} disabled={verifyingAccount || withdrawForm.accountNumber.length !== 10} style={{ padding: "12px 16px", background: "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap", height: "48px" }}>
+                  }} disabled={verifyingAccount || withdrawForm.accountNumber.length !== 10} style={{ padding: "12px 16px", background: "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap", height: "48px" }}>
                     {verifyingAccount ? "..." : "Verify"}
                   </button>
                 </div>
@@ -439,18 +439,18 @@ export default function SellerDashboard() {
                     setWithdrawForm({ amount: "", bankCode: "", accountNumber: "", accountName: "", bankName: "" });
                   } catch (err) { setMsg(err.response?.data?.error || "Withdrawal failed"); }
                   finally { setWithdrawLoading(false); }
-                }} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: withdrawForm.accountName ? "linear-gradient(135deg,#f97316,#dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: withdrawForm.accountName ? "pointer" : "not-allowed", fontWeight: "700" }}>
+                }} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: withdrawForm.accountName ? "linear-gradient(135deg,#f97316,#dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: withdrawForm.accountName ? "pointer" : "not-allowed", fontWeight: "700" }}>
                   {withdrawLoading ? "Processing..." : `Withdraw N${Number(withdrawForm.amount||0).toLocaleString()}`}
                 </button>
               </div>
 
-              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-                <h3 style={{ color: "#fff", marginBottom: "12px", fontSize: "15px" }}>Recent Transactions</h3>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                <h3 style={{ color: "var(--text-primary)", marginBottom: "12px", fontSize: "15px" }}>Recent Transactions</h3>
                 {(sellerWallet.recentTransactions||[]).map((t,i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #222" }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border-light)" }}>
                     <div>
-                      <p style={{ color: "#fff", fontSize: "13px", margin: "0 0 2px" }}>{t.description}</p>
-                      <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>{new Date(t.createdAt).toLocaleDateString()}</p>
+                      <p style={{ color: "var(--text-primary)", fontSize: "13px", margin: "0 0 2px" }}>{t.description}</p>
+                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{new Date(t.createdAt).toLocaleDateString()}</p>
                     </div>
                     <p style={{ color: t.type==="credit"?"#22c55e":"#f87171", fontWeight: "700", margin: 0 }}>{t.type==="credit"?"+":"-"}N{t.amount?.toLocaleString()}</p>
                   </div>
@@ -463,28 +463,28 @@ export default function SellerDashboard() {
 
       {tab === "Payouts" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>Payout Requests</h2>
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Payout Requests</h2>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
             <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Request Payout</h3>
-            <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Available: N{(analytics?.netRevenue || 0).toLocaleString()}</p>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>Available: N{(analytics?.netRevenue || 0).toLocaleString()}</p>
             <input placeholder="Amount (N)" type="number" value={newPayout.amount} onChange={e => setNewPayout({...newPayout, amount: e.target.value})} style={inp} />
             <input placeholder="Bank Name" value={newPayout.bankName} onChange={e => setNewPayout({...newPayout, bankName: e.target.value})} style={inp} />
             <input placeholder="Account Number" value={newPayout.accountNumber} onChange={e => setNewPayout({...newPayout, accountNumber: e.target.value})} style={inp} />
             <input placeholder="Account Name" value={newPayout.accountName} onChange={e => setNewPayout({...newPayout, accountName: e.target.value})} style={inp} />
-            <button onClick={requestPayout} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Request Payout</button>
+            <button onClick={requestPayout} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Request Payout</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {payouts.length === 0 ? <p style={{ color: "#888" }}>No payout requests yet.</p> : payouts.map(p => (
-              <div key={p._id} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+            {payouts.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No payout requests yet.</p> : payouts.map(p => (
+              <div key={p._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>N{p.amount.toLocaleString()}</p>
-                    <p style={{ color: "#888", fontSize: "13px", margin: "0 0 2px" }}>{p.bankName} — {p.accountNumber}</p>
-                    <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>{new Date(p.createdAt).toLocaleDateString()}</p>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>N{p.amount.toLocaleString()}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 2px" }}>{p.bankName} — {p.accountNumber}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>{new Date(p.createdAt).toLocaleDateString()}</p>
                   </div>
                   <span style={{ padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "700", background: p.status === "paid" ? "#0a2a1a" : p.status === "rejected" ? "#2a1010" : "#1a1a0a", color: p.status === "paid" ? "#22c55e" : p.status === "rejected" ? "#f87171" : "#fbbf24" }}>{p.status.toUpperCase()}</span>
                 </div>
-                {p.note && <p style={{ color: "#aaa", fontSize: "13px", marginTop: "8px" }}>Note: {p.note}</p>}
+                {p.note && <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginTop: "8px" }}>Note: {p.note}</p>}
               </div>
             ))}
           </div>
@@ -494,36 +494,36 @@ export default function SellerDashboard() {
       {/* DISPUTES */}
       {tab === "Disputes" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>Customer Disputes</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Customer Disputes</h2>
           {selectedDispute ? (
             <div>
-              <button onClick={() => setSelectedDispute(null)} style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>← Back</button>
-              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                <h3 style={{ color: "#fff", margin: "0 0 8px" }}>{selectedDispute.subject}</h3>
-                <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>From: {selectedDispute.customerEmail}</p>
+              <button onClick={() => setSelectedDispute(null)} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>← Back</button>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>{selectedDispute.subject}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>From: {selectedDispute.customerEmail}</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
                 {selectedDispute.messages.map((m, i) => (
                   <div key={i} style={{ alignSelf: m.senderType === "seller" ? "flex-end" : "flex-start", background: m.senderType === "seller" ? "#1a0a00" : "#1a1a1a", border: `1px solid ${m.senderType === "seller" ? "#f97316" : "#333"}`, borderRadius: "10px", padding: "12px", maxWidth: "80%" }}>
-                    <p style={{ color: "#888", fontSize: "11px", margin: "0 0 4px" }}>{m.sender}</p>
-                    <p style={{ color: "#fff", fontSize: "14px", margin: 0 }}>{m.message}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px" }}>{m.sender}</p>
+                    <p style={{ color: "var(--text-primary)", fontSize: "14px", margin: 0 }}>{m.message}</p>
                   </div>
                 ))}
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input value={disputeReply} onChange={e => setDisputeReply(e.target.value)} placeholder="Type your response..." style={{ ...inp, marginBottom: 0, flex: 1 }} />
-                <button onClick={replyDispute} style={{ padding: "12px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Send</button>
+                <button onClick={replyDispute} style={{ padding: "12px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Send</button>
               </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {disputes.length === 0 ? <p style={{ color: "#888" }}>No disputes yet.</p> : disputes.map(d => (
-                <div key={d._id} onClick={() => setSelectedDispute(d)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
+              {disputes.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No disputes yet.</p> : disputes.map(d => (
+                <div key={d._id} onClick={() => setSelectedDispute(d)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{d.subject}</p>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{d.subject}</p>
                     <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: "700", background: d.status === "resolved" ? "#0a2a1a" : "#2a1a0a", color: d.status === "resolved" ? "#22c55e" : "#fbbf24" }}>{d.status}</span>
                   </div>
-                  <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>{d.customerEmail} — {new Date(d.createdAt).toLocaleDateString()}</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{d.customerEmail} — {new Date(d.createdAt).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>
@@ -534,34 +534,34 @@ export default function SellerDashboard() {
       {/* MESSAGES */}
       {tab === "Messages" && (
         <div>
-          <h2 style={{ color: "#fff", marginBottom: "16px" }}>Customer Messages</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Customer Messages</h2>
           {selectedThread ? (
             <div>
-              <button onClick={() => setSelectedThread(null)} style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>← Back</button>
-              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{selectedThread.productName}</p>
-                <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>From: {selectedThread.customerName} ({selectedThread.customerEmail})</p>
+              <button onClick={() => setSelectedThread(null)} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "16px" }}>← Back</button>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{selectedThread.productName}</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>From: {selectedThread.customerName} ({selectedThread.customerEmail})</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
                 {selectedThread.messages.map((m, i) => (
                   <div key={i} style={{ alignSelf: m.senderType === "seller" ? "flex-end" : "flex-start", background: m.senderType === "seller" ? "#1a0a00" : "#1a1a1a", border: `1px solid ${m.senderType === "seller" ? "#f97316" : "#333"}`, borderRadius: "10px", padding: "12px", maxWidth: "80%" }}>
-                    <p style={{ color: "#888", fontSize: "11px", margin: "0 0 4px" }}>{m.sender}</p>
-                    <p style={{ color: "#fff", fontSize: "14px", margin: 0 }}>{m.message}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px" }}>{m.sender}</p>
+                    <p style={{ color: "var(--text-primary)", fontSize: "14px", margin: 0 }}>{m.message}</p>
                   </div>
                 ))}
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input value={msgReply} onChange={e => setMsgReply(e.target.value)} placeholder="Type your reply..." style={{ ...inp, marginBottom: 0, flex: 1 }} />
-                <button onClick={replyMessage} style={{ padding: "12px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Send</button>
+                <button onClick={replyMessage} style={{ padding: "12px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Send</button>
               </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {messages.length === 0 ? <p style={{ color: "#888" }}>No messages yet.</p> : messages.map(t => (
-                <div key={t._id} onClick={() => setSelectedThread(t)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
-                  <p style={{ color: "#fff", fontWeight: "700", margin: "0 0 4px" }}>{t.productName}</p>
-                  <p style={{ color: "#888", fontSize: "13px", margin: "0 0 2px" }}>{t.customerName} — {t.messages.length} message(s)</p>
-                  <p style={{ color: "#aaa", fontSize: "13px", margin: 0 }}>{t.messages[t.messages.length-1]?.message?.substring(0, 60)}...</p>
+              {messages.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No messages yet.</p> : messages.map(t => (
+                <div key={t._id} onClick={() => setSelectedThread(t)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{t.productName}</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 2px" }}>{t.customerName} — {t.messages.length} message(s)</p>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: 0 }}>{t.messages[t.messages.length-1]?.message?.substring(0, 60)}...</p>
                 </div>
               ))}
             </div>

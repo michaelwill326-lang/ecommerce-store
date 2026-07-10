@@ -53,7 +53,7 @@ export default function Policy() {
 const styles = {
   container: {
     padding: "20px 15px",
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "var(--bg-primary)",
     minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
@@ -66,19 +66,19 @@ const styles = {
     padding: "24px 20px",
     width: "100%",
     maxWidth: "800px",
-    border: "1px solid #222",
+    border: "1px solid var(--border-light)",
     boxSizing: "border-box",
   },
   mainTitle: {
     fontSize: "24px",
     fontWeight: "bold",
-    color: "#fff",
+    color: "var(--text-primary)",
     margin: "0 0 8px 0",
     textAlign: "center",
   },
   subtitle: {
     fontSize: "14px",
-    color: "#888",
+    color: "var(--text-muted)",
     margin: "0 0 20px 0",
     textAlign: "center",
   },

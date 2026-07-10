@@ -63,7 +63,7 @@ export default function ChatPage() {
       display: "flex",
       flexDirection: "column",
       height: "100dvh",
-      background: "#111",
+      background: "var(--bg-secondary)",
       overflow: "hidden",
     }}>
       {/* HEADER */}
@@ -73,7 +73,7 @@ export default function ChatPage() {
         alignItems: "center",
         padding: "16px",
         background: "linear-gradient(135deg, #f97316, #dc2626)",
-        color: "#fff",
+        color: "var(--text-primary)",
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -88,7 +88,7 @@ export default function ChatPage() {
           style={{
             background: "rgba(255,255,255,0.2)",
             border: "none",
-            color: "#fff",
+            color: "var(--text-primary)",
             fontSize: "14px",
             fontWeight: "700",
             cursor: "pointer",
@@ -114,7 +114,7 @@ export default function ChatPage() {
             style={msg.sender === "user" ? {
               alignSelf: "flex-end",
               background: "linear-gradient(135deg, #f97316, #dc2626)",
-              color: "#fff",
+              color: "var(--text-primary)",
               padding: "10px 14px",
               borderRadius: "16px 16px 4px 16px",
               fontSize: "15px",
@@ -124,7 +124,7 @@ export default function ChatPage() {
             } : {
               alignSelf: "flex-start",
               background: "#1e1e1e",
-              color: "#fff",
+              color: "var(--text-primary)",
               padding: "10px 14px",
               borderRadius: "16px 16px 16px 4px",
               fontSize: "15px",
@@ -164,8 +164,8 @@ export default function ChatPage() {
         display: "flex",
         gap: "8px",
         padding: "12px 16px",
-        borderTop: "1px solid #222",
-        background: "#0a0a0a",
+        borderTop: "1px solid var(--border-light)",
+        background: "var(--bg-primary)",
         flexShrink: 0,
       }}>
         <input
@@ -178,9 +178,9 @@ export default function ChatPage() {
             flex: 1,
             padding: "12px 16px",
             borderRadius: "999px",
-            border: "1px solid #333",
-            background: "#1a1a1a",
-            color: "#fff",
+            border: "1px solid var(--border-color)",
+            background: "var(--bg-card)",
+            color: "var(--text-primary)",
             fontSize: "15px",
             outline: "none",
             minWidth: 0,
@@ -192,7 +192,7 @@ export default function ChatPage() {
             padding: "12px 20px",
             borderRadius: "999px",
             background: "linear-gradient(135deg, #f97316, #dc2626)",
-            color: "#fff",
+            color: "var(--text-primary)",
             border: "none",
             cursor: "pointer",
             fontWeight: "700",

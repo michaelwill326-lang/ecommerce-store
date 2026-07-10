@@ -284,45 +284,45 @@ export default function TechMartPay() {
     } finally { setBetLoading(false); }
   };
   const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History"];
-  const inp = { width: "100%", padding: "12px 16px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
+  const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ color: "#fff" }}>Loading TechMart Pay...</p>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "var(--text-primary)" }}>Loading TechMart Pay...</p>
     </div>
   );
 
   return (
     <>
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", padding: "16px", paddingBottom: "60px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "16px", paddingBottom: "60px" }}>
       <div style={{ maxWidth: "600px", margin: "0 auto" }}>
 
         {/* HEADER */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <h1 style={{ color: "#fff", fontSize: "24px", fontWeight: "900", margin: "0 0 4px" }}>
+          <h1 style={{ color: "var(--text-primary)", fontSize: "24px", fontWeight: "900", margin: "0 0 4px" }}>
             <span style={{ color: "#f97316" }}>TechMart</span> Pay
           </h1>
-          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>Your digital wallet</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Your digital wallet</p>
         </div>
 
         {/* BALANCE CARD */}
         <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "20px", padding: "28px", marginBottom: "20px", textAlign: "center" }}>
           <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "1px" }}>Available Balance</p>
-          <p style={{ color: "#fff", fontSize: "40px", fontWeight: "900", margin: "0 0 16px" }}>₦{(dashboard?.balance || 0).toLocaleString()}</p>
+          <p style={{ color: "var(--text-primary)", fontSize: "40px", fontWeight: "900", margin: "0 0 16px" }}>₦{(dashboard?.balance || 0).toLocaleString()}</p>
           <div style={{ display: "flex", justifyContent: "center", gap: "24px" }}>
             <div style={{ textAlign: "center" }}>
               <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "11px", margin: "0 0 2px" }}>TOTAL IN</p>
-              <p style={{ color: "#fff", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{(dashboard?.stats?.totalIn || 0).toLocaleString()}</p>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{(dashboard?.stats?.totalIn || 0).toLocaleString()}</p>
             </div>
             <div style={{ width: "1px", background: "rgba(255,255,255,0.3)" }} />
             <div style={{ textAlign: "center" }}>
               <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "11px", margin: "0 0 2px" }}>TOTAL OUT</p>
-              <p style={{ color: "#fff", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{(dashboard?.stats?.totalOut || 0).toLocaleString()}</p>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{(dashboard?.stats?.totalOut || 0).toLocaleString()}</p>
             </div>
             <div style={{ width: "1px", background: "rgba(255,255,255,0.3)" }} />
             <div style={{ textAlign: "center" }}>
               <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "11px", margin: "0 0 2px" }}>TRANSACTIONS</p>
-              <p style={{ color: "#fff", fontWeight: "700", fontSize: "14px", margin: 0 }}>{dashboard?.stats?.transactionCount || 0}</p>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>{dashboard?.stats?.transactionCount || 0}</p>
             </div>
           </div>
         </div>
@@ -339,9 +339,9 @@ export default function TechMartPay() {
             { icon: "📺", label: "Cable TV", tab: "Cable TV" },
             { icon: "🎯", label: "Betting", tab: "Betting" },
           ].map((a, i) => (
-            <button key={i} onClick={() => setTab(a.tab)} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
+            <button key={i} onClick={() => setTab(a.tab)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
               <p style={{ fontSize: "22px", margin: "0 0 4px" }}>{a.icon}</p>
-              <p style={{ color: "#fff", fontSize: "11px", fontWeight: "600", margin: 0 }}>{a.label}</p>
+              <p style={{ color: "var(--text-primary)", fontSize: "11px", fontWeight: "600", margin: 0 }}>{a.label}</p>
             </button>
           ))}
         </div>
@@ -364,33 +364,33 @@ export default function TechMartPay() {
         {tab === "Dashboard" && (
           <div>
             {dashboard?.virtualAccount ? (
-              <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                <p style={{ color: "#888", fontSize: "12px", margin: "0 0 8px", textTransform: "uppercase" }}>Your Virtual Account</p>
-                <p style={{ color: "#fff", fontWeight: "800", fontSize: "22px", margin: "0 0 4px", letterSpacing: "2px" }}>{dashboard.virtualAccount.accountNumber}</p>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 8px", textTransform: "uppercase" }}>Your Virtual Account</p>
+                <p style={{ color: "var(--text-primary)", fontWeight: "800", fontSize: "22px", margin: "0 0 4px", letterSpacing: "2px" }}>{dashboard.virtualAccount.accountNumber}</p>
                 <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 2px" }}>{dashboard.virtualAccount.bankName}</p>
-                <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>{dashboard.virtualAccount.accountName}</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{dashboard.virtualAccount.accountName}</p>
                 <p style={{ color: "#22c55e", fontSize: "12px", marginTop: "8px" }}>Transfer to this account to fund your wallet instantly</p>
               </div>
             ) : (
-              <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "12px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
+              <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
                 <p style={{ fontSize: "32px", margin: "0 0 8px" }}>➕</p>
-                <p style={{ color: "#fff", fontWeight: "700", marginBottom: "8px" }}>Fund Your Wallet</p>
-                <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Pay via card, USSD, or bank transfer</p>
-                <button onClick={() => setTab("Add Money")} style={{ padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", marginBottom: "8px" }}>Fund Your Wallet</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Pay via card, USSD, or bank transfer</p>
+                <button onClick={() => setTab("Add Money")} style={{ padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
                   Add Money
                 </button>
               </div>
             )}
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-              <p style={{ color: "#fff", fontWeight: "700", fontSize: "15px", margin: "0 0 12px" }}>Recent Transactions</p>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 12px" }}>Recent Transactions</p>
               {(dashboard?.recentTransactions || []).length === 0 ? (
-                <p style={{ color: "#888", textAlign: "center", padding: "20px 0" }}>No transactions yet</p>
+                <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No transactions yet</p>
               ) : (
                 dashboard.recentTransactions.map((tx, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #222" }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border-light)" }}>
                     <div>
-                      <p style={{ color: "#fff", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{tx.description}</p>
-                      <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>{new Date(tx.createdAt).toLocaleDateString()}</p>
+                      <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{tx.description}</p>
+                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{new Date(tx.createdAt).toLocaleDateString()}</p>
                     </div>
                     <p style={{ color: tx.type === "credit" ? "#22c55e" : "#f87171", fontWeight: "700", fontSize: "14px", margin: 0 }}>
                       {tx.type === "credit" ? "+" : "-"}₦{tx.amount?.toLocaleString()}
@@ -405,23 +405,23 @@ export default function TechMartPay() {
         {/* ADD MONEY TAB */}
         {tab === "Add Money" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Add Money to Wallet</h2>
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Fund your wallet securely via card, USSD, or bank transfer</p>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Add Money to Wallet</h2>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Fund your wallet securely via card, USSD, or bank transfer</p>
               <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
                 {[500, 1000, 2000, 5000, 10000].map(a => (
                   <button key={a} onClick={() => setFundAmount(String(a))} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${fundAmount === String(a) ? "#f97316" : "#333"}`, background: fundAmount === String(a) ? "#1a0a00" : "#111", color: fundAmount === String(a) ? "#f97316" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>N{a.toLocaleString()}</button>
                 ))}
               </div>
               <input placeholder="Or enter custom amount (min N100)" type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)} style={inp} />
-              <div style={{ background: "#111", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px" }}>
-                <p style={{ color: "#888", fontSize: "12px", margin: "0 0 4px" }}>Payment methods accepted</p>
-                <p style={{ color: "#fff", fontSize: "13px", margin: 0 }}>💳 Card &nbsp;|&nbsp; 📱 USSD &nbsp;|&nbsp; 🏦 Bank Transfer &nbsp;|&nbsp; 📲 Mobile Money</p>
+              <div style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 4px" }}>Payment methods accepted</p>
+                <p style={{ color: "var(--text-primary)", fontSize: "13px", margin: 0 }}>💳 Card &nbsp;|&nbsp; 📱 USSD &nbsp;|&nbsp; 🏦 Bank Transfer &nbsp;|&nbsp; 📲 Mobile Money</p>
               </div>
-              <button onClick={() => fundWallet()} disabled={fundLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => fundWallet()} disabled={fundLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {fundLoading ? "Redirecting..." : `Add N${Number(fundAmount || 0).toLocaleString()} to Wallet`}
               </button>
-              <p style={{ color: "#888", fontSize: "11px", textAlign: "center", marginTop: "8px" }}>Powered by Paystack. Funds reflect instantly after payment.</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "11px", textAlign: "center", marginTop: "8px" }}>Powered by Paystack. Funds reflect instantly after payment.</p>
             </div>
           </div>
         )}
@@ -429,14 +429,14 @@ export default function TechMartPay() {
         {/* SEND MONEY TAB */}
         {tab === "Send Money" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Send Money</h2>
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Send to any TechMart user instantly</p>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Send Money</h2>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Send to any TechMart user instantly</p>
               <input placeholder="Recipient email address" value={sendForm.recipientEmail} onChange={e => setSendForm({...sendForm, recipientEmail: e.target.value})} style={inp} />
               <input placeholder="Amount (N)" type="number" value={sendForm.amount} onChange={e => setSendForm({...sendForm, amount: e.target.value})} style={inp} />
               <input placeholder="Note (optional)" value={sendForm.note} onChange={e => setSendForm({...sendForm, note: e.target.value})} style={inp} />
-              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={sendMoney} disabled={sendLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={sendMoney} disabled={sendLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {sendLoading ? "Sending..." : "Send Money"}
               </button>
             </div>
@@ -446,14 +446,14 @@ export default function TechMartPay() {
         {/* WITHDRAW TAB */}
         {tab === "Withdraw" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Withdraw to Bank</h2>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Withdraw to Bank</h2>
             <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
               <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
               <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
-              <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>Bank withdrawals will be available once we complete business registration. Your wallet balance is safe!</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Bank withdrawals will be available once we complete business registration. Your wallet balance is safe!</p>
             </div>
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
               <input placeholder="Amount (N) — minimum N500" type="number" value={withdrawForm.amount} onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})} style={inp} />
               <select value={withdrawForm.bankCode} onChange={e => setWithdrawForm({...withdrawForm, bankCode: e.target.value, accountName: ""})} style={{ ...inp, appearance: "none" }}>
                 <option value="">Select Bank</option>
@@ -461,7 +461,7 @@ export default function TechMartPay() {
               </select>
               <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                 <input placeholder="Account Number" value={withdrawForm.accountNumber} onChange={e => setWithdrawForm({...withdrawForm, accountNumber: e.target.value, accountName: ""})} style={{ ...inp, marginBottom: 0, flex: 1 }} maxLength={10} />
-                <button onClick={verifyAccount} disabled={verifyingAccount || !withdrawForm.accountNumber || !withdrawForm.bankCode} style={{ padding: "12px 14px", background: "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "600", flexShrink: 0 }}>
+                <button onClick={verifyAccount} disabled={verifyingAccount || !withdrawForm.accountNumber || !withdrawForm.bankCode} style={{ padding: "12px 14px", background: "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "600", flexShrink: 0 }}>
                   {verifyingAccount ? "..." : "Verify"}
                 </button>
               </div>
@@ -470,7 +470,7 @@ export default function TechMartPay() {
                   <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: 0 }}>{withdrawForm.accountName}</p>
                 </div>
               )}
-              <button onClick={withdraw} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: !withdrawForm.accountName ? 0.6 : 1 }}>
+              <button onClick={withdraw} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: !withdrawForm.accountName ? 0.6 : 1 }}>
                 {withdrawLoading ? "Processing..." : `Withdraw ₦${Number(withdrawForm.amount || 0).toLocaleString()}`}
               </button>
             </div>
@@ -480,14 +480,14 @@ export default function TechMartPay() {
         {/* AIRTIME TAB */}
         {tab === "Airtime" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Buy Airtime</h2>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Buy Airtime</h2>
         <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
           <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
           <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
-          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
         </div>
 
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
                 {["MTN", "Airtel", "Glo", "9mobile"].map(n => (
                   <button key={n} onClick={() => setAirtimeForm({...airtimeForm, network: n})} style={{ padding: "12px", borderRadius: "10px", border: `2px solid ${airtimeForm.network === n ? "#f97316" : "#333"}`, background: airtimeForm.network === n ? "#1a0a00" : "#111", color: airtimeForm.network === n ? "#f97316" : "#888", fontWeight: "700", cursor: "pointer" }}>{n}</button>
@@ -500,8 +500,8 @@ export default function TechMartPay() {
                 ))}
               </div>
               <input placeholder="Or enter custom amount" type="number" value={airtimeForm.amount} onChange={e => setAirtimeForm({...airtimeForm, amount: e.target.value})} style={inp} />
-              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={buyAirtime} disabled={airtimeLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={buyAirtime} disabled={airtimeLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {airtimeLoading ? "Processing..." : `Buy ₦${Number(airtimeForm.amount || 0).toLocaleString()} Airtime`}
               </button>
             </div>
@@ -511,14 +511,14 @@ export default function TechMartPay() {
         {/* DATA TAB */}
         {tab === "Data" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Buy Data Bundle</h2>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Buy Data Bundle</h2>
         <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
           <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
           <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
-          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
         </div>
 
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
                 {["MTN", "Airtel", "Glo", "9mobile"].map(n => (
                   <button key={n} onClick={() => { setDataForm({...dataForm, network: n, planId: "", planName: "", amount: ""}); fetchDataPlans(n); }}
@@ -526,12 +526,12 @@ export default function TechMartPay() {
                 ))}
               </div>
               <input placeholder="Phone number (e.g. 08012345678)" value={dataForm.phone} onChange={e => setDataForm({...dataForm, phone: e.target.value})} style={inp} />
-              {dataPlansLoading && <p style={{ color: "#888", fontSize: "13px" }}>Loading plans...</p>}
+              {dataPlansLoading && <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Loading plans...</p>}
               {dataPlans.length > 0 && (
                 <div style={{ maxHeight: "200px", overflowY: "auto", marginBottom: "12px", border: "1px solid #2a2a2a", borderRadius: "10px" }}>
                   {dataPlans.map((plan, i) => (
                     <div key={i} onClick={() => setDataForm({...dataForm, planId: plan.id || plan.code || String(i), planName: plan.name || plan.description, amount: String(plan.price || plan.amount)})}
-                      style={{ padding: "12px 16px", borderBottom: "1px solid #222", cursor: "pointer", background: dataForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)", cursor: "pointer", background: dataForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ color: dataForm.planId === (plan.id || plan.code || String(i)) ? "#f97316" : "#fff", fontSize: "13px" }}>{plan.name || plan.description}</span>
                       <span style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
                     </div>
@@ -543,8 +543,8 @@ export default function TechMartPay() {
                   <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>Selected: <strong>{dataForm.planName}</strong> — ₦{Number(dataForm.amount || 0).toLocaleString()}</p>
                 </div>
               )}
-              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={buyData} disabled={dataLoading || !dataForm.planId} style={{ width: "100%", padding: "14px", background: dataForm.planId ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: dataForm.planId ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={buyData} disabled={dataLoading || !dataForm.planId} style={{ width: "100%", padding: "14px", background: dataForm.planId ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: dataForm.planId ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {dataLoading ? "Processing..." : dataForm.planName ? `Buy ${dataForm.planName}` : "Select a plan"}
               </button>
             </div>
@@ -554,15 +554,15 @@ export default function TechMartPay() {
         {/* ELECTRICITY TAB */}
         {tab === "Electricity" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>⚡ Electricity Payment</h2>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>⚡ Electricity Payment</h2>
         <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
           <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
           <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
-          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
         </div>
 
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Distribution Company</p>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>Select Distribution Company</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", marginBottom: "16px", width: "100%" }}>
                 {["IKEDC", "EKEDC", "AEDC", "PHEDC", "KAEDCO", "IBEDC", "KEDCO", "EEDC"].map(d => (
                   <button key={d} onClick={() => { setElecForm({...elecForm, disco: d}); setElecVerified(false); }}
@@ -590,8 +590,8 @@ export default function TechMartPay() {
                 ))}
               </div>
               <input placeholder="Or enter custom amount (min N500)" type="number" value={elecForm.amount} onChange={e => setElecForm({...elecForm, amount: e.target.value})} style={inp} />
-              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={payElectricity} disabled={elecLoading || !elecVerified} style={{ width: "100%", padding: "14px", background: elecVerified ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: elecVerified ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={payElectricity} disabled={elecLoading || !elecVerified} style={{ width: "100%", padding: "14px", background: elecVerified ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: elecVerified ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {elecLoading ? "Processing..." : `Pay ₦${Number(elecForm.amount || 0).toLocaleString()} Electricity`}
               </button>
             </div>
@@ -601,9 +601,9 @@ export default function TechMartPay() {
         {/* CABLE TV TAB */}
         {tab === "Cable TV" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>📺 Cable TV Subscription</h2>
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Provider</p>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>📺 Cable TV Subscription</h2>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>Select Provider</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
                 {["DSTV", "GOTV", "STARTIMES"].map(p => (
                   <button key={p} onClick={() => { setCtvForm({...ctvForm, provider: p, planId: "", planName: "", amount: "", customerName: ""}); setCtvVerified(false); fetchCtvPlans(p); }}
@@ -620,12 +620,12 @@ export default function TechMartPay() {
                   <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{ctvForm.customerName}</strong></p>
                 </div>
               )}
-              {ctvPlansLoading && <p style={{ color: "#888", fontSize: "13px" }}>Loading packages...</p>}
+              {ctvPlansLoading && <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Loading packages...</p>}
               {ctvPlans.length > 0 && (
                 <div style={{ maxHeight: "200px", overflowY: "auto", marginBottom: "12px", border: "1px solid #2a2a2a", borderRadius: "10px" }}>
                   {ctvPlans.map((plan, i) => (
                     <div key={i} onClick={() => setCtvForm({...ctvForm, planId: plan.id || plan.code || String(i), planName: plan.name || plan.description, amount: String(plan.price || plan.amount)})}
-                      style={{ padding: "12px 16px", borderBottom: "1px solid #222", cursor: "pointer", background: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)", cursor: "pointer", background: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ color: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#f97316" : "#fff", fontSize: "13px" }}>{plan.name || plan.description}</span>
                       <span style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
                     </div>
@@ -637,8 +637,8 @@ export default function TechMartPay() {
                   <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>Selected: <strong>{ctvForm.planName}</strong> — ₦{Number(ctvForm.amount || 0).toLocaleString()}</p>
                 </div>
               )}
-              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={payCableTV} disabled={ctvLoading || !ctvVerified || !ctvForm.planId} style={{ width: "100%", padding: "14px", background: (ctvVerified && ctvForm.planId) ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: (ctvVerified && ctvForm.planId) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={payCableTV} disabled={ctvLoading || !ctvVerified || !ctvForm.planId} style={{ width: "100%", padding: "14px", background: (ctvVerified && ctvForm.planId) ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: (ctvVerified && ctvForm.planId) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {ctvLoading ? "Processing..." : ctvForm.planName ? `Subscribe — ₦${Number(ctvForm.amount || 0).toLocaleString()}` : "Select a package"}
               </button>
             </div>
@@ -648,15 +648,15 @@ export default function TechMartPay() {
         {/* BETTING TAB */}
         {tab === "Betting" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>🎯 Fund Betting Wallet</h2>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>🎯 Fund Betting Wallet</h2>
         <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", textAlign: "center" }}>
           <p style={{ fontSize: "24px", margin: "0 0 8px" }}>🔧</p>
           <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 4px" }}>Coming Soon</p>
-          <p style={{ color: "#888", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>This service is being activated. Check back soon!</p>
         </div>
 
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "#888", fontSize: "13px", marginBottom: "12px" }}>Select Platform</p>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>Select Platform</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
                 {[{ id: "bet9ja", name: "Bet9ja", icon: "🎯" }, { id: "sportybet", name: "SportyBet", icon: "⚽" }, { id: "1xbet", name: "1xBet", icon: "🏆" }].map(p => (
                   <button key={p.id} onClick={() => setBetForm({...betForm, platform: p.id})}
@@ -670,8 +670,8 @@ export default function TechMartPay() {
                 ))}
               </div>
               <input placeholder="Or enter custom amount (min N100)" type="number" value={betForm.amount} onChange={e => setBetForm({...betForm, amount: e.target.value})} style={inp} />
-              <p style={{ color: "#888", fontSize: "12px", margin: "0 0 16px" }}>Available: N{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={fundBetting} disabled={betLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: N{(dashboard?.balance || 0).toLocaleString()}</p>
+              <button onClick={fundBetting} disabled={betLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {betLoading ? "Processing..." : `Fund N${Number(betForm.amount || 0).toLocaleString()} to ${betForm.platform || "Betting"} Wallet`}
               </button>
             </div>
@@ -681,20 +681,20 @@ export default function TechMartPay() {
         {/* HISTORY TAB */}
         {tab === "History" && (
           <div>
-            <h2 style={{ color: "#fff", marginBottom: "16px" }}>Transaction History</h2>
-            <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Transaction History</h2>
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
               {(dashboard?.recentTransactions || []).length === 0 ? (
-                <p style={{ color: "#888", textAlign: "center", padding: "20px 0" }}>No transactions yet</p>
+                <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No transactions yet</p>
               ) : (
                 dashboard.recentTransactions.map((tx, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #222" }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--border-light)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: tx.type === "credit" ? "#0a2a1a" : "#2a1010", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
                         {tx.type === "credit" ? "⬇️" : "⬆️"}
                       </div>
                       <div>
-                        <p style={{ color: "#fff", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{tx.description}</p>
-                        <p style={{ color: "#888", fontSize: "11px", margin: 0 }}>{new Date(tx.createdAt).toLocaleString()}</p>
+                        <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{tx.description}</p>
+                        <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{new Date(tx.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
                     <p style={{ color: tx.type === "credit" ? "#22c55e" : "#f87171", fontWeight: "800", fontSize: "15px", margin: 0 }}>
@@ -711,31 +711,31 @@ export default function TechMartPay() {
 
       {pinModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
-            <h3 style={{ color: "#fff", marginBottom: "8px" }}>Lock Enter Wallet PIN</h3>
-            <p style={{ color: "#888", fontSize: "13px", marginBottom: "20px" }}>Enter your 4-digit PIN to confirm</p>
+          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
+            <h3 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>Lock Enter Wallet PIN</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "20px" }}>Enter your 4-digit PIN to confirm</p>
             <input type="password" maxLength={4} placeholder="4 digits" value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/[^0-9]/g, "")); setPinError(""); }}
               style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "8px" }} />
             {pinError && <p style={{ color: "#f87171", fontSize: "12px", marginBottom: "8px" }}>{pinError}</p>}
-            <button onClick={confirmPin} disabled={pinLoading} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
+            <button onClick={confirmPin} disabled={pinLoading} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
               {pinLoading ? "Verifying..." : "Confirm"}
             </button>
-            <button onClick={() => setPinModal({ open: false, onSuccess: null })} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+            <button onClick={() => setPinModal({ open: false, onSuccess: null })} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
           </div>
         </div>
       )}
 
       {showSetPin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
-            <h3 style={{ color: "#fff", marginBottom: "8px" }}>Set Wallet PIN</h3>
-            <p style={{ color: "#888", fontSize: "13px", marginBottom: "20px" }}>Create a 4-digit PIN to secure your wallet</p>
+          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
+            <h3 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>Set Wallet PIN</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "20px" }}>Create a 4-digit PIN to secure your wallet</p>
             <input type="password" maxLength={4} placeholder="Enter 4-digit PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ""))}
               style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "16px" }} />
-            <button onClick={setWalletPin} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
+            <button onClick={setWalletPin} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
               Set PIN
             </button>
-            <button onClick={() => setShowSetPin(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+            <button onClick={() => setShowSetPin(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
           </div>
         </div>
       )}

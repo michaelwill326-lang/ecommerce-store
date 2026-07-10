@@ -18,7 +18,7 @@ export default function AIDescriptionGenerator({ onGenerated }) {
     finally { setLoading(false); }
   };
 
-  const inp = { width: "100%", padding: "10px 14px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box", marginBottom: "10px" };
+  const inp = { width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px", outline: "none", boxSizing: "border-box", marginBottom: "10px" };
 
   return (
     <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
@@ -30,13 +30,13 @@ export default function AIDescriptionGenerator({ onGenerated }) {
       <input placeholder="Category" value={form.category} onChange={e => setForm({...form, category: e.target.value})} style={inp} />
       <input placeholder="Price (N)" value={form.price} onChange={e => setForm({...form, price: e.target.value})} style={inp} />
       <textarea placeholder="Key features (e.g. 12GB RAM, 256GB storage, 5000mAh battery)" value={form.keyFeatures} onChange={e => setForm({...form, keyFeatures: e.target.value})} style={{ ...inp, height: "70px", resize: "vertical" }} />
-      <button onClick={generate} disabled={loading || !form.productName} style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
+      <button onClick={generate} disabled={loading || !form.productName} style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "var(--text-primary)", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
         {loading ? "Generating..." : "Generate Description with AI"}
       </button>
       {result && (
-        <div style={{ marginTop: "12px", padding: "12px", background: "#111", borderRadius: "8px", border: "1px solid #333" }}>
-          <p style={{ color: "#fff", fontSize: "13px", lineHeight: "1.6", margin: "0 0 8px" }}>{result}</p>
-          <button onClick={() => onGenerated && onGenerated(result)} style={{ padding: "6px 14px", background: "#22c55e", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}>Use This Description</button>
+        <div style={{ marginTop: "12px", padding: "12px", background: "var(--bg-secondary)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+          <p style={{ color: "var(--text-primary)", fontSize: "13px", lineHeight: "1.6", margin: "0 0 8px" }}>{result}</p>
+          <button onClick={() => onGenerated && onGenerated(result)} style={{ padding: "6px 14px", background: "#22c55e", color: "var(--text-primary)", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}>Use This Description</button>
         </div>
       )}
     </div>

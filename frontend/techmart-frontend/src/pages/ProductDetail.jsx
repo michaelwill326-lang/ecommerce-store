@@ -100,14 +100,14 @@ export default function ProductDetail() {
   if (loading) return (
     <div style={styles.centered}>
       <div style={styles.spinner} />
-      <p style={{ color: "#888", marginTop: "16px" }}>Loading product...</p>
+      <p style={{ color: "var(--text-muted)", marginTop: "16px" }}>Loading product...</p>
     </div>
   );
 
   if (error || !product) return (
     <div style={styles.centered}>
       <p style={{ fontSize: "48px" }}>😕</p>
-      <h2 style={{ color: "#fff" }}>Product not found</h2>
+      <h2 style={{ color: "var(--text-primary)" }}>Product not found</h2>
       <button onClick={() => navigate("/")} style={styles.backBtn}>
         ← Back to Shop
       </button>
@@ -184,7 +184,7 @@ export default function ProductDetail() {
         <div style={styles.detailsCol}>
           {product.vendorName && (
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
-              <span style={{ color: "#888", fontSize: "13px" }}>Sold by</span>
+              <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>Sold by</span>
               <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>{product.vendorName}</span>
               <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "20px" }}>✓ Verified Seller</span>
             </div>
@@ -300,7 +300,7 @@ export default function ProductDetail() {
               fontSize: "15px",
               fontWeight: "700",
               cursor: "pointer",
-              color: "#fff",
+              color: "var(--text-primary)",
               textDecoration: "none",
             }}
           >
@@ -387,40 +387,40 @@ const styles = {
   page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh", paddingBottom: "80px" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
   spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
-  backBtn: { background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", marginBottom: "16px" },
+  backBtn: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", marginBottom: "16px" },
   layout: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" },
   layoutMobile: { display: "flex", flexDirection: "column", gap: "20px" },
   imageCol: { display: "flex", flexDirection: "column", gap: "12px" },
-  mainImgWrap: { position: "relative", borderRadius: "16px", overflow: "hidden", background: "#1a1a1a" },
+  mainImgWrap: { position: "relative", borderRadius: "16px", overflow: "hidden", background: "var(--bg-card)" },
   mainImg: { width: "100%", height: "300px", objectFit: "contain", display: "block", background: "#fff" },
-  outOfStockBadge: { position: "absolute", top: "16px", left: "16px", background: "#dc2626", color: "#fff", padding: "6px 14px", borderRadius: "999px", fontSize: "13px", fontWeight: "700" },
+  outOfStockBadge: { position: "absolute", top: "16px", left: "16px", background: "#dc2626", color: "var(--text-primary)", padding: "6px 14px", borderRadius: "999px", fontSize: "13px", fontWeight: "700" },
   heartBtn: { position: "absolute", top: "16px", right: "16px", width: "40px", height: "40px", borderRadius: "50%", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
   thumbRow: { display: "flex", gap: "10px", flexWrap: "wrap" },
   thumb: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "8px", cursor: "pointer", transition: "border 0.2s" },
   detailsCol: { display: "flex", flexDirection: "column", gap: "8px" },
-  categoryBadge: { background: "#1a1a1a", border: "1px solid #333", color: "#f97316", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", alignSelf: "flex-start" },
-  productName: { color: "#fff", fontSize: "22px", fontWeight: "800", lineHeight: "1.3" },
+  categoryBadge: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "#f97316", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", alignSelf: "flex-start" },
+  productName: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", lineHeight: "1.3" },
   ratingRow: { display: "flex", alignItems: "center", gap: "8px" },
   stars: { color: "#f97316", fontSize: "18px" },
-  ratingText: { color: "#888", fontSize: "14px" },
+  ratingText: { color: "var(--text-muted)", fontSize: "14px" },
   price: { color: "#f97316", fontSize: "28px", fontWeight: "800" },
   stockText: { fontSize: "14px", fontWeight: "600" },
-  description: { color: "#aaa", fontSize: "14px", lineHeight: "1.6", marginTop: "4px" },
-  divider: { borderTop: "1px solid #222", margin: "8px 0" },
-  label: { color: "#aaa", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" },
+  description: { color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.6", marginTop: "4px" },
+  divider: { borderTop: "1px solid var(--border-light)", margin: "8px 0" },
+  label: { color: "var(--text-secondary)", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" },
   qtyRow: { display: "flex", alignItems: "center", gap: "16px" },
   qtyControls: { display: "flex", alignItems: "center", gap: "12px" },
-  qtyBtn: { width: "36px", height: "36px", borderRadius: "8px", border: "1px solid #333", background: "#1a1a1a", color: "#fff", fontSize: "20px", cursor: "pointer" },
-  qtyNum: { color: "#fff", fontSize: "18px", fontWeight: "700", minWidth: "28px", textAlign: "center" },
-  addBtn: { padding: "16px", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", transition: "background 0.3s" },
+  qtyBtn: { width: "36px", height: "36px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)", fontSize: "20px", cursor: "pointer" },
+  qtyNum: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", minWidth: "28px", textAlign: "center" },
+  addBtn: { padding: "16px", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", transition: "background 0.3s" },
   wishlistBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" },
   viewCartBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", color: "#f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer" },
-  recSection: { marginTop: "48px", paddingTop: "32px", borderTop: "1px solid #222" },
-  recTitle: { color: "#fff", fontSize: "22px", fontWeight: "800", marginBottom: "24px" },
+  recSection: { marginTop: "48px", paddingTop: "32px", borderTop: "1px solid var(--border-light)" },
+  recTitle: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", marginBottom: "24px" },
   recGrid: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" },
-  recCard: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", overflow: "hidden", cursor: "pointer", transition: "border 0.2s, transform 0.2s" },
+  recCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", overflow: "hidden", cursor: "pointer", transition: "border 0.2s, transform 0.2s" },
   recImg: { width: "100%", height: "150px", objectFit: "cover", display: "block" },
   recInfo: { padding: "12px" },
-  recName: { color: "#fff", fontSize: "13px", fontWeight: "600", margin: "0 0 6px", lineHeight: "1.4" },
+  recName: { color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 6px", lineHeight: "1.4" },
   recPrice: { color: "#f97316", fontSize: "15px", fontWeight: "700", margin: 0 },
 };

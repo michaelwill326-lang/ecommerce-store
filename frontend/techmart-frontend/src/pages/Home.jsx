@@ -79,19 +79,19 @@ export default function Home() {
     <Link to={`/product/${p._id}`} className="tm-card">
       <div style={{ position: "relative" }}>
         <img src={p.images?.[0]||FALLBACK} alt={p.name} onError={e=>e.target.src=FALLBACK} loading="lazy" decoding="async" className="tm-card-img" />
-        {p.stock === 0 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#dc2626", color: "#fff", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Out of Stock</span>}
-        {p.stock > 0 && p.stock <= 5 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#f59e0b", color: "#fff", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Only {p.stock} left</span>}
+        {p.stock === 0 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#dc2626", color: "var(--text-primary)", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Out of Stock</span>}
+        {p.stock > 0 && p.stock <= 5 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#f59e0b", color: "var(--text-primary)", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Only {p.stock} left</span>}
       </div>
       <div style={{padding:"10px"}}>
         {p.category && <p style={{ fontSize: "10px", color: "#f97316", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 3px", fontWeight: "600" }}>{p.category}</p>}
-        <p style={{fontSize:"13px",fontWeight:"600",margin:"0 0 4px",color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+        <p style={{fontSize:"13px",fontWeight:"600",margin:"0 0 4px",color:"var(--text-primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
         <p style={{fontSize:"14px",color:"#f97316",fontWeight:"700",margin:0}}>₦{p.price?.toLocaleString()}</p>
       </div>
     </Link>
   );
 
-  if (loading) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><div style={{width:"40px",height:"40px",border:"4px solid #333",borderTop:"4px solid #f97316",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} /><p style={{color:"#888",marginTop:"16px"}}>Loading...</p></div>;
-  if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"#f97316"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"#f97316",color:"#fff",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
+  if (loading) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><div style={{width:"40px",height:"40px",border:"4px solid #333",borderTop:"4px solid #f97316",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} /><p style={{color:"var(--text-muted)",marginTop:"16px"}}>Loading...</p></div>;
+  if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"#f97316"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"#f97316",color:"var(--text-primary)",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
 
   return (
     <>
@@ -117,7 +117,7 @@ export default function Home() {
         {/* SEARCH BAR */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
           <input type="text" placeholder="🔍 Search products..." value={search} onChange={e=>setSearch(e.target.value)} className="tm-search" style={{ flex: 1 }} />
-          <Link to="/ai-search" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "12px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", borderRadius: "999px", textDecoration: "none", fontWeight: "700", fontSize: "13px", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <Link to="/ai-search" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "12px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", borderRadius: "999px", textDecoration: "none", fontWeight: "700", fontSize: "13px", whiteSpace: "nowrap", flexShrink: 0 }}>
             🤖 AI Search
           </Link>
         </div>
@@ -134,7 +134,7 @@ export default function Home() {
           <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="tm-select">
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid #333", background: showFilters ? "#f97316" : "#1a1a1a", color: "#fff", fontSize: "13px", cursor: "pointer", fontWeight: "600" }}>
+          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--border-color)", background: showFilters ? "#f97316" : "#1a1a1a", color: "var(--text-primary)", fontSize: "13px", cursor: "pointer", fontWeight: "600" }}>
             {showFilters ? "Hide Filters" : "Price Filter"}
           </button>
           {isFiltering && (
@@ -142,16 +142,16 @@ export default function Home() {
               Clear All
             </button>
           )}
-          <span style={{ color: "#888", fontSize: "13px", marginLeft: "auto" }}>{filtered.length} product{filtered.length !== 1 ? "s" : ""}</span>
+          <span style={{ color: "var(--text-muted)", fontSize: "13px", marginLeft: "auto" }}>{filtered.length} product{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
         {/* PRICE FILTER */}
         {showFilters && (
-          <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-            <p style={{ color: "#fff", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Price Range (₦)</p>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+            <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Price Range (₦)</p>
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
               <input type="number" placeholder="Min price" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="tm-price-input" />
-              <span style={{ color: "#888" }}>—</span>
+              <span style={{ color: "var(--text-muted)" }}>—</span>
               <input type="number" placeholder="Max price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="tm-price-input" />
             </div>
           </div>
@@ -166,8 +166,8 @@ export default function Home() {
             {filtered.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <p style={{ fontSize: "40px", margin: "0 0 12px" }}>😕</p>
-                <p style={{ color: "#888" }}>No products found. Try different filters.</p>
-                <button onClick={() => { setSearch(""); setCategory("All"); setSortBy("newest"); setMinPrice(""); setMaxPrice(""); }} style={{ marginTop: "12px", padding: "10px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Clear Filters</button>
+                <p style={{ color: "var(--text-muted)" }}>No products found. Try different filters.</p>
+                <button onClick={() => { setSearch(""); setCategory("All"); setSortBy("newest"); setMinPrice(""); setMaxPrice(""); }} style={{ marginTop: "12px", padding: "10px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Clear Filters</button>
               </div>
             ) : (
               <div className="tm-grid">{filtered.map(p=><ProductCard key={p._id} p={p}/>)}</div>
@@ -186,7 +186,7 @@ export default function Home() {
               <div className="tm-grid">{paginatedProducts.map(p=><ProductCard key={p._id} p={p}/>)}</div>
               <div ref={loaderRef} style={{ padding: "20px", textAlign: "center" }}>
                 {hasMore && <div style={{ width: "30px", height: "30px", border: "3px solid #333", borderTop: "3px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />}
-                {!hasMore && filtered.length > ITEMS_PER_PAGE && <p style={{ color: "#888", fontSize: "13px" }}>All {filtered.length} products loaded</p>}
+                {!hasMore && filtered.length > ITEMS_PER_PAGE && <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>All {filtered.length} products loaded</p>}
               </div>
             </section>
             {recent.length > 0 && (

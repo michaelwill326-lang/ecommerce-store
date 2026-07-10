@@ -62,6 +62,10 @@ function ToastProvider({ children }) {
   );
 }
 
+// Apply saved theme on load
+const savedTheme = localStorage.getItem("techmart-theme") || "dark";
+document.body.setAttribute("data-theme", savedTheme);
+
 export default function App() {
   useEffect(() => {
     let timer;
@@ -134,7 +138,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     minHeight: "100vh",
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "var(--bg-primary)",
     overflowX: "hidden", 
     color: "#fff",
     fontFamily: "sans-serif",

@@ -15,7 +15,7 @@ export default function AIReviewSummary({ productId }) {
       .finally(() => setLoading(false));
   }, [productId]);
 
-  if (loading) return <div style={{ background: "#1a1a1a", borderRadius: "10px", padding: "12px", marginBottom: "16px", color: "#888", fontSize: "13px" }}>AI is summarizing reviews...</div>;
+  if (loading) return <div style={{ background: "var(--bg-card)", borderRadius: "10px", padding: "12px", marginBottom: "16px", color: "var(--text-muted)", fontSize: "13px" }}>AI is summarizing reviews...</div>;
   if (!summary?.summary) return null;
 
   return (
@@ -23,9 +23,9 @@ export default function AIReviewSummary({ productId }) {
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
         <span style={{ fontSize: "16px" }}>🤖</span>
         <p style={{ color: "#3b82f6", fontWeight: "700", fontSize: "13px", margin: 0 }}>AI Review Summary</p>
-        <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>({summary.reviewCount} reviews · {summary.avgRating} avg)</p>
+        <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>({summary.reviewCount} reviews · {summary.avgRating} avg)</p>
       </div>
-      <p style={{ color: "#fff", fontSize: "14px", lineHeight: "1.6", margin: 0 }}>{summary.summary}</p>
+      <p style={{ color: "var(--text-primary)", fontSize: "14px", lineHeight: "1.6", margin: 0 }}>{summary.summary}</p>
     </div>
   );
 }

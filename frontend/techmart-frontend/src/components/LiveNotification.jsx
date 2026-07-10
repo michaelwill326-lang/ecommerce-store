@@ -52,7 +52,7 @@ export default function LiveNotification() {
           key={idx}
           style={{
             background: "#2563EB",
-            color: "#fff",
+            color: "var(--text-primary)",
             padding: "10px 15px",
             borderRadius: "8px",
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",

@@ -143,16 +143,16 @@ export default function Login() {
             </form>
             <div style={{ textAlign: "center", marginTop: "12px" }}>
               {otpTimer > 0 ? (
-                <p style={{ color: "#888", fontSize: "13px" }}>Resend in <strong style={{ color: "#f97316" }}>{Math.floor(otpTimer/60)}:{String(otpTimer%60).padStart(2,"0")}</strong></p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Resend in <strong style={{ color: "#f97316" }}>{Math.floor(otpTimer/60)}:{String(otpTimer%60).padStart(2,"0")}</strong></p>
               ) : (
-                <p style={{ color: "#888", fontSize: "13px" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
                   Didn't receive it?{" "}
                   <span onClick={async () => { await axios.post(`${API}/api/auth/send-otp`, { email }); setOtpTimer(120); setError(""); }} style={{ color: "#f97316", cursor: "pointer", fontWeight: "700" }}>Resend OTP</span>
                 </p>
               )}
             </div>
-            <p style={{ color: "#888", fontSize: "13px", textAlign: "center", marginTop: "8px" }}>
-              <span onClick={() => { setOtpStep(false); setOtp(""); setError(""); }} style={{ color: "#888", cursor: "pointer" }}>← Back to login</span>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", textAlign: "center", marginTop: "8px" }}>
+              <span onClick={() => { setOtpStep(false); setOtp(""); setError(""); }} style={{ color: "var(--text-muted)", cursor: "pointer" }}>← Back to login</span>
             </p>
           </>
         )}
@@ -316,12 +316,12 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#0a0a0a",
+    background: "var(--bg-primary)",
     padding: "24px",
   },
   card: {
-    background: "#111",
-    border: "1px solid #222",
+    background: "var(--bg-secondary)",
+    border: "1px solid var(--border-light)",
     borderRadius: "20px",
     padding: "40px",
     width: "100%",
@@ -342,14 +342,14 @@ const styles = {
     letterSpacing: "1px",
   },
   title: {
-    color: "#fff",
+    color: "var(--text-primary)",
     fontSize: "22px",
     fontWeight: "700",
     textAlign: "center",
     marginBottom: "6px",
   },
   subtitle: {
-    color: "#888",
+    color: "var(--text-muted)",
     fontSize: "14px",
     textAlign: "center",
     marginBottom: "28px",
@@ -377,7 +377,7 @@ const styles = {
   },
   label: {
     display: "block",
-    color: "#aaa",
+    color: "var(--text-secondary)",
     fontSize: "13px",
     fontWeight: "600",
     marginBottom: "8px",
@@ -387,10 +387,10 @@ const styles = {
   input: {
     width: "100%",
     padding: "12px 16px",
-    background: "#1a1a1a",
-    border: "1px solid #333",
+    background: "var(--bg-card)",
+    border: "1px solid var(--border-color)",
     borderRadius: "10px",
-    color: "#fff",
+    color: "var(--text-primary)",
     fontSize: "15px",
     outline: "none",
     boxSizing: "border-box",
@@ -422,7 +422,7 @@ const styles = {
     width: "100%",
     background: "transparent",
     border: "none",
-    color: "#888",
+    color: "var(--text-muted)",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
@@ -433,7 +433,7 @@ const styles = {
     width: "100%",
     padding: "14px",
     background: "linear-gradient(135deg, #f97316, #dc2626)",
-    color: "#fff",
+    color: "var(--text-primary)",
     border: "none",
     borderRadius: "12px",
     fontSize: "16px",
@@ -450,14 +450,14 @@ const styles = {
   dividerLine: {
     flex: 1,
     height: "1px",
-    background: "#222",
+    background: "var(--bg-input)",
   },
   dividerText: {
     color: "#555",
     fontSize: "13px",
   },
   switchText: {
-    color: "#888",
+    color: "var(--text-muted)",
     fontSize: "14px",
     textAlign: "center",
   },

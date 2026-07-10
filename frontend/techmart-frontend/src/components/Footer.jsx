@@ -21,8 +21,8 @@ export default function Footer() {
 
 const styles = {
   footer: {
-    background: "#111",
-    borderTop: "1px solid #222",
+    background: "var(--bg-secondary)",
+    borderTop: "1px solid var(--border-light)",
     padding: "20px 32px",
     marginTop: "auto", // Ensures it stays pushed down on short pages
   },
@@ -44,7 +44,7 @@ const styles = {
     gap: "24px",
   },
   link: {
-    color: "#aaa",
+    color: "var(--text-secondary)",
     textDecoration: "none",
     fontSize: "14px",
     fontWeight: "500",

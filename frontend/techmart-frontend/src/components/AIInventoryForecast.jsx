@@ -19,7 +19,7 @@ export default function AIInventoryForecast({ headers }) {
   const statusColor = { critical: "#dc2626", low: "#f59e0b", healthy: "#22c55e", slow: "#888" };
   const statusBg = { critical: "#2a1010", low: "#1a1a0a", healthy: "#0a2a1a", slow: "#1a1a1a" };
 
-  if (loading) return <p style={{ color: "#888" }}>AI is analyzing inventory...</p>;
+  if (loading) return <p style={{ color: "var(--text-muted)" }}>AI is analyzing inventory...</p>;
 
   return (
     <div>
@@ -32,16 +32,16 @@ export default function AIInventoryForecast({ headers }) {
         {filtered.map((f, i) => (
           <div key={i} style={{ background: statusBg[f.status], border: `1px solid ${statusColor[f.status]}`, borderRadius: "10px", padding: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
             <div>
-              <p style={{ color: "#fff", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{f.name}</p>
-              <p style={{ color: "#888", fontSize: "12px", margin: 0 }}>Stock: {f.currentStock} | Sold (30d): {f.sold30Days} | Daily: {f.dailyVelocity}</p>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{f.name}</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Stock: {f.currentStock} | Sold (30d): {f.sold30Days} | Daily: {f.dailyVelocity}</p>
             </div>
             <div style={{ textAlign: "right" }}>
-              <span style={{ padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: "700", background: statusColor[f.status], color: "#fff" }}>{f.status.toUpperCase()}</span>
+              <span style={{ padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: "700", background: statusColor[f.status], color: "var(--text-primary)" }}>{f.status.toUpperCase()}</span>
               {f.daysUntilStockout !== null && (
                 <p style={{ color: statusColor[f.status], fontSize: "12px", fontWeight: "700", margin: "4px 0 0" }}>{f.daysUntilStockout} days left</p>
               )}
               {f.reorderSuggestion > 0 && (
-                <p style={{ color: "#888", fontSize: "11px", margin: "2px 0 0" }}>Reorder: {f.reorderSuggestion} units</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "2px 0 0" }}>Reorder: {f.reorderSuggestion} units</p>
               )}
             </div>
           </div>
