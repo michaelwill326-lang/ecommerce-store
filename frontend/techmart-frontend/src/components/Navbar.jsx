@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Navbar() {
   const { cart } = useContext(CartContext);
@@ -114,6 +115,8 @@ export default function Navbar() {
               </>
             )}
 
+            <ThemeSwitcher />
+
             {/* CART */}
             <Link to="/cart" style={{ ...linkStyle("/cart"), position: "relative" }}>
               <div style={{
@@ -183,6 +186,10 @@ export default function Navbar() {
           <Link to="/pay" style={{...styles.mobileLink, color: "#f97316", fontWeight: "700"}} onClick={() => setMenuOpen(false)}>
             💳 TechMart Pay
           </Link>
+
+          <div style={{ margin: "12px 0" }}>
+            <ThemeSwitcher />
+          </div>
 
           {user?.role === "admin" && (
             <Link to="/admin" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
