@@ -29,9 +29,9 @@ export default function Signup() {
       return setError("Phone number is required for dispatch updates");
     }
 
-    const pwdRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])(.{8,})$/;
+    const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
     if (!pwdRegex.test(password)) {
-      return setError("Password must be 8+ characters with at least one number and symbol (e.g. !@#$%)");
+      return setError("Password must contain uppercase, lowercase, number, symbol and be 8+ characters.");
     }
 
     if (password !== confirm) {
@@ -63,10 +63,15 @@ export default function Signup() {
 
   const getPasswordStrength = () => {
     if (password.length === 0) return null;
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
     const hasNum = /[0-9]/.test(password);
     const hasSym = /[!@#$%^&*]/.test(password);
-    if (password.length < 8 || !hasNum || !hasSym) return { label: "Weak", color: "#dc2626", width: "33%" };
-    if (password.length < 12) return { label: "Medium", color: "#f97316", width: "66%" };
+
+    const score = [hasLower, hasUpper, hasNum, hasSym, password.length >= 8].filter(Boolean).length;
+
+    if (score <= 2) return { label: "Weak", color: "#dc2626", width: "33%" };
+    if (score <= 4) return { label: "Medium", color: "#f97316", width: "66%" };
     return { label: "Strong", color: "#22c55e", width: "100%" };
   };
 

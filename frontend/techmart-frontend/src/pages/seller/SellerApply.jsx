@@ -15,6 +15,13 @@ export default function SellerApply() {
     if (!form.name || !form.email || !form.password || !form.storeName) {
       setError("Please fill all required fields"); return;
     }
+
+    const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+
+    if (!pwdRegex.test(form.password)) {
+      setError("Password must contain uppercase, lowercase, number, symbol and be 8+ characters.");
+      return;
+    }
     try {
       setLoading(true);
       await axios.post(`${API}/api/seller/apply`, form);
@@ -26,6 +33,23 @@ export default function SellerApply() {
   };
 
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
+  const getPasswordStrength = () => {
+    if (!form.password) return null;
+
+    const hasLower = /[a-z]/.test(form.password);
+    const hasUpper = /[A-Z]/.test(form.password);
+    const hasNum = /[0-9]/.test(form.password);
+    const hasSym = /[!@#$%^&*]/.test(form.password);
+
+    const score = [hasLower, hasUpper, hasNum, hasSym, form.password.length >= 8].filter(Boolean).length;
+
+    if (score <= 2) return { label: "Weak", color: "#dc2626", width: "33%" };
+    if (score <= 4) return { label: "Medium", color: "#f97316", width: "66%" };
+    return { label: "Strong", color: "#22c55e", width: "100%" };
+  };
+
+  const strength = getPasswordStrength();
+
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
@@ -42,6 +66,30 @@ export default function SellerApply() {
           <input placeholder="Full Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={inp} />
           <input placeholder="Email Address *" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} style={inp} />
           <input placeholder="Password *" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} style={inp} />
+
+          {strength && (
+            <div style={{ marginTop: "-6px", marginBottom: "12px" }}>
+              <div style={{
+                height: "6px",
+                background: "#333",
+                borderRadius: "10px",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  width: strength.width,
+                  height: "100%",
+                  background: strength.color
+                }} />
+              </div>
+              <p style={{
+                color: strength.color,
+                fontSize: "13px",
+                marginTop: "6px"
+              }}>
+                Password strength: {strength.label}
+              </p>
+            </div>
+          )}
           <input placeholder="Phone Number" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} style={inp} />
           <input placeholder="Store Name *" value={form.storeName} onChange={e => setForm({...form, storeName: e.target.value})} style={inp} />
           <textarea placeholder="Tell us about your store and what you sell..." value={form.storeDescription} onChange={e => setForm({...form, storeDescription: e.target.value})} style={{ ...inp, height: "100px", resize: "vertical" }} />
