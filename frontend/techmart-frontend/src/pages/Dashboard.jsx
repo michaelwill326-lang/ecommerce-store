@@ -256,7 +256,8 @@ export default function Dashboard() {
             {user ? (
               <span
                 onClick={() => {
-                  localStorage.clear();
+                  localStorage.removeItem("token");
+                  localStorage.removeItem("user");
                   window.location.href = "/login";
                 }}
                 style={{ ...styles.footerLink, cursor: "pointer" }}

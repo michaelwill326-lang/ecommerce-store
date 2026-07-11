@@ -5,16 +5,13 @@ export const CartContext = createContext();
 export function CartProvider({ children }) {
   const isLoggedIn = () => !!localStorage.getItem("token");
   const [cart, setCart] = useState(() => {
-    if (!localStorage.getItem("token")) return [];
     const saved = localStorage.getItem("cart");
     return saved ? JSON.parse(saved) : [];
   });
 
   // Save to localStorage whenever cart changes
   useEffect(() => {
-    if (isLoggedIn()) {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
+    localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
   // Sync cart to backend when user logs in
@@ -50,9 +47,8 @@ export function CartProvider({ children }) {
     const handleStorage = (e) => {
       if (e.key === "token") {
         if (!e.newValue) {
-          // Logged out — clear cart
-          setCart([]);
-          localStorage.removeItem("cart");
+          // Logged out — keep cart locally
+          return;
         } else {
           // Logged in — load from server
           loadCartFromServer();

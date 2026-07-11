@@ -156,7 +156,7 @@ export default function Account() {
               </div>
             ))}
           </div>
-          <button onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); localStorage.removeItem("cart"); window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null })); navigate("/login"); }}
+          <button onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user");  window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null })); navigate("/login"); }}
             style={{ marginTop: "20px", width: "100%", padding: "12px", background: "var(--bg-card)", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
             Logout
           </button>
