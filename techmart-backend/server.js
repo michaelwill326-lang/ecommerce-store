@@ -305,7 +305,14 @@ app.post("/api/auth/signup", async (req, res) => {
       console.log("Welcome email failed:", e.message);
     }
 
-    res.status(201).json({ success: true, token, user });
+    const safeUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    };
+
+    res.status(201).json({ success: true, token, user: safeUser });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Signup failed" });
