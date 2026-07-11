@@ -2393,12 +2393,36 @@ app.get("/api/seller/dashboard", sellerAuth, async (req, res) => {
 app.post("/api/seller/products", sellerAuth, adminUploader.array("images", 5), async (req, res) => {
   try {
     let imageUrls = [];
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const result = await cloudinaryCloud.uploader.upload(file.path, { folder: "techmart_products" });
-        imageUrls.push(result.secure_url);
+
+    if (req.body.images) {
+      if (Array.isArray(req.body.images)) {
+        imageUrls = req.body.images;
+      } else {
+        try {
+          imageUrls = JSON.parse(req.body.images);
+        } catch {
+          imageUrls = [req.body.images];
+        }
       }
     }
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        if (file.path && file.path.startsWith("http")) {
+          imageUrls.push(file.path);
+        } else {
+          const result = await cloudinaryCloud.uploader.upload(file.path, {
+            folder: "techmart_products",
+            transformation: [
+              { width: 800, height: 800, crop: "limit" },
+              { quality: "auto" }
+            ]
+          });
+          imageUrls.push(result.secure_url);
+        }
+      }
+    }
+
     const product = await Product.create({
       name: req.body.name,
       price: Number(req.body.price),
@@ -2409,12 +2433,21 @@ app.post("/api/seller/products", sellerAuth, adminUploader.array("images", 5), a
       vendorId: req.seller.id,
       vendorName: req.seller.storeName,
     });
-    res.status(201).json({ success: true, data: product });
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      data: product
+    });
+
   } catch (err) {
-    res.status(500).json({ error: "Failed to add product" });
+    console.error("Seller product create:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to add product"
+    });
   }
 });
-
 
 // Seller update product
 app.put("/api/seller/products/:id", sellerAuth, adminUploader.array("images", 5), async (req, res) => {
