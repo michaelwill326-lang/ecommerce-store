@@ -87,6 +87,11 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setSuccessMessage("");
+    const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{8,}$/;
+    if (!pwdRegex.test(newPassword)) {
+      setError("Password must be 8+ characters with uppercase, lowercase, number and symbol (e.g. Abc@1234)");
+      return;
+    }
     try {
       setLoading(true);
       const response = await axios.post(`${API}/api/auth/reset-password`, { 
@@ -96,6 +101,8 @@ export default function Login() {
       setSuccessMessage("Password reset successful! You can now log in.");
       setView("login");
       setPassword("");
+      setToken("");
+      setNewPassword("");
     } catch (err) {
       setError(err.response?.data?.error || "Invalid or expired verification token.");
     } finally {
@@ -258,25 +265,33 @@ export default function Login() {
                 <label style={styles.label}>6-Digit Recovery Code</label>
                 <input
                   type="text"
-                  placeholder="e.g. 123456"
+                  placeholder="Enter the code sent to your email"
                   maxLength={6}
                   value={token}
-                  onChange={(e) => setToken(e.target.value)}
+                  onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))}
+                  onFocus={(e) => e.target.select()}
                   required
-                  style={styles.input}
+                  autoComplete="off"
+                  style={{ ...styles.input, letterSpacing: "6px", fontSize: "20px", textAlign: "center" }}
                 />
               </div>
 
               <div style={styles.fieldWrap}>
                 <label style={styles.label}>New Secure Password</label>
-                <input
-                  type="password"
-                  placeholder="At least 6 characters"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  style={styles.input}
-                />
+                <div style={styles.passwordWrap}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min 8 chars, uppercase, number, symbol"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    style={{ ...styles.input, marginBottom: 0 }}
+                  />
+                  <button type="button" onClick={() => setShowPassword(p => !p)} style={styles.eyeBtn}>
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+                </div>
+                <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "4px 0 0" }}>Must include uppercase, lowercase, number and symbol (e.g. Abc@1234)</p>
               </div>
 
               <button type="submit" disabled={loading} style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1 }}>
