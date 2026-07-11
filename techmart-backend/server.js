@@ -493,6 +493,10 @@ const SellerSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
   commission: { type: Number, default: 10 },
   totalSales: { type: Number, default: 0 },
+
+  resetPasswordToken: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null },
+
   createdAt: { type: Date, default: Date.now }
 });
 const Seller = mongoose.model("Seller", SellerSchema);
@@ -2358,6 +2362,115 @@ app.post("/api/seller/login", async (req, res) => {
     res.status(500).json({ error: "Login failed" });
   }
 });
+
+/* ===========================
+   SELLER PASSWORD RESET
+=========================== */
+
+app.post("/api/seller/forgot-password", async (req,res)=>{
+  try{
+
+    const {email}=req.body;
+
+    if(!email)
+      return res.status(400).json({error:"Email is required"});
+
+    const seller=await Seller.findOne({email});
+
+    if(!seller){
+      return res.json({
+        success:true,
+        message:"If that seller account exists, a reset code has been sent."
+      });
+    }
+
+    const token=Math.floor(
+      100000+Math.random()*900000
+    ).toString();
+
+    seller.resetPasswordToken=token;
+    seller.resetPasswordExpires=Date.now()+3600000;
+
+    await seller.save();
+
+    console.log(
+      `🔑 Seller Reset Token for ${seller.email}: ${token}`
+    );
+
+    try{
+      if(typeof sendPasswordResetEmail==="function"){
+        await sendPasswordResetEmail(
+          seller.email,
+          token
+        );
+      }
+    }catch(e){
+      console.error(e.message);
+    }
+
+    res.json({
+      success:true,
+      message:"If that seller account exists, a reset code has been sent."
+    });
+
+  }catch(err){
+    console.error(err);
+    res.status(500).json({
+      error:"Seller password reset failed"
+    });
+  }
+});
+
+app.post("/api/seller/reset-password", async (req,res)=>{
+
+  try{
+
+    const {token,newPassword}=req.body;
+
+    if(!token||!newPassword){
+      return res.status(400).json({
+        error:"Token and password required"
+      });
+    }
+
+    const seller=await Seller.findOne({
+      resetPasswordToken:token.trim(),
+      resetPasswordExpires:{
+        $gt:Date.now()
+      }
+    });
+
+    if(!seller){
+      return res.status(400).json({
+        error:"Invalid or expired reset code"
+      });
+    }
+
+    seller.password=await bcrypt.hash(newPassword,10);
+
+    seller.resetPasswordToken=undefined;
+    seller.resetPasswordExpires=undefined;
+
+    await seller.save();
+
+    res.json({
+      success:true,
+      message:"Seller password updated successfully."
+    });
+
+  }catch(err){
+
+    console.error(err);
+
+    res.status(500).json({
+      error:"Password reset failed"
+    });
+
+  }
+
+});
+
+
 
 // Seller middleware
 function sellerAuth(req, res, next) {
