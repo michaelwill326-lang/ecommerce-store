@@ -406,7 +406,11 @@ const styles = {
     background: "transparent",
     border: "none",
     cursor: "pointer",
-    fontSize: "16px",
+    fontSize: "18px",
+    color: "var(--text-muted)",
+    padding: "4px",
+    lineHeight: 1,
+    zIndex: 2,
   },
   forgotBtn: {
     background: "transparent",

@@ -304,13 +304,16 @@ export default function SellerDashboard() {
               <input placeholder="Category" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} style={inp} />
               <textarea placeholder="Description" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} style={{ ...inp, height: "80px", resize: "vertical" }} />
               <AIDescriptionGenerator
-                onGenerated={(desc) => setNewProduct(prev => ({...prev, description: desc}))}
+                onGenerated={(desc) => {
+                  setNewProduct(prev => ({...prev, description: desc}));
+                  setMsg("✅ AI description applied!");
+                }}
               />
-              <label style={{ display: "inline-block", padding: "10px 20px", background: "#333", color: "var(--text-primary)", borderRadius: "8px", cursor: "pointer", marginBottom: "12px" }}>
-                {uploading ? "Uploading..." : "Upload Images"}
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 20px", background: uploading ? "#555" : "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "#fff", borderRadius: "8px", cursor: uploading ? "not-allowed" : "pointer", marginBottom: "4px", fontWeight: "600", fontSize: "14px" }}>
+                {uploading ? "⏳ Uploading..." : "📷 Upload Images"}
                 <input type="file" accept=".jpg,.jpeg,.png,.webp" multiple onChange={handleImageUpload} style={{ display: "none" }} disabled={uploading} />
               </label>
-              <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "4px 0 8px" }}>Max 5MB per image • JPG, PNG, WebP only</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "4px 0 12px" }}>Max 5MB per image • JPG, PNG, WebP only</p>
               {images.length > 0 && (
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
                   {images.map((url, i) => (
@@ -322,7 +325,12 @@ export default function SellerDashboard() {
                 </div>
               )}
 
-              <button onClick={addProduct} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Add Product</button>
+              {images.length > 0 && (
+                <div style={{ background: "#0a2a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px", fontWeight: "600" }}>✅ {images.length} image{images.length > 1 ? "s" : ""} ready to upload with product</p>
+                </div>
+              )}
+              <button onClick={addProduct} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>Add Product</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
