@@ -27,6 +27,12 @@ cloudinary.config({
 // Multer memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+
+// Strong password security rule
+function isStrongPassword(password) {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/.test(password);
+}
+
 const app = express();
 app.set("trust proxy", 1);
 
@@ -276,7 +282,11 @@ app.post("/api/auth/signup", async (req, res) => {
     if (!name || !email || !password || !req.body.phone) return res.status(400).json({ error: "Name, email, password, and phone number are required" });
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return res.status(400).json({ error: "Invalid email address" });
-    if (password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters" });
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        error:"Password must be 8+ characters with uppercase, lowercase, number and special character."
+      });
+    }
     if (name.trim().length < 2) return res.status(400).json({ error: "Name must be at least 2 characters" });
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "User already exists" });
@@ -367,6 +377,12 @@ app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) return res.status(400).json({ error: "Token and new password are required" });
+
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({
+        error:"Password must be 8+ characters with uppercase, lowercase, number and special character."
+      });
+    }
 
     const user = await User.findOne({
       resetPasswordToken: token.trim(),
@@ -2339,6 +2355,12 @@ app.post("/api/seller/apply", async (req, res) => {
     const existing = await Seller.findOne({ email });
     if (existing) return res.status(400).json({ error: "A seller account with this email already exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        error:"Password must be 8+ characters with uppercase, lowercase, number and special character."
+      });
+    }
+
     const seller = await Seller.create({ name, email, password: hashedPassword, phone, storeName, storeDescription });
     res.status(201).json({ success: true, message: "Application submitted! We will review and get back to you shortly." });
   } catch (err) {
@@ -2430,6 +2452,12 @@ app.post("/api/seller/reset-password", async (req,res)=>{
     if(!token||!newPassword){
       return res.status(400).json({
         error:"Token and password required"
+      });
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({
+        error:"Password must be 8+ characters with uppercase, lowercase, number and special character."
       });
     }
 
