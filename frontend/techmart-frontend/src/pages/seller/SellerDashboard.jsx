@@ -77,12 +77,19 @@ export default function SellerDashboard() {
     setMsg("");
     if (!newProduct.name || !newProduct.price || !newProduct.stock) { setMsg("Name, price and stock are required"); return; }
     try {
-      const res = await axios.post(`${API}/api/seller/products`, { ...newProduct, images }, { headers });
+      const formData = new FormData();
+      formData.append("name", newProduct.name);
+      formData.append("price", newProduct.price);
+      formData.append("stock", newProduct.stock);
+      formData.append("category", newProduct.category || "");
+      formData.append("description", newProduct.description || "");
+      formData.append("images", JSON.stringify(images));
+      const res = await axios.post(`${API}/api/seller/products`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       setData(prev => ({ ...prev, products: [res.data.data, ...(prev?.products || [])] }));
       setShowAddProduct(false);
       setNewProduct({ name: "", price: "", description: "", category: "", stock: "" });
       setImages([]);
-      setMsg("Product added!");
+      setMsg("✅ Product added successfully!");
     } catch (err) { setMsg(err.response?.data?.error || "Failed to add product"); }
   };
 
