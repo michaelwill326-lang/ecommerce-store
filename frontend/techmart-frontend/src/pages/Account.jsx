@@ -5,7 +5,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 
 export default function Account() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const [tab, setTab] = useState("Wallet");
@@ -22,10 +22,10 @@ export default function Account() {
     try {
       setLoading(true);
       const [walletRes, ordersRes] = await Promise.all([
-        axios.get(`${API}/api/wallet`, { headers }),
-        axios.get(`${API}/api/orders/my`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/api/pay/dashboard`, { headers }),
+        axios.get(`${API}/api/orders/me`, { headers }).catch(() => ({ data: [] })),
       ]);
-      setWallet(walletRes.data);
+      setWallet({ balance: walletRes.data.balance || 0, transactions: walletRes.data.recentTransactions || [] });
       setOrders(ordersRes.data || []);
     } catch (err) {
       console.error(err);
@@ -148,7 +148,7 @@ export default function Account() {
               { label: "Full Name", value: user?.name },
               { label: "Email", value: user?.email },
               { label: "Phone", value: user?.phone || "Not set" },
-              { label: "Member Since", value: "TechMart Member" },
+              { label: "Member Since", value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "TechMart Member" },
             ].map((item, i) => (
               <div key={i} style={{ paddingBottom: "16px", borderBottom: "1px solid var(--border-light)" }}>
                 <p style={{ color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>{item.label}</p>
