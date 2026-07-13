@@ -77,7 +77,6 @@ export default function Home() {
   useEffect(() => { setPage(1); }, [search, category, sortBy, minPrice, maxPrice]);
   const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 
-  const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 
   if (loading) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><div style={{width:"40px",height:"40px",border:"4px solid #333",borderTop:"4px solid #f97316",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} /><p style={{color:"var(--text-muted)",marginTop:"16px"}}>Loading...</p></div>;
   if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"#f97316"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"#f97316",color:"var(--text-primary)",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
