@@ -479,12 +479,17 @@ app.delete("/api/products/:id", adminOnly, async (req, res) => {
 =========================== */
 app.post("/api/orders", auth, async (req, res) => {
   try {
-    const { items, amount } = req.body;
+    const { items, amount, deliveryAddress, phone, paymentMethod, escrow } = req.body;
     const order = await Order.create({
       email: req.user.email,
       items,
       amount,
-      reference: "TX-" + Date.now()
+      reference: "TX-" + Date.now(),
+      deliveryAddress: deliveryAddress || "",
+      phone: phone || "",
+      paymentMethod: paymentMethod || "Paystack",
+      escrow: escrow || false,
+      escrowStatus: escrow ? "held" : "none"
     });
     res.json(order);
   } catch (err) {
