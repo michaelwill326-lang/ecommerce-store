@@ -10,11 +10,21 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 992); // Tablet and Mobile Breakpoint
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth <= 992 : false);
   const wishlistCount = wishlist.length;
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } });
   const cartCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try { setUser(JSON.parse(localStorage.getItem("user"))); } catch { setUser(null); }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   // Automatically track viewport adjustments so elements adapt seamlessly
   useEffect(() => {
@@ -369,7 +379,7 @@ const styles = {
     fontSize: "15px",
     fontWeight: "500",
     padding: "12px 0",
-    borderBottom: "1px solid #1a1a1a",
+    borderBottom: "1px solid var(--nav-border)",
     display: "flex",
     alignItems: "center",
     gap: "10px",

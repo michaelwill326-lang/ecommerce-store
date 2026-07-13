@@ -7,7 +7,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 const FALLBACK_IMG = "https://placehold.co/80x80?text=No+Image";
 
 export default function Checkout() {
-  const { cart } = useContext(CartContext);
+  const { cart, clearCart } = useContext(CartContext);
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(JSON.parse(localStorage.getItem("user"))?.phone || "");
@@ -36,7 +36,7 @@ export default function Checkout() {
   const walletApplied = useWallet ? Math.min(walletBalance, afterCoupon + deliveryFee) : 0;
   const finalTotal = Math.max(0, afterCoupon + deliveryFee - walletApplied);
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth <= 768 : false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -45,7 +45,7 @@ export default function Checkout() {
   const [suggestions, setSuggestions] = useState([]);
   useEffect(() => {
     if (token) {
-      axios.get(`${API}/api/wallet`, { headers: { Authorization: `Bearer ${token}` } })
+      axios.get(`${API}/api/pay/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setWalletBalance(res.data.balance || 0))
         .catch(() => {});
       axios.get(`${API}/api/orders/pod-eligibility`, { headers: { Authorization: `Bearer ${token}` } })
@@ -268,7 +268,7 @@ export default function Checkout() {
                   </div>
                 )}
               </div>
-              <p style={{color:"var(--text-muted)",fontSize:"12px",marginTop:"6px"}}>🔍 Google will suggest your address automatically</p>
+              <p style={{color:"var(--text-muted)",fontSize:"12px",marginTop:"6px"}}>🔍 Start typing — Nigerian addresses will auto-suggest</p>
               {deliveryZone && (
                 <div style={{ marginTop: "8px", padding: "8px 12px", background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "8px" }}>
                   <p style={{ color: "#22c55e", fontSize: "13px", margin: 0 }}>
@@ -415,15 +415,16 @@ export default function Checkout() {
                 </button>
               </div>
             )}
-            {paymentMethod === "online" ? (
+            {paymentMethod === "online" && (
               <button onClick={handlePayment} disabled={loading || !user} style={{ ...styles.payBtn, opacity: loading || !user ? 0.7 : 1 }}>
                 {loading ? "Processing..." : `Pay ₦${finalTotal.toLocaleString()} Online →`}
               </button>
-            ) : (
+            )}
+            {paymentMethod === "pod" && (
               <>
-                <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
+                <div style={{ background: "var(--bg-secondary)", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
                   <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: "0 0 4px" }}>Delivery Deposit Required</p>
-                  <p style={{ color: "#86efac", fontSize: "12px", margin: 0 }}>You will pay ₦{deliveryFee.toLocaleString()} now (delivery fee) and ₦{(finalTotal - deliveryFee).toLocaleString()} cash on delivery.</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>You will pay ₦{deliveryFee.toLocaleString()} now (delivery fee) and ₦{(finalTotal - deliveryFee).toLocaleString()} cash on delivery.</p>
                 </div>
                 <button onClick={handlePOD} disabled={podLoading || !user || !deliveryFee} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #16a34a, #15803d)", opacity: podLoading || !user || !deliveryFee ? 0.7 : 1 }}>
                   {podLoading ? "Processing..." : `Pay ₦${deliveryFee.toLocaleString()} Delivery Deposit →`}
