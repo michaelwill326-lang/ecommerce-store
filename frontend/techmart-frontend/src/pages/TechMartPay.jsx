@@ -69,6 +69,11 @@ export default function TechMartPay() {
     try {
       const res = await axios.get(`${API}/api/pay/dashboard`, { headers });
       setDashboard(res.data);
+      // Sync pinSet from user profile
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (user?.walletPinSet) setPinSet(true);
+      } catch {}
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
@@ -436,7 +441,7 @@ export default function TechMartPay() {
               <input placeholder="Amount (N)" type="number" value={sendForm.amount} onChange={e => setSendForm({...sendForm, amount: e.target.value})} style={inp} />
               <input placeholder="Note (optional)" value={sendForm.note} onChange={e => setSendForm({...sendForm, note: e.target.value})} style={inp} />
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={sendMoney} disabled={sendLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => requirePin(sendMoney)} disabled={sendLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {sendLoading ? "Sending..." : "Send Money"}
               </button>
             </div>
@@ -501,7 +506,7 @@ export default function TechMartPay() {
               </div>
               <input placeholder="Or enter custom amount" type="number" value={airtimeForm.amount} onChange={e => setAirtimeForm({...airtimeForm, amount: e.target.value})} style={inp} />
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={buyAirtime} disabled={airtimeLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => requirePin(buyAirtime)} disabled={airtimeLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {airtimeLoading ? "Processing..." : `Buy ₦${Number(airtimeForm.amount || 0).toLocaleString()} Airtime`}
               </button>
             </div>
@@ -544,7 +549,7 @@ export default function TechMartPay() {
                 </div>
               )}
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={buyData} disabled={dataLoading || !dataForm.planId} style={{ width: "100%", padding: "14px", background: dataForm.planId ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: dataForm.planId ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => requirePin(buyData)} disabled={dataLoading || !dataForm.planId} style={{ width: "100%", padding: "14px", background: dataForm.planId ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: dataForm.planId ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {dataLoading ? "Processing..." : dataForm.planName ? `Buy ${dataForm.planName}` : "Select a plan"}
               </button>
             </div>
@@ -591,7 +596,7 @@ export default function TechMartPay() {
               </div>
               <input placeholder="Or enter custom amount (min N500)" type="number" value={elecForm.amount} onChange={e => setElecForm({...elecForm, amount: e.target.value})} style={inp} />
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={payElectricity} disabled={elecLoading || !elecVerified} style={{ width: "100%", padding: "14px", background: elecVerified ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: elecVerified ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => requirePin(payElectricity)} disabled={elecLoading || !elecVerified} style={{ width: "100%", padding: "14px", background: elecVerified ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: elecVerified ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {elecLoading ? "Processing..." : `Pay ₦${Number(elecForm.amount || 0).toLocaleString()} Electricity`}
               </button>
             </div>
@@ -638,7 +643,7 @@ export default function TechMartPay() {
                 </div>
               )}
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={payCableTV} disabled={ctvLoading || !ctvVerified || !ctvForm.planId} style={{ width: "100%", padding: "14px", background: (ctvVerified && ctvForm.planId) ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: (ctvVerified && ctvForm.planId) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => requirePin(payCableTV)} disabled={ctvLoading || !ctvVerified || !ctvForm.planId} style={{ width: "100%", padding: "14px", background: (ctvVerified && ctvForm.planId) ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: (ctvVerified && ctvForm.planId) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "15px" }}>
                 {ctvLoading ? "Processing..." : ctvForm.planName ? `Subscribe — ₦${Number(ctvForm.amount || 0).toLocaleString()}` : "Select a package"}
               </button>
             </div>
@@ -671,7 +676,7 @@ export default function TechMartPay() {
               </div>
               <input placeholder="Or enter custom amount (min N100)" type="number" value={betForm.amount} onChange={e => setBetForm({...betForm, amount: e.target.value})} style={inp} />
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: N{(dashboard?.balance || 0).toLocaleString()}</p>
-              <button onClick={fundBetting} disabled={betLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+              <button onClick={() => requirePin(fundBetting)} disabled={betLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
                 {betLoading ? "Processing..." : `Fund N${Number(betForm.amount || 0).toLocaleString()} to ${betForm.platform || "Betting"} Wallet`}
               </button>
             </div>
@@ -712,7 +717,7 @@ export default function TechMartPay() {
       {pinModal.open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
           <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
-            <h3 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>Lock Enter Wallet PIN</h3>
+            <h3 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>🔐 Enter Wallet PIN</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "20px" }}>Enter your 4-digit PIN to confirm</p>
             <input type="password" maxLength={4} placeholder="4 digits" value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/[^0-9]/g, "")); setPinError(""); }}
               style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "8px" }} />
