@@ -412,6 +412,27 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 /* ===========================
+   🏥 HEALTH
+=========================== */
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", service: "TechMart API", timestamp: new Date().toISOString() });
+});
+
+/* ===========================
+   👤 USER PROFILE
+=========================== */
+app.get("/api/users/me", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password -walletPin -otpCode -resetPasswordToken -fraudFlags -loginAttempts -lastLoginIP");
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
+/* ===========================
    🛍 PRODUCTS
 =========================== */
 app.get("/api/products", async (req, res) => {
