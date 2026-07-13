@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, useDeferredValue } from "react";
 import { Link } from "react-router-dom";
 import FlashSaleBanner from "../components/FlashSaleBanner";
+import ProductCard from "../components/ProductCard";
 
 const CATEGORIES = ["All", "Phones", "Laptops", "Electronics", "Audio", "Accessories", "Gaming", "Computers", "Wearables", "Printers"];
 const SORT_OPTIONS = [
@@ -16,19 +17,26 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [category, setCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const recent = JSON.parse(localStorage.getItem("recent")) || [];
+  const [recent] = useState(() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } });
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
   const observerRef = useRef(null);
   const loaderRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/products`)
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (deferredSearch) params.set("search", deferredSearch);
+    if (category !== "All") params.set("category", category);
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
+    fetch(`${import.meta.env.VITE_API_URL}/api/products?${params.toString()}`)
       .then(res => { if (!res.ok) throw new Error("Failed to fetch"); return res.json(); })
       .then(data => {
         setProducts(data);
@@ -36,22 +44,16 @@ export default function Home() {
         setLoading(false);
       })
       .catch(err => { setError(err.message); setLoading(false); });
-  }, []);
+  }, [deferredSearch, category, minPrice, maxPrice]);
 
   const filtered = useMemo(() => {
-    let result = products.filter(p => {
-      const matchSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase()) || p.category?.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = category === "All" || p.category?.toLowerCase().trim().includes(category.toLowerCase().trim());
-      const matchMin = !minPrice || p.price >= Number(minPrice);
-      const matchMax = !maxPrice || p.price <= Number(maxPrice);
-      return matchSearch && matchCategory && matchMin && matchMax;
-    });
-    if (sortBy === "price_asc") result = [...result].sort((a,b) => a.price - b.price);
-    else if (sortBy === "price_desc") result = [...result].sort((a,b) => b.price - a.price);
-    else if (sortBy === "popular") result = [...result].sort((a,b) => (b.reviews?.length||0) - (a.reviews?.length||0));
-    else result = [...result].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    let result = [...products];
+    if (sortBy === "price_asc") result.sort((a,b) => a.price - b.price);
+    else if (sortBy === "price_desc") result.sort((a,b) => b.price - a.price);
+    else if (sortBy === "popular") result.sort((a,b) => (b.reviews?.length||0) - (a.reviews?.length||0));
+    else result.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
     return result;
-  }, [products, search, category, sortBy, minPrice, maxPrice]);
+  }, [products, sortBy]);
 
   const isFiltering = search || category !== "All" || minPrice || maxPrice || sortBy !== "newest";
   const paginatedProducts = useMemo(() => filtered.slice(0, page * ITEMS_PER_PAGE), [filtered, page]);
@@ -75,20 +77,7 @@ export default function Home() {
   useEffect(() => { setPage(1); }, [search, category, sortBy, minPrice, maxPrice]);
   const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 
-  const ProductCard = ({ p }) => (
-    <Link to={`/product/${p._id}`} className="tm-card">
-      <div style={{ position: "relative" }}>
-        <img src={p.images?.[0]||FALLBACK} alt={p.name} onError={e=>e.target.src=FALLBACK} loading="lazy" decoding="async" className="tm-card-img" />
-        {p.stock === 0 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#dc2626", color: "var(--text-primary)", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Out of Stock</span>}
-        {p.stock > 0 && p.stock <= 5 && <span style={{ position: "absolute", top: "8px", left: "8px", background: "#f59e0b", color: "var(--text-primary)", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>Only {p.stock} left</span>}
-      </div>
-      <div style={{padding:"10px"}}>
-        {p.category && <p style={{ fontSize: "10px", color: "#f97316", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 3px", fontWeight: "600" }}>{p.category}</p>}
-        <p style={{fontSize:"13px",fontWeight:"600",margin:"0 0 4px",color:"var(--text-primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
-        <p style={{fontSize:"14px",color:"#f97316",fontWeight:"700",margin:0}}>₦{p.price?.toLocaleString()}</p>
-      </div>
-    </Link>
-  );
+  const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 
   if (loading) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><div style={{width:"40px",height:"40px",border:"4px solid #333",borderTop:"4px solid #f97316",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} /><p style={{color:"var(--text-muted)",marginTop:"16px"}}>Loading...</p></div>;
   if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"#f97316"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"#f97316",color:"var(--text-primary)",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
