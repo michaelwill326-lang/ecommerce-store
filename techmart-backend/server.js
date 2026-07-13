@@ -489,7 +489,7 @@ app.post("/api/orders", auth, async (req, res) => {
       phone: phone || "",
       paymentMethod: paymentMethod || "Paystack",
       escrow: escrow || false,
-      escrowStatus: escrow ? "held" : "none"
+      escrowStatus: escrow ? "holding" : "none"
     });
     res.json(order);
   } catch (err) {
