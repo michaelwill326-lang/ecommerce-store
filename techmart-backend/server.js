@@ -333,7 +333,7 @@ app.post("/api/auth/login", async (req, res) => {
       { expiresIn: "7d" }
     );
     analyzeFraud(user, "login", { email: user.email, accountAge: Math.floor((Date.now() - new Date(user.createdAt)) / 86400000) + " days" }).catch(() => {});
-    res.json({ success: true, token, user });
+    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, role: user.role, walletBalance: user.walletBalance, walletPinSet: user.walletPinSet, twoFactorEnabled: user.twoFactorEnabled } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Login failed" });
