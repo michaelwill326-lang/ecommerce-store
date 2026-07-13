@@ -24,7 +24,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -51,7 +51,7 @@ export default function ProductDetail() {
       fetchRecommendations(res.data);
 
       // SAVE TO RECENTLY VIEWED
-      const recent = JSON.parse(localStorage.getItem("recent")) || [];
+      const recent = (() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } })();
       const filtered = recent.filter((p) => p._id !== res.data._id);
       filtered.unshift(res.data);
       localStorage.setItem("recent", JSON.stringify(filtered.slice(0, 6)));
@@ -313,7 +313,7 @@ export default function ProductDetail() {
           {product.vendorId && (
             <button
               onClick={async () => {
-                const user = JSON.parse(localStorage.getItem("user"));
+                const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
                 const token = localStorage.getItem("token");
                 if (!user || !token) { navigate("/login"); return; }
                 const msg = prompt("Send a message to the seller about this product:");

@@ -22,7 +22,7 @@ export default function Tracking() {
   const [tab, setTab] = useState("track");
 
   const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
 
   useEffect(() => {
     if (token && user) {
@@ -33,7 +33,7 @@ export default function Tracking() {
   const fetchMyOrders = async () => {
     try {
       setMyOrdersLoading(true);
-      const res = await axios.get(`${API}/api/orders/my`, {
+      const res = await axios.get(`${API}/api/orders/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMyOrders(res.data);

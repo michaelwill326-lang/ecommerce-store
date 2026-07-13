@@ -10,7 +10,7 @@ export default function Cart() {
   const total = cart.reduce(
     (sum, item) => sum + item.price * (item.quantity || 1), 0
   );
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
