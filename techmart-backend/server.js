@@ -416,7 +416,16 @@ app.post("/api/auth/reset-password", async (req, res) => {
 =========================== */
 app.get("/api/products", async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
+    const { search, category, minPrice, maxPrice } = req.query;
+    const filter = {};
+    if (search) filter.name = { $regex: search, $options: "i" };
+    if (category) filter.category = { $regex: category, $options: "i" };
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
+    const products = await Product.find(filter).sort({ createdAt: -1 });
     res.json(products);
   } catch (err) {
     console.error(err);
