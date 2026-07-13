@@ -12,7 +12,7 @@ export default function Chatbot() {
   const [typing, setTyping] = useState(false);
   const [userName, setUserName] = useState("Guest");
   const [userRole, setUserRole] = useState("customer");
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -29,7 +29,7 @@ export default function Chatbot() {
 
   useEffect(() => {
     const syncUser = () => {
-      const user = JSON.parse(localStorage.getItem("user"));
+      const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
       setUserName(user?.name?.split(" ")[0] || "Guest");
       setUserRole(user?.role || "customer");
     };
@@ -119,7 +119,7 @@ export default function Chatbot() {
       speak(data.message || "");
       if (data.data?.type === "navigate") setTimeout(() => navigate(data.data.path), 1500);
       if (data.data?.type === "add_to_cart") {
-        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+        const cart = (() => { try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; } })();
         const existing = cart.find(i => i._id === data.data.product._id);
         if (existing) existing.quantity += 1;
         else cart.push({ ...data.data.product, quantity: 1 });

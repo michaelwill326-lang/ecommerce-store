@@ -7,7 +7,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 export default function SellerDashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem("sellerToken");
-  const seller = JSON.parse(localStorage.getItem("seller") || "{}");
+  const seller = (() => { try { return JSON.parse(localStorage.getItem("seller") || "{}"); } catch { return {}; } })();
   const headers = { Authorization: `Bearer ${token}` };
   const [tab, setTab] = useState("Overview");
   const [data, setData] = useState(null);

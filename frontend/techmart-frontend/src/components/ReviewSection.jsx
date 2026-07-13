@@ -12,7 +12,7 @@ export default function ReviewSection({ product, onRefresh }) {
   const [flagging, setFlagging] = useState(null);
 
   const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
 
   const approvedReviews = product.reviews?.filter((r) => r.approved) || [];
 
