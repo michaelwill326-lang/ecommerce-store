@@ -4,7 +4,14 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const xss = require("xss");
 const tokenBlacklist = new Set(); // In-memory JWT blacklist
+
+// Sanitize user input to prevent XSS
+const sanitize = (str) => {
+  if (typeof str !== "string") return str;
+  return xss(str.trim(), { whiteList: {}, stripIgnoreTag: true, stripIgnoreTagBody: ["script"] });
+};
 const bcrypt = require("bcryptjs");
 const axios = require("axios");
 const http = require("http");
@@ -1667,6 +1674,8 @@ app.put("/api/admin/disputes/:id", adminOnly, async (req, res) => {
 
 // --- SELLER MESSAGING ---
 app.post("/api/seller/messages", auth, async (req, res) => {
+  req.body.message = sanitize(req.body.message || "");
+  req.body.subject = sanitize(req.body.subject || "");
   try {
     const { sellerId, productId, productName, message } = req.body;
     const user = await User.findById(req.user.id);
@@ -1697,6 +1706,7 @@ app.get("/api/seller/messages", sellerAuth, async (req, res) => {
 });
 
 app.post("/api/seller/messages/:id/reply", sellerAuth, async (req, res) => {
+  req.body.message = sanitize(req.body.message || "");
   try {
     const { message } = req.body;
     const seller = await Seller.findById(req.seller.id);
@@ -3171,7 +3181,8 @@ app.get("/api/admin/analytics", adminOnly, async (req, res) => {
 /* ADD REVIEW - verified buyers only */
 app.post("/api/products/:id/review", auth, async (req, res) => {
   try {
-    const { comment, stars } = req.body;
+    const { stars } = req.body;
+    const comment = sanitize(req.body.comment);
     if (!comment || !stars) return res.status(400).json({ error: "Comment and stars required" });
 
     const product = await Product.findById(req.params.id);
