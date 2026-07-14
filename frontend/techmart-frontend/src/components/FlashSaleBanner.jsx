@@ -56,7 +56,7 @@ export default function FlashSaleBanner() {
   if (!sales.length) return null;
 
   const sale = sales[current];
-  const discount = Math.round(((sale.originalPrice - sale.salePrice) / sale.originalPrice) * 100);
+  const discount = sale.originalPrice > 0 ? Math.round(((sale.originalPrice - sale.salePrice) / sale.originalPrice) * 100) : 0;
 
   return (
     <div style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", borderRadius: "12px", padding: "16px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", position: "relative" }}>
