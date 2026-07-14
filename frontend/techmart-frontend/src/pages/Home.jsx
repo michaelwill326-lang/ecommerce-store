@@ -39,8 +39,20 @@ export default function Home() {
     fetch(`${import.meta.env.VITE_API_URL}/api/products?${params.toString()}`)
       .then(res => { if (!res.ok) throw new Error("Failed to fetch"); return res.json(); })
       .then(data => {
-        setProducts(data);
-        setTrending([...data].sort((a,b)=>(b.reviews?.length||0)-(a.reviews?.length||0)).slice(0,6));
+        const productList = Array.isArray(data)
+          ? data
+          : Array.isArray(data.products)
+            ? data.products
+            : [];
+
+        setProducts(productList);
+
+        setTrending(
+          [...productList]
+            .sort((a,b)=>(b.reviews?.length||0)-(a.reviews?.length||0))
+            .slice(0,6)
+        );
+
         setLoading(false);
       })
       .catch(err => { setError(err.message); setLoading(false); });
