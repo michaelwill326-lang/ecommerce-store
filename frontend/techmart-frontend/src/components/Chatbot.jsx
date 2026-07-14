@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-const API = "https://techmart-backend-ecbi.onrender.com";
+const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
   const navigate = useNavigate();
@@ -167,7 +167,7 @@ export default function Chatbot() {
   };
 
   const renderMsg = (msg) => {
-    const html = (msg.text || "").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br/>");
+    const html = (msg.text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br/>");
     return (
       <div>
         <span dangerouslySetInnerHTML={{ __html: html }} />
@@ -269,7 +269,7 @@ export default function Chatbot() {
     { label: "💰 Balance", msg: "Show my wallet balance" },
     { label: "📦 Orders", msg: "Track my last order" },
     { label: "🔍 Search", msg: "Find me a product" },
-    { label: "�� Coupon", msg: "Apply the best coupon" },
+    { label: "🏷️ Coupon", msg: "Apply the best coupon" },
     { label: "⚠️ Alerts", msg: "Check for alerts" },
     ...(userRole === "admin" ? [{ label: "📊 Revenue", msg: "Show today revenue" }, { label: "🚨 Fraud", msg: "List suspicious accounts" }] : []),
     ...(userRole === "seller" ? [{ label: "📉 Stock", msg: "Show low stock products" }, { label: "✍️ Describe", msg: "Generate descriptions for new products" }] : []),
@@ -312,7 +312,7 @@ export default function Chatbot() {
 
           {/* ALERTS BAR */}
           {alerts.length > 0 && (
-            <div style={{ background:"#1a0a00", borderBottom:"1px solid #f97316", padding:"6px 12px", display:"flex", alignItems:"center", gap:6 }}>
+            <div style={{ background:"var(--bg-card)", borderBottom:"1px solid #f97316", padding:"6px 12px", display:"flex", alignItems:"center", gap:6 }}>
               <span style={{ fontSize:12 }}>⚠️</span>
               <p style={{ color:"#f97316", fontSize:11, margin:0, flex:1 }}>{alerts[0]}</p>
               <button onClick={() => setAlerts(a => a.slice(1))} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:14 }}>✕</button>
