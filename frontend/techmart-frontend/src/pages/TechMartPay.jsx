@@ -71,7 +71,7 @@ export default function TechMartPay() {
       setDashboard(res.data);
       // Sync pinSet from user profile
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
+        const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
         if (user?.walletPinSet) setPinSet(true);
       } catch {}
     } catch (err) {

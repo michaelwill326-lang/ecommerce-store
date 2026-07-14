@@ -10,12 +10,12 @@ export default function Checkout() {
   const { cart, clearCart } = useContext(CartContext);
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState(JSON.parse(localStorage.getItem("user"))?.phone || "");
+  const [phone, setPhone] = useState((() => { try { return JSON.parse(localStorage.getItem("user"))?.phone || ""; } catch { return ""; } })());
   const [error, setError] = useState("");
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
   const token = localStorage.getItem("token");
   const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
   const [couponCode, setCouponCode] = useState("");

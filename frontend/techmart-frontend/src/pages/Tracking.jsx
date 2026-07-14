@@ -128,7 +128,7 @@ export default function Tracking() {
               placeholder="e.g. TX-1779582238315"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && trackOrder()}
+              onKeyDown={(e) => e.key === "Enter" && trackOrder()}
               style={styles.input}
             />
             <button

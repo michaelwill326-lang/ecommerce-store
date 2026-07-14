@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-const API = "https://techmart-backend-ecbi.onrender.com";
+const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function SellerLogin() {
   const navigate = useNavigate();
@@ -164,7 +164,7 @@ export default function SellerLogin() {
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={e => setForm({...form, password:e.target.value})}
-                  onKeyPress={e => e.key === "Enter" && handleLogin()}
+                  onKeyDown={e => e.key === "Enter" && handleLogin()}
                   style={{...inp, marginBottom:0, paddingRight:"44px"}}
                 />
 

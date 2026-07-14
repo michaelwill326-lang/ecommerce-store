@@ -18,12 +18,7 @@ export default function ThemeSwitcher() {
     localStorage.setItem("techmart-theme", current);
   }, [current]);
 
-  // Apply saved theme on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("techmart-theme") || "dark";
-    document.body.setAttribute("data-theme", saved);
-    setCurrent(saved);
-  }, []);
+  // Theme applied by first useEffect on current change
 
   const currentTheme = THEMES.find(t => t.id === current) || THEMES[0];
 

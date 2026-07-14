@@ -18,8 +18,8 @@ export default function Dashboard() {
   const [sortBy, setSortBy] = useState("newest");
   const [addedId, setAddedId] = useState(null);
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  const recent = JSON.parse(localStorage.getItem("recent")) || [];
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const recent = (() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } })();
 
   useEffect(() => {
     fetchProducts();
