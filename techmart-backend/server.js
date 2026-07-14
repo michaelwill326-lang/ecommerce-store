@@ -130,6 +130,7 @@ const User = mongoose.model(
     otpCode: { type: String, default: null },
     otpExpires: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
+    deviceTokens: { type: [String], default: [] },
     aiPreferences: { type: Object, default: {} },
     savedCart: { type: Array, default: [] },
     fraudScore: { type: Number, default: 0 },
@@ -328,8 +329,10 @@ app.post("/api/auth/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ error: "Wrong password" });
     analyzeFraud(user, "login", { email: user.email, accountAge: Math.floor((Date.now() - new Date(user.createdAt)) / 86400000) + " days" }).catch(() => {});
-    // If 2FA not enabled, return token directly
-    if (!user.twoFactorEnabled) {
+    const { deviceToken } = req.body;
+    const isKnownDevice = deviceToken && user.deviceTokens && user.deviceTokens.includes(deviceToken);
+    // Skip OTP only if device is known
+    if (isKnownDevice) {
       const token = jwt.sign(
         { id: user._id, email: user.email, role: user.role },
         process.env.JWT_SECRET,
@@ -337,7 +340,7 @@ app.post("/api/auth/login", async (req, res) => {
       );
       return res.json({ success: true, token, requireOtp: false, user: { id: user._id, name: user.name, email: user.email, role: user.role, walletBalance: user.walletBalance, walletPinSet: user.walletPinSet, twoFactorEnabled: user.twoFactorEnabled } });
     }
-    // 2FA enabled — signal frontend to request OTP
+    // Unknown device — require OTP regardless of 2FA setting
     res.json({ success: true, requireOtp: true });
   } catch (err) {
     console.error(err);
@@ -3695,14 +3698,16 @@ app.post("/api/auth/verify-otp", async (req, res) => {
     if (!user.otpCode || user.otpCode !== otp) return res.status(400).json({ error: "Invalid OTP" });
     if (new Date() > new Date(user.otpExpires)) return res.status(400).json({ error: "OTP has expired. Please request a new one." });
 
-    await User.findByIdAndUpdate(user._id, { otpCode: null, otpExpires: null });
-
+    const crypto = require("crypto");
+    const deviceToken = crypto.randomBytes(32).toString("hex");
+    const updatedTokens = [...(user.deviceTokens || []), deviceToken].slice(-5);
+    await User.findByIdAndUpdate(user._id, { otpCode: null, otpExpires: null, deviceTokens: updatedTokens });
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({ success: true, token, deviceToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, walletBalance: user.walletBalance, walletPinSet: user.walletPinSet, twoFactorEnabled: user.twoFactorEnabled } });
   } catch (err) {
     console.error("OTP verify error:", err.message);
     res.status(500).json({ error: "OTP verification failed" });
