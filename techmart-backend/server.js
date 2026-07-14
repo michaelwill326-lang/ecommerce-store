@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const tokenBlacklist = new Set(); // In-memory JWT blacklist
 const bcrypt = require("bcryptjs");
 const axios = require("axios");
 const http = require("http");
@@ -243,6 +244,7 @@ function generateReferralCode(name) {
 =========================== */
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
+  if (token && tokenBlacklist.has(token)) return res.status(401).json({ error: "Token has been invalidated. Please log in again." });
   if (!token) return res.status(401).json({ error: "No token" });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
@@ -420,7 +422,20 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 /* ===========================
-   🏥 HEALTH
+   🚪 LOGOUT
+=========================== */
+app.post("/api/auth/logout", auth, (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (token) {
+    tokenBlacklist.add(token);
+    // Auto-clean after 7 days (token expiry)
+    setTimeout(() => tokenBlacklist.delete(token), 7 * 24 * 60 * 60 * 1000);
+  }
+  res.json({ success: true, message: "Logged out successfully" });
+});
+
+/* ===========================
+   �� HEALTH
 =========================== */
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "TechMart API", timestamp: new Date().toISOString() });
@@ -4878,3 +4893,33 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
 
 
 
+
+/* ===========================
+   🛡️ GLOBAL ERROR HANDLING
+=========================== */
+
+// Global Express error handler
+app.use((err, req, res, next) => {
+  console.error("🔥 Unhandled error:", err.message, err.stack);
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === "production"
+      ? "An unexpected error occurred. Please try again."
+      : err.message
+  });
+});
+
+// 404 handler for unknown routes
+app.use((req, res) => {
+  res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
+});
+
+// Unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("🔥 Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+// Uncaught exceptions
+process.on("uncaughtException", (err) => {
+  console.error("🔥 Uncaught Exception:", err.message);
+  process.exit(1);
+});
