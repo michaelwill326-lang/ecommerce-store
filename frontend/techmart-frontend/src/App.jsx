@@ -68,14 +68,17 @@ document.body.setAttribute("data-theme", savedTheme);
 
 export default function App() {
   useEffect(() => {
+    // Only auto-logout if user is actually logged in
+    if (!localStorage.getItem("token")) return;
     let timer;
     const resetTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        localStorage.removeItem("token");  window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
+        localStorage.removeItem("token");
         localStorage.removeItem("user");
+        window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
         window.location.href = "/login";
-      }, 5 * 60 * 1000);
+      }, 30 * 60 * 1000); // 30 minutes
     };
     const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
     events.forEach((e) => window.addEventListener(e, resetTimer));

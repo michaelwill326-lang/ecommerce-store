@@ -33,12 +33,20 @@ export default function Login() {
       setLoading(true);
       // First verify credentials
       const response = await axios.post(`${API}/api/auth/login`, { email, password });
-      // Send OTP
-      await axios.post(`${API}/api/auth/send-otp`, { email });
-      localStorage.setItem("_tempUser", JSON.stringify(response.data));
-      setOtpStep(true);
-      setOtpTimer(120);
-      const interval = setInterval(() => setOtpTimer(prev => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; }), 1000);
+      if (response.data.requireOtp) {
+        // 2FA enabled — send OTP and show OTP step
+        await axios.post(`${API}/api/auth/send-otp`, { email });
+        localStorage.setItem("_tempUser", JSON.stringify(response.data));
+        setOtpStep(true);
+        setOtpTimer(120);
+        const interval = setInterval(() => setOtpTimer(prev => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; }), 1000);
+      } else {
+        // No 2FA — login directly
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: response.data.token }));
+        navigate("/");
+      }
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Invalid email or password");
