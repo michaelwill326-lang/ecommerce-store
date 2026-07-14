@@ -32,7 +32,8 @@ export default function Login() {
     try {
       setLoading(true);
       // First verify credentials
-      const response = await axios.post(`${API}/api/auth/login`, { email, password });
+      const deviceToken = localStorage.getItem("deviceToken");
+      const response = await axios.post(`${API}/api/auth/login`, { email, password, deviceToken });
       if (response.data.requireOtp) {
         // 2FA enabled — send OTP and show OTP step
         await axios.post(`${API}/api/auth/send-otp`, { email });
@@ -65,6 +66,8 @@ export default function Login() {
       localStorage.removeItem("_tempUser");
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
+      if (res.data.deviceToken) localStorage.setItem("deviceToken", res.data.deviceToken);
+      window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: res.data.token }));
       navigate("/");
     } catch (err) {
       setError(err.response?.data?.error || "Invalid or expired OTP");
