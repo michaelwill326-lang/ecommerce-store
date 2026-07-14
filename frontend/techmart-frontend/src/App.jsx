@@ -12,7 +12,8 @@ if ("serviceWorker" in navigator) {
     }).catch(() => {});
   });
 }
-import Navbar from "./components/Navbar"; 
+import Navbar from "./components/Navbar";
+import ErrorBoundary from "./components/ErrorBoundary"; 
 import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
 
@@ -66,6 +67,23 @@ function ToastProvider({ children }) {
 const savedTheme = localStorage.getItem("techmart-theme") || "dark";
 document.body.setAttribute("data-theme", savedTheme);
 
+function OfflineBanner() {
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const on = () => setOffline(true);
+    const off = () => setOffline(false);
+    window.addEventListener("offline", on);
+    window.addEventListener("online", off);
+    return () => { window.removeEventListener("offline", on); window.removeEventListener("online", off); };
+  }, []);
+  if (!offline) return null;
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, background: "#dc2626", color: "#fff", textAlign: "center", padding: "8px", fontSize: "13px", fontWeight: "700", zIndex: 99999 }}>
+      ⚠️ No internet connection. Please check your network.
+    </div>
+  );
+}
+
 export default function App() {
   useEffect(() => {
     // Only auto-logout if user is actually logged in
@@ -91,11 +109,13 @@ export default function App() {
   return (
     <ToastProvider>
     <div style={styles.appContainer}>
+      <OfflineBanner />
       {/* Navigation Bar across all views */}
       <Navbar />
 
       {/* Main Routing Architecture */}
       <main style={styles.mainContent}>
+        <ErrorBoundary>
         <Suspense fallback={<div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>Loading...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -121,6 +141,7 @@ export default function App() {
           <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* Professional Legal Footer */}

@@ -38,9 +38,11 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
+    const t = localStorage.getItem("token");
+    if (t) fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    
+    localStorage.removeItem("deviceToken");
     window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
     navigate("/login");
     setMenuOpen(false);
