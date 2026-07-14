@@ -7,7 +7,7 @@ export default function Success() {
   const { clearCart } = useContext(CartContext);
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(10);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
   const [searchParams] = useSearchParams();
   const isPOD = searchParams.get("pod") === "true";
   const reference = searchParams.get("reference");
@@ -58,7 +58,7 @@ export default function Success() {
             <span style={styles.detailValue}>2-5 business days</span>
           </div>
           {isPOD && (
-            <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginTop: "12px" }}>
+            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginTop: "12px" }}>
               <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>Pay on Delivery Instructions</p>
               <p style={{ color: "#86efac", fontSize: "13px", margin: 0 }}>Please have the exact cash amount ready when our delivery agent arrives. Do not pay before inspecting your item.</p>
             </div>
@@ -108,7 +108,7 @@ export default function Success() {
               🛍️ Continue Shopping
             </button>
           </Link>
-          <Link to="/cart" style={{ flex: 1 }}>
+          <Link to="/tracking" style={{ flex: 1 }}>
             <button style={styles.secondaryBtn}>
               📦 View Orders
             </button>
@@ -148,7 +148,7 @@ const styles = {
     width: "96px",
     height: "96px",
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #14532d, #166534)",
+    background: "rgba(34,197,94,0.15)",
     border: "2px solid #22c55e",
     display: "flex",
     alignItems: "center",
@@ -168,7 +168,7 @@ const styles = {
   },
   detailsCard: {
     background: "var(--bg-card)",
-    border: "1px solid #2a2a2a",
+    border: "1px solid var(--border-color)",
     borderRadius: "14px",
     padding: "20px",
     marginBottom: "20px",
@@ -201,7 +201,7 @@ const styles = {
   },
   stepsCard: {
     background: "var(--bg-card)",
-    border: "1px solid #2a2a2a",
+    border: "1px solid var(--border-color)",
     borderRadius: "14px",
     padding: "20px",
     marginBottom: "24px",

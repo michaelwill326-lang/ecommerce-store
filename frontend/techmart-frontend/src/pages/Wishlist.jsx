@@ -102,10 +102,9 @@ export default function Wishlist() {
           </p>
           <button
             onClick={() => {
-              wishlist.filter(p => p.stock > 0).forEach(p => {
-                addToCart(p);
-                removeFromWishlist(p._id);
-              });
+              const available = wishlist.filter(p => p.stock > 0);
+              available.forEach(p => addToCart(p));
+              available.forEach(p => removeFromWishlist(p._id));
             }}
             style={styles.orangeBtn}
           >
@@ -128,7 +127,7 @@ const styles = {
   clearBtn: { background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
   orangeBtn: { padding: "12px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "15px" },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "24px", marginBottom: "32px" },
-  card: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", overflow: "hidden" },
+  card: { background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", overflow: "hidden" },
   imgWrap: { position: "relative" },
   img: { width: "100%", height: "200px", objectFit: "cover", display: "block", background: "var(--bg-input)" },
   outOfStock: { position: "absolute", top: "10px", left: "10px", background: "#dc2626", color: "var(--text-primary)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: "700" },
@@ -139,5 +138,5 @@ const styles = {
   actions: { display: "flex", gap: "8px" },
   cartBtn: { flex: 1, padding: "10px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "700" },
   removeBtn: { padding: "10px 12px", background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", borderRadius: "8px", cursor: "pointer", fontSize: "16px" },
-  bottomBar: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" },
+  bottomBar: { background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" },
 };
