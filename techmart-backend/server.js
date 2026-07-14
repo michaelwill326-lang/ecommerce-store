@@ -327,13 +327,18 @@ app.post("/api/auth/login", async (req, res) => {
     if (!user) return res.status(400).json({ error: "User not found" });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ error: "Wrong password" });
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
     analyzeFraud(user, "login", { email: user.email, accountAge: Math.floor((Date.now() - new Date(user.createdAt)) / 86400000) + " days" }).catch(() => {});
-    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email, role: user.role, walletBalance: user.walletBalance, walletPinSet: user.walletPinSet, twoFactorEnabled: user.twoFactorEnabled } });
+    // If 2FA not enabled, return token directly
+    if (!user.twoFactorEnabled) {
+      const token = jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      return res.json({ success: true, token, requireOtp: false, user: { id: user._id, name: user.name, email: user.email, role: user.role, walletBalance: user.walletBalance, walletPinSet: user.walletPinSet, twoFactorEnabled: user.twoFactorEnabled } });
+    }
+    // 2FA enabled — signal frontend to request OTP
+    res.json({ success: true, requireOtp: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Login failed" });
