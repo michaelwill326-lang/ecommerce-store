@@ -45,11 +45,11 @@ export default function AISearch() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            onKeyPress={e => e.key === "Enter" && search()}
+            onKeyDown={e => e.key === "Enter" && search()}
             placeholder='e.g. "show me laptops under N500,000 for video editing"'
             style={{ flex: 1, padding: "14px 18px", background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", color: "var(--text-primary)", fontSize: "15px", outline: "none" }}
           />
-          <button onClick={search} disabled={loading} style={{ padding: "14px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "15px", flexShrink: 0 }}>
+          <button id="ai-search-btn" onClick={search} disabled={loading} style={{ padding: "14px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "15px", flexShrink: 0 }}>
             {loading ? "..." : "Search"}
           </button>
         </div>
@@ -59,7 +59,7 @@ export default function AISearch() {
             <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "10px" }}>Try asking:</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {suggestions.map((s, i) => (
-                <button key={i} onClick={() => { setQuery(s); }} style={{ padding: "8px 14px", background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "999px", color: "var(--text-secondary)", fontSize: "13px", cursor: "pointer" }}>{s}</button>
+                <button key={i} onClick={() => { setQuery(s); setTimeout(() => document.getElementById("ai-search-btn").click(), 50); }} style={{ padding: "8px 14px", background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "999px", color: "var(--text-secondary)", fontSize: "13px", cursor: "pointer" }}>{s}</button>
               ))}
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function AISearch() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "16px" }}>
                 {results.map(p => (
-                  <div key={p._id} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", overflow: "hidden", cursor: "pointer" }}>
+                  <div key={p._id} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", overflow: "hidden", cursor: "pointer" }}>
                     <img src={p.images?.[0] || FALLBACK} alt={p.name} style={{ width: "100%", height: "140px", objectFit: "cover" }} />
                     <div style={{ padding: "10px" }}>
                       <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>

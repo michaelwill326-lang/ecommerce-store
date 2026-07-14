@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "https://techmart-backend-ecbi.onrender.com";
+const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
     setUserEmail(user?.email || "Guest");
     setUserName(user?.name?.split(" ")[0] || "Guest");
   }, []);
@@ -123,7 +123,7 @@ export default function ChatPage() {
               wordBreak: "break-word",
             } : {
               alignSelf: "flex-start",
-              background: "#1e1e1e",
+              background: "var(--bg-card)",
               color: "var(--text-primary)",
               padding: "10px 14px",
               borderRadius: "16px 16px 16px 4px",
@@ -132,13 +132,13 @@ export default function ChatPage() {
               lineHeight: "1.5",
               wordBreak: "break-word",
             }}
-            dangerouslySetInnerHTML={{ __html: msg.text }}
+            children={msg.text}
           />
         ))}
         {typing && (
           <div style={{
             alignSelf: "flex-start",
-            background: "#1e1e1e",
+            background: "var(--bg-card)",
             padding: "12px 16px",
             borderRadius: "16px 16px 16px 4px",
             display: "flex",
@@ -172,7 +172,7 @@ export default function ChatPage() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Ask me anything..."
           style={{
             flex: 1,
