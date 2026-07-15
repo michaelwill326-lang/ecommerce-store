@@ -7,6 +7,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 export default function Signup() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(""); // 📱 Track phone number state
   const [password, setPassword] = useState("");
@@ -42,6 +43,7 @@ export default function Signup() {
       setLoading(true);
 
       const response = await axios.post(`${API}/api/auth/signup`, {
+        ...(referralCode.trim() && { referralCode: referralCode.trim().toUpperCase() }),
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(), // 📦 Added payload parameter for our updated backend

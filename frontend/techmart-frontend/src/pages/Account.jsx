@@ -150,6 +150,7 @@ export default function Account() {
               { label: "Email", value: user?.email },
               { label: "Phone", value: user?.phone || "Not set" },
               { label: "Member Since", value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "TechMart Member" },
+              { label: "Referral Code", value: user?.referralCode || "—" },
             ].map((item, i) => (
               <div key={i} style={{ paddingBottom: "16px", borderBottom: "1px solid var(--border-light)" }}>
                 <p style={{ color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>{item.label}</p>
@@ -157,6 +158,16 @@ export default function Account() {
               </div>
             ))}
           </div>
+          {user?.referralCode && (
+            <div style={{ background: "var(--bg-secondary)", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginTop: "16px", marginBottom: "8px" }}>
+              <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>🎁 Refer & Earn</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 12px" }}>Share your code and earn ₦500 for every friend who signs up!</p>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "10px 14px", fontFamily: "monospace", fontWeight: "700", fontSize: "16px", color: "var(--text-primary)", letterSpacing: "2px" }}>{user.referralCode}</div>
+                <button onClick={() => { navigator.clipboard?.writeText(user.referralCode); alert("Referral code copied!"); }} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Copy</button>
+              </div>
+            </div>
+          )}
           <button onClick={() => { const t = localStorage.getItem("token"); if (t) fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {}); localStorage.removeItem("token"); localStorage.removeItem("user"); localStorage.removeItem("deviceToken"); window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null })); navigate("/login"); }}
             style={{ marginTop: "20px", width: "100%", padding: "12px", background: "var(--bg-card)", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
             Logout
