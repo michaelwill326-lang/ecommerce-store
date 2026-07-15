@@ -1,0 +1,43 @@
+{
+  "name": "TechMart",
+  "short_name": "TechMart",
+  "description": "Nigeria's trusted tech marketplace",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#f97316",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/techmart.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/techmart.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "finance"],
+  "lang": "en-NG",
+  "shortcuts": [
+    {
+      "name": "Shop",
+      "url": "/",
+      "description": "Browse products"
+    },
+    {
+      "name": "TechMart Pay",
+      "url": "/pay",
+      "description": "Access your wallet"
+    },
+    {
+      "name": "Track Order",
+      "url": "/tracking",
+      "description": "Track your orders"
+    }
+  ]
+}
