@@ -77,7 +77,7 @@ function OfflineBanner() {
     window.addEventListener("online", off);
     // Detect slow backend (cold start)
     const start = Date.now();
-    const BACKEND = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
+    const BACKEND = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "https://techmart-backend-ecbi.onrender.com";
     const slowTimer = setTimeout(() => setSlowConn(true), 5000);
     fetch(`${BACKEND}/api/health`)
       .then(() => { clearTimeout(slowTimer); setSlowConn(false); })
@@ -97,13 +97,16 @@ function OfflineBanner() {
   return null;
 }
 
-// Keep Render backend warm — ping every 10 minutes
-const BACKEND = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
-setInterval(() => {
-  fetch(`${BACKEND}/api/health`).catch(() => {});
-}, 10 * 60 * 1000);
-
 export default function App() {
+  useEffect(() => {
+    // Keep Render backend warm
+    const BACKEND = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
+    const keepAlive = setInterval(() => {
+      fetch(`${BACKEND}/api/health`).catch(() => {});
+    }, 10 * 60 * 1000);
+    return () => clearInterval(keepAlive);
+  }, []);
+
   useEffect(() => {
     // Only auto-logout if user is actually logged in
     if (!localStorage.getItem("token")) return;
