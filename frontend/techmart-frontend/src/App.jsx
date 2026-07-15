@@ -69,20 +69,39 @@ document.body.setAttribute("data-theme", savedTheme);
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
+  const [slowConn, setSlowConn] = useState(false);
   useEffect(() => {
     const on = () => setOffline(true);
     const off = () => setOffline(false);
     window.addEventListener("offline", on);
     window.addEventListener("online", off);
-    return () => { window.removeEventListener("offline", on); window.removeEventListener("online", off); };
+    // Detect slow backend (cold start)
+    const start = Date.now();
+    const BACKEND = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
+    const slowTimer = setTimeout(() => setSlowConn(true), 5000);
+    fetch(`${BACKEND}/api/health`)
+      .then(() => { clearTimeout(slowTimer); setSlowConn(false); })
+      .catch(() => { clearTimeout(slowTimer); });
+    return () => { window.removeEventListener("offline", on); window.removeEventListener("online", off); clearTimeout(slowTimer); };
   }, []);
-  if (!offline) return null;
-  return (
+  if (offline) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, background: "#dc2626", color: "#fff", textAlign: "center", padding: "8px", fontSize: "13px", fontWeight: "700", zIndex: 99999 }}>
       ⚠️ No internet connection. Please check your network.
     </div>
   );
+  if (slowConn) return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, background: "#f97316", color: "#fff", textAlign: "center", padding: "8px", fontSize: "13px", fontWeight: "700", zIndex: 99999 }}>
+      ⏳ Server is waking up... Please wait a moment.
+    </div>
+  );
+  return null;
 }
+
+// Keep Render backend warm — ping every 10 minutes
+const BACKEND = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
+setInterval(() => {
+  fetch(`${BACKEND}/api/health`).catch(() => {});
+}, 10 * 60 * 1000);
 
 export default function App() {
   useEffect(() => {
