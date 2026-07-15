@@ -355,7 +355,11 @@ app.post("/api/auth/signup", async (req, res) => {
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      referralCode: user.referralCode,
+      walletBalance: user.walletBalance || 0,
+      walletPinSet: user.walletPinSet || false,
+      twoFactorEnabled: user.twoFactorEnabled || false
     };
 
     res.status(201).json({ success: true, token, user: safeUser });
