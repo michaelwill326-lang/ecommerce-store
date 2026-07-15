@@ -279,12 +279,16 @@ function auth(req, res, next) {
   }
 }
 
-function adminOnly(req, res, next) {
+async function adminOnly(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token" });
+  if (tokenBlacklist.has(token)) return res.status(401).json({ error: "Token has been invalidated" });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== "admin") return res.status(403).json({ error: "Admin only" });
+    // Verify role in DB to prevent stale JWT attacks
+    const user = await User.findById(decoded.id).select("role").lean();
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin access revoked" });
     req.user = decoded;
     next();
   } catch {
