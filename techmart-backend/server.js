@@ -324,6 +324,8 @@ app.post("/api/auth/signup", async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "User already exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
+    const crypto = require("crypto");
+    const newReferralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
     const user = await User.create({ name, email, password: hashedPassword, phone: req.body.phone || "", referralCode: newReferralCode });
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
