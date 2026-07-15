@@ -553,13 +553,29 @@ app.delete("/api/products/:id", adminOnly, async (req, res) => {
 app.post("/api/orders", auth, async (req, res) => {
   try {
     const { items, amount, deliveryAddress, phone, paymentMethod, escrow } = req.body;
+    // Validate items
+    if (!items || !Array.isArray(items) || items.length === 0) return res.status(400).json({ error: "Order must contain at least one item" });
+    if (!deliveryAddress?.trim()) return res.status(400).json({ error: "Delivery address is required" });
+    if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required" });
+    // Validate stock for each item
+    const validatedItems = [];
+    for (const item of items) {
+      if (!item.productId) return res.status(400).json({ error: "Invalid item — missing productId" });
+      const qty = Number(item.quantity) || 1;
+      if (qty < 1) return res.status(400).json({ error: "Quantity must be at least 1" });
+      if (qty > 100) return res.status(400).json({ error: `Quantity cannot exceed 100 per item` });
+      const product = await Product.findById(item.productId).select("name price stock");
+      if (!product) return res.status(404).json({ error: `Product not found: ${item.productId}` });
+      if (product.stock < qty) return res.status(400).json({ error: `Sorry, only ${product.stock} unit(s) of "${product.name}" available` });
+      validatedItems.push({ ...item, name: product.name, price: product.price, quantity: qty });
+    }
     const order = await Order.create({
       email: req.user.email,
-      items,
+      items: validatedItems,
       amount,
       reference: "TX-" + Date.now(),
-      deliveryAddress: deliveryAddress || "",
-      phone: phone || "",
+      deliveryAddress: sanitize(deliveryAddress),
+      phone: sanitize(phone),
       paymentMethod: paymentMethod || "Paystack",
       escrow: escrow || false,
       escrowStatus: escrow ? "holding" : "none"
