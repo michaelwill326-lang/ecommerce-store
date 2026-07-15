@@ -57,6 +57,14 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+// Request timeout middleware (30 seconds)
+app.use((req, res, next) => {
+  res.setTimeout(30000, () => {
+    res.status(408).json({ error: "Request timeout. Please try again." });
+  });
+  next();
+});
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -102,9 +110,19 @@ app.use(express.json({ limit: "10mb" }));
    🧠 DATABASE
 =========================== */
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    maxPoolSize: 10,
+  })
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err));
+
+// Reconnect on disconnect
+mongoose.connection.on("disconnected", () => {
+  console.warn("⚠️ MongoDB disconnected. Attempting reconnect...");
+});
 
 /* ===========================
    👤 MODELS
