@@ -63,9 +63,7 @@ function ToastProvider({ children }) {
   );
 }
 
-// Apply saved theme on load
-const savedTheme = localStorage.getItem("techmart-theme") || "dark";
-document.body.setAttribute("data-theme", savedTheme);
+
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -98,6 +96,14 @@ function OfflineBanner() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Apply saved theme safely after mount
+    try {
+      const savedTheme = localStorage.getItem("techmart-theme") || "dark";
+      document.body.setAttribute("data-theme", savedTheme);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     // Keep Render backend warm
     const BACKEND = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
