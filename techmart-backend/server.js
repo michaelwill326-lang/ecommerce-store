@@ -312,6 +312,7 @@ app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password || !req.body.phone) return res.status(400).json({ error: "Name, email, password, and phone number are required" });
+    const { referralCode } = req.body;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return res.status(400).json({ error: "Invalid email address" });
     if (!isStrongPassword(password)) {
@@ -323,7 +324,7 @@ app.post("/api/auth/signup", async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "User already exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword, phone: req.body.phone || "" });
+    const user = await User.create({ name, email, password: hashedPassword, phone: req.body.phone || "", referralCode: newReferralCode });
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -332,7 +333,18 @@ app.post("/api/auth/signup", async (req, res) => {
 
     // 📧 SEND WELCOME EMAIL
     try {
-      await sendWelcomeEmail(user);
+      // Process referral if code provided
+    if (referralCode) {
+      const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+      if (referrer && referrer._id.toString() !== user._id.toString()) {
+        await User.findByIdAndUpdate(user._id, { referredBy: referralCode.toUpperCase() });
+        await User.findByIdAndUpdate(referrer._id, {
+          $inc: { referralCount: 1, referralCredits: 500, walletBalance: 500 },
+          $push: { walletTransactions: { type: "credit", amount: 500, description: `Referral bonus — ${name} signed up`, createdAt: new Date() } }
+        });
+      }
+    }
+    await sendWelcomeEmail(user);
     } catch (e) {
       console.log("Welcome email failed:", e.message);
     }
