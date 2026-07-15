@@ -97,12 +97,7 @@ export default function ProductDetail() {
     }
   };
 
-  if (loading) return (
-    <div style={styles.centered}>
-      <div style={styles.spinner} />
-      <p style={{ color: "var(--text-muted)", marginTop: "16px" }}>Loading product...</p>
-    </div>
-  );
+  if (loading) return <ProductDetailSkeleton />;
 
   if (error || !product) return (
     <div style={styles.centered}>

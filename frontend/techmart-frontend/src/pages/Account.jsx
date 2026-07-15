@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { OrderCardSkeleton, TransactionSkeleton, ProfileSkeleton } from "../components/Skeleton";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
@@ -35,8 +36,8 @@ export default function Account() {
   const TABS = ["Wallet", "Orders", "Profile"];
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ color: "var(--text-primary)" }}>Loading...</p>
+    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "16px", minHeight: "100vh" }}>
+      <OrderCardSkeleton count={3} />
     </div>
   );
 

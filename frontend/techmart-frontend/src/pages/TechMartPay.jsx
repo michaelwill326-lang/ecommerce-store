@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TransactionSkeleton, SkeletonBlock } from "../components/Skeleton";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -292,8 +293,14 @@ export default function TechMartPay() {
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ color: "var(--text-primary)" }}>Loading TechMart Pay...</p>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "16px" }}>
+      <div style={{ maxWidth: "600px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <SkeletonBlock height="180px" borderRadius="20px" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "10px" }}>
+          {Array.from({length:8}).map((_,i) => <SkeletonBlock key={i} height="70px" borderRadius="12px" />)}
+        </div>
+        <SkeletonBlock height="200px" borderRadius="12px" />
+      </div>
     </div>
   );
 

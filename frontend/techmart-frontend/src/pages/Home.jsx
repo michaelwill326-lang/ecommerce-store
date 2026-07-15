@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback, useDeferredValue } f
 import { Link } from "react-router-dom";
 import FlashSaleBanner from "../components/FlashSaleBanner";
 import ProductCard from "../components/ProductCard";
+import { ProductGridSkeleton } from "../components/Skeleton";
 
 const CATEGORIES = ["All", "Phones", "Laptops", "Electronics", "Audio", "Accessories", "Gaming", "Computers", "Wearables", "Printers"];
 const SORT_OPTIONS = [
@@ -90,7 +91,7 @@ export default function Home() {
   const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 
 
-  if (loading) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><div style={{width:"40px",height:"40px",border:"4px solid #333",borderTop:"4px solid #f97316",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} /><p style={{color:"var(--text-muted)",marginTop:"16px"}}>Loading...</p></div>;
+  if (loading) return <div className="tm-container"><ProductGridSkeleton count={8} /></div>;
   if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"#f97316"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"#f97316",color:"var(--text-primary)",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
 
   return (
