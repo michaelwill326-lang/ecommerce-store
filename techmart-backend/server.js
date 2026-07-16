@@ -3677,18 +3677,21 @@ app.post("/api/orders/:orderId/cancel", auth, async (req, res) => {
       return res.status(400).json({ error: `Cannot cancel an order that is ${order.status}` });
     }
 
-    // Refund to wallet
-    const buyer = await User.findOne({ email: order.email });
-    if (buyer) {
-      buyer.walletBalance = (buyer.walletBalance || 0) + order.amount;
-      buyer.walletTransactions = buyer.walletTransactions || [];
-      buyer.walletTransactions.push({
-        type: "credit",
-        amount: order.amount,
-        description: `Refund for cancelled order #${order.trackingNumber || order._id}`,
-        reference: "REF-" + Date.now()
-      });
-      await buyer.save();
+    // Refund to wallet if order was paid
+    const refundAmount = Number(order.amount) || 0;
+    if (refundAmount > 0) {
+      const buyer = await User.findOne({ email: order.email });
+      if (buyer) {
+        buyer.walletBalance = (buyer.walletBalance || 0) + refundAmount;
+        buyer.walletTransactions = buyer.walletTransactions || [];
+        buyer.walletTransactions.push({
+          type: "credit",
+          amount: refundAmount,
+          description: `Refund for cancelled order #${order.trackingNumber || order._id}`,
+          reference: "REF-" + Date.now()
+        });
+        await buyer.save();
+      }
     }
 
     order.status = "Cancelled";
