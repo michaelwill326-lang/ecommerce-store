@@ -3634,20 +3634,25 @@ app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
     if (order.escrowStatus !== "holding") return res.status(400).json({ error: "No escrow funds to release" });
     if (order.buyerConfirmed) return res.status(400).json({ error: "Delivery already confirmed" });
 
-    // Find seller and credit their wallet
+    // Find seller (checks both Seller model and User model with role=seller) and credit their wallet
     const sellerId = order.items[0]?.vendorId;
-    if (sellerId) {
-      const seller = await User.findById(sellerId);
+    const releaseAmount = Number(order.amount) || 0;
+    if (sellerId && releaseAmount > 0) {
+      let seller = await Seller.findById(sellerId).catch(() => null);
+      let isSellerModel = !!seller;
+      if (!seller) seller = await User.findById(sellerId).catch(() => null);
       if (seller) {
-        seller.walletBalance = (seller.walletBalance || 0) + order.amount;
+        seller.walletBalance = (seller.walletBalance || 0) + releaseAmount;
         seller.walletTransactions = seller.walletTransactions || [];
         seller.walletTransactions.push({
           type: "credit",
-          amount: order.amount,
+          amount: releaseAmount,
           description: `Escrow released for order #${order.trackingNumber || order._id}`,
           reference: "ESC-" + Date.now()
         });
         await seller.save();
+      } else {
+        console.warn(`⚠️ Escrow release: seller ${sellerId} not found in Seller or User model. Funds not credited.`);
       }
     }
 
@@ -4854,9 +4859,9 @@ app.post("/api/seller/withdraw", auth, async (req, res) => {
 });
 
 // 6. Get seller wallet balance + earnings
-app.get("/api/seller/wallet", auth, async (req, res) => {
+app.get("/api/seller/wallet", sellerAuth, async (req, res) => {
   try {
-    const seller = await User.findById(req.user.id).select("walletBalance walletTransactions name email");
+    const seller = await Seller.findById(req.seller.id).select("walletBalance walletTransactions name email");
     const earnings = (seller.walletTransactions || [])
       .filter(t => t.type === "credit" && t.description?.includes("Escrow"))
       .reduce((s, t) => s + t.amount, 0);
