@@ -582,10 +582,10 @@ app.post("/api/orders", auth, async (req, res) => {
       const qty = Number(item.quantity) || 1;
       if (qty < 1) return res.status(400).json({ error: "Quantity must be at least 1" });
       if (qty > 100) return res.status(400).json({ error: `Quantity cannot exceed 100 per item` });
-      const product = await Product.findById(item.productId).select("name price stock");
+      const product = await Product.findById(item.productId).select("name price stock vendorId");
       if (!product) return res.status(404).json({ error: `Product not found: ${item.productId}` });
       if (product.stock < qty) return res.status(400).json({ error: `Sorry, only ${product.stock} unit(s) of "${product.name}" available` });
-      validatedItems.push({ ...item, name: product.name, price: product.price, quantity: qty });
+      validatedItems.push({ ...item, name: product.name, price: product.price, quantity: qty, vendorId: product.vendorId });
     }
     const order = await Order.create({
       email: req.user.email,
