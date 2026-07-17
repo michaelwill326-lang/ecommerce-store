@@ -4810,14 +4810,13 @@ app.post("/api/orders/:orderId/release-escrow", adminOnly, async (req, res) => {
 });
 
 // 5. Seller requests withdrawal from wallet
-app.post("/api/seller/withdraw", auth, async (req, res) => {
+app.post("/api/seller/withdraw", sellerAuth, async (req, res) => {
   try {
     const { amount, bankCode, accountNumber, accountName, bankName } = req.body;
     if (!amount || !bankCode || !accountNumber || !accountName) return res.status(400).json({ error: "All fields are required" });
     if (Number(amount) < 1000) return res.status(400).json({ error: "Minimum seller withdrawal is ₦1,000" });
-
-    const seller = await User.findById(req.user.id);
-    if (!["seller", "admin"].includes(seller.role)) return res.status(403).json({ error: "Only sellers can withdraw" });
+    const seller = await Seller.findById(req.seller.id);
+    if (!seller) return res.status(404).json({ error: "Seller not found" });
     if ((seller.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     // Create payout request
