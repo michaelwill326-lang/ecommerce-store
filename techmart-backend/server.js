@@ -622,7 +622,7 @@ app.post("/api/orders/buy-now", auth, async (req, res) => {
       items: [{ productId, quantity: qty, name: product.name, price: product.price, vendorId: product.vendorId }],
       amount: product.price * qty,
       reference: "TX-" + Date.now(),
-      deliveryAddress: user.savedAddress || "",
+      deliveryAddress: "",
       phone: user.phone,
       paymentMethod: "Paystack",
       status: "Pending"
