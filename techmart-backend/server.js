@@ -1666,16 +1666,28 @@ app.put("/api/admin/payouts/:id", adminOnly, async (req, res) => {
 // --- DISPUTES ---
 app.post("/api/disputes", auth, async (req, res) => {
   try {
-    const { orderId, sellerId, sellerName, subject, description } = req.body;
+    const { orderId, subject, description, reason } = req.body;
+    if (!orderId || !description) return res.status(400).json({ error: "Order ID and description are required" });
     const user = await User.findById(req.user.id);
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.email !== user.email) return res.status(403).json({ error: "Not your order" });
+    // Derive sellerId/sellerName from the order itself, never trust client input
+    const sellerId = order.items[0]?.vendorId || null;
+    let sellerName = "Unknown Seller";
+    if (sellerId) {
+      const seller = await Seller.findById(sellerId).catch(() => null);
+      if (seller) sellerName = seller.storeName || seller.name;
+    }
     const dispute = await Dispute.create({
-      orderId, sellerId, sellerName, subject, description,
+      orderId, sellerId, sellerName, subject: subject || reason || "Order dispute", description,
       customerEmail: user.email,
       customerId: req.user.id,
       messages: [{ sender: user.name, senderType: "customer", message: description }]
     });
     res.status(201).json({ success: true, data: dispute });
   } catch (err) {
+    console.error("Dispute creation error:", err.message);
     res.status(500).json({ error: "Failed to create dispute" });
   }
 });
