@@ -4980,7 +4980,6 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
 =========================== */
 
 // Multer-specific error handler (must come before the generic error handler)
-const multer = require("multer");
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
