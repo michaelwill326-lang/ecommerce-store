@@ -637,7 +637,14 @@ const SellerSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
   commission: { type: Number, default: 10 },
   totalSales: { type: Number, default: 0 },
-
+  walletBalance: { type: Number, default: 0 },
+  walletTransactions: [{
+    type: { type: String, enum: ["credit", "debit"] },
+    amount: Number,
+    description: String,
+    reference: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
   resetPasswordToken: { type: String, default: null },
   resetPasswordExpires: { type: Date, default: null },
 
@@ -3637,10 +3644,8 @@ app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
     // Find seller (checks both Seller model and User model with role=seller) and credit their wallet
     const sellerId = order.items[0]?.vendorId;
     const releaseAmount = Number(order.amount) || 0;
-    console.log("🔍 ESCROW DEBUG - sellerId:", sellerId, "releaseAmount:", releaseAmount, "items:", JSON.stringify(order.items));
     if (sellerId && releaseAmount > 0) {
-      let seller = await Seller.findById(sellerId).catch((e) => { console.log("🔍 Seller.findById error:", e.message); return null; });
-      console.log("🔍 ESCROW DEBUG - Seller found:", !!seller);
+      let seller = await Seller.findById(sellerId).catch(() => null);
       let isSellerModel = !!seller;
       if (!seller) seller = await User.findById(sellerId).catch(() => null);
       if (seller) {
