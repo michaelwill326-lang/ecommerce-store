@@ -4979,6 +4979,21 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
    🛡️ GLOBAL ERROR HANDLING
 =========================== */
 
+// Multer-specific error handler (must come before the generic error handler)
+const multer = require("multer");
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ error: "Image too large. Maximum file size is 5MB." });
+    }
+    return res.status(400).json({ error: `Upload error: ${err.message}` });
+  }
+  if (err && err.message && err.message.includes("Only images")) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
+
 // Global Express error handler
 app.use((err, req, res, next) => {
   console.error("🔥 Unhandled error:", err.message, err.stack);
