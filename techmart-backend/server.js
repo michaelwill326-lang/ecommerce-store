@@ -605,6 +605,33 @@ app.post("/api/orders", auth, async (req, res) => {
   }
 });
 
+// AI Assistant "Buy Now" quick action
+app.post("/api/orders/buy-now", auth, async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+    if (!productId) return res.status(400).json({ error: "Product ID is required" });
+    const qty = Number(quantity) || 1;
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (product.stock < qty) return res.status(400).json({ error: `Sorry, only ${product.stock} unit(s) of "${product.name}" available` });
+    const user = await User.findById(req.user.id);
+    if (!user.phone) return res.status(400).json({ error: "Please add a phone number to your profile before ordering" });
+    const order = await Order.create({
+      email: req.user.email,
+      items: [{ productId, quantity: qty, name: product.name, price: product.price, vendorId: product.vendorId }],
+      amount: product.price * qty,
+      reference: "TX-" + Date.now(),
+      deliveryAddress: user.savedAddress || "",
+      phone: user.phone,
+      paymentMethod: "Paystack",
+      status: "Pending"
+    });
+    res.json({ success: true, order, message: `Order placed for ${product.name}! Complete payment to confirm.` });
+  } catch (err) {
+    console.error("Buy-now error:", err.message);
+    res.status(500).json({ error: "Failed to place order" });
+  }
+});
 app.get("/api/orders/me", auth, async (req, res) => {
   try {
     const orders = await Order.find({ email: req.user.email });
