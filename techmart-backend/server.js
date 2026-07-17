@@ -133,6 +133,7 @@ const User = mongoose.model(
     name: String,
     email: { type: String, unique: true },
     password: String,
+    phone: { type: String, default: "" },
     role: { type: String, default: "customer" },
     referralCode: { type: String, unique: true, sparse: true },
     referredBy: { type: String, default: null },
