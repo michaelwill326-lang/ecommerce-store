@@ -3565,13 +3565,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ===========================
-   ❌ ERROR HANDLER
-=========================== */
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong" });
-});
+// (old generic error handler removed — see global handler at end of file)
 
 /* ===========================
    🏓 KEEP ALIVE
