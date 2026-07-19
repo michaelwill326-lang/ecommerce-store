@@ -65,16 +65,18 @@ app.use((req, res, next) => {
   next();
 });
 
+const { ipKeyGenerator } = require("express-rate-limit");
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: "Too many attempts, please try again in 15 minutes." },
   keyGenerator: (req) => {
-    // Key on submitted email (when present) combined with IP, so repeated
-    // guesses against the same account are tracked together even if requests
-    // land on different processes/instances behind the proxy.
+    // Key on submitted email (when present), so repeated guesses against the
+    // same account are tracked together even if requests land on different
+    // processes/instances behind the proxy. Falls back to a safe IP key
+    // (IPv6-aware) when no email is present on the request.
     const email = (req.body && req.body.email) ? String(req.body.email).toLowerCase().trim() : "";
-    return email ? `email:${email}` : req.ip;
+    return email ? `email:${email}` : ipKeyGenerator(req);
   }
 });
 app.use("/api/auth/login", authLimiter);
