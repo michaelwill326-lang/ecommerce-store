@@ -1013,15 +1013,26 @@ app.post("/api/pay/fund-wallet", auth, async (req, res) => {
 });
 
 // 2. Wallet to Wallet Transfer
+// Reusable wallet PIN verification helper
+async function verifyWalletPin(user, pin) {
+  if (!user.walletPinSet) return { ok: false, error: "Please set a wallet PIN before making transactions" };
+  if (!pin) return { ok: false, error: "Wallet PIN is required" };
+  const match = await bcrypt.compare(String(pin), user.walletPin || "");
+  if (!match) return { ok: false, error: "Incorrect PIN" };
+  return { ok: true };
+}
+
 app.post("/api/pay/send", auth, async (req, res) => {
   try {
-    const { recipientEmail, amount, note } = req.body;
+    const { recipientEmail, amount, note, pin } = req.body;
     if (!recipientEmail || !amount) return res.status(400).json({ error: "Recipient email and amount are required" });
     if (Number(amount) < 100) return res.status(400).json({ error: "Minimum transfer is N100" });
-
     const sender = await User.findById(req.user.id);
+    if (!sender.walletPinSet) return res.status(400).json({ error: "Please set a wallet PIN before sending money" });
+    if (!pin) return res.status(400).json({ error: "Wallet PIN is required" });
+    const pinMatch = await bcrypt.compare(String(pin), sender.walletPin || "");
+    if (!pinMatch) return res.status(400).json({ error: "Incorrect PIN" });
     const recipient = await User.findOne({ email: recipientEmail });
-
     if (!recipient) return res.status(404).json({ error: "No TechMart user found with that email" });
     if (sender.email === recipientEmail) return res.status(400).json({ error: "You cannot send money to yourself" });
     if ((sender.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
@@ -1132,11 +1143,12 @@ app.post("/api/pay/verify-account", auth, async (req, res) => {
 // 6. Bill Payments (Airtime via Paystack)
 app.post("/api/pay/airtime", auth, async (req, res) => {
   try {
-    const { phone, amount, network } = req.body;
+    const { phone, amount, network, pin } = req.body;
     if (!phone || !amount || !network) return res.status(400).json({ error: "Phone, amount and network are required" });
     if (Number(amount) < 50) return res.status(400).json({ error: "Minimum airtime is N50" });
-
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     // Network to Paystack provider code mapping
@@ -1222,10 +1234,11 @@ app.get("/api/pay/data-plans/:network", auth, async (req, res) => {
 // 9. Purchase Data Bundle
 app.post("/api/pay/data", auth, async (req, res) => {
   try {
-    const { phone, network, planId, amount, planName } = req.body;
+    const { phone, network, planId, amount, planName, pin } = req.body;
     if (!phone || !network || !planId || !amount) return res.status(400).json({ error: "Phone, network, plan and amount are required" });
-
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     const networkMap = { MTN: "MTN", Airtel: "AIRTEL", Glo: "GLO", "9mobile": "9MOBILE" };
@@ -1276,11 +1289,12 @@ app.post("/api/pay/electricity/verify", auth, async (req, res) => {
 // 11. Pay Electricity Bill
 app.post("/api/pay/electricity", auth, async (req, res) => {
   try {
-    const { meterNumber, disco, meterType, amount, customerName } = req.body;
+    const { meterNumber, disco, meterType, amount, customerName, pin } = req.body;
     if (!meterNumber || !disco || !meterType || !amount) return res.status(400).json({ error: "All fields are required" });
     if (Number(amount) < 500) return res.status(400).json({ error: "Minimum electricity payment is N500" });
-
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     const reference = "ELEC-" + Date.now();
@@ -1368,10 +1382,11 @@ app.get("/api/pay/cabletv/plans/:provider", auth, async (req, res) => {
 // 14. Pay Cable TV Subscription
 app.post("/api/pay/cabletv", auth, async (req, res) => {
   try {
-    const { smartcardNumber, provider, planId, planName, amount, customerName } = req.body;
+    const { smartcardNumber, provider, planId, planName, amount, customerName, pin } = req.body;
     if (!smartcardNumber || !provider || !planId || !amount) return res.status(400).json({ error: "All fields are required" });
-
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     const reference = "CATV-" + Date.now();
@@ -1463,10 +1478,9 @@ app.get("/api/pay/betting/platforms", auth, async (req, res) => {
 // 16. Fund Betting Wallet
 app.post("/api/pay/betting", auth, async (req, res) => {
   try {
-    const { platform, bettingId, amount } = req.body;
+    const { platform, bettingId, amount, pin } = req.body;
     if (!platform || !bettingId || !amount) return res.status(400).json({ error: "Platform, betting ID and amount are required" });
     if (Number(amount) < 100) return res.status(400).json({ error: "Minimum betting deposit is N100" });
-
     const validPlatforms = ["bet9ja", "sportybet", "1xbet"];
     if (!validPlatforms.includes(platform.toLowerCase())) return res.status(400).json({ error: "Invalid betting platform" });
 
