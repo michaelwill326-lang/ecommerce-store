@@ -16,6 +16,9 @@ export default function Chatbot() {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const [pinPromptAction, setPinPromptAction] = useState(null);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
   const [context, setContext] = useState({});
   const [alerts, setAlerts] = useState([]);
   const messagesEndRef = useRef(null);
@@ -129,31 +132,37 @@ export default function Chatbot() {
     } catch { setTyping(false); addMessage("Connection error. Please try again.", "bot"); }
   };
 
-  const executeAction = async (action, actionData) => {
+  const executeAction = async (action, actionData, pin) => {
     const token = localStorage.getItem("token");
-    setPendingAction(null);
     if (action === "confirm_transfer") {
+      if (!pin) { setPinPromptAction({ action, actionData }); return; }
+      setPendingAction(null);
       try {
-        const res = await fetch(`${API}/api/pay/send`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ recipientEmail: actionData.recipientEmail, amount: actionData.amount, note: actionData.note }) });
+        const res = await fetch(`${API}/api/pay/send`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ recipientEmail: actionData.recipientEmail, amount: actionData.amount, note: actionData.note, pin }) });
         const data = await res.json();
         const msg = data.success ? `Transfer successful! ${data.message}` : `Transfer failed: ${data.error}`;
         addMessage(msg, "bot"); speak(msg);
       } catch { addMessage("Transfer failed.", "bot"); }
+      return;
     }
     if (action === "confirm_split") {
+      if (!pin) { setPinPromptAction({ action, actionData }); return; }
+      setPendingAction(null);
       const { recipients, amount } = actionData;
       const share = Math.floor(Number(amount) / recipients.length);
       let results = [];
       for (const email of recipients) {
         try {
-          const res = await fetch(`${API}/api/pay/send`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ recipientEmail: email, amount: share }) });
+          const res = await fetch(`${API}/api/pay/send`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ recipientEmail: email, amount: share, pin }) });
           const data = await res.json();
           results.push(data.success ? `✅ ${email}` : `❌ ${email}`);
         } catch { results.push(`❌ ${email}`); }
       }
       const msg = `Split complete:\n${results.join("\n")}`;
       addMessage(msg, "bot"); speak("Split complete");
+      return;
     }
+    setPendingAction(null);
     if (action === "apply_coupon") { navigator.clipboard?.writeText(actionData.code); addMessage(`Coupon **${actionData.code}** copied!`, "bot"); }
     if (action === "start_return") { navigate("/tracking"); addMessage("Taking you to tracking to start the return.", "bot"); }
     if (action === "confirm_buy") {
@@ -363,6 +372,28 @@ export default function Chatbot() {
               style={{ width:36, height:36, borderRadius:"50%", background:"linear-gradient(135deg,#f97316,#dc2626)", border:"none", color:"var(--text-primary)", cursor:"pointer", fontSize:16, flexShrink:0 }}>
               ➤
             </button>
+          </div>
+        </div>
+      )}
+
+      {pinPromptAction && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99999 }}>
+          <div style={{ background:"var(--bg-card)", border:"1px solid var(--border-color)", borderRadius:16, padding:"28px 24px", width:280, textAlign:"center" }}>
+            <h3 style={{ color:"var(--text-primary)", marginBottom:8, fontSize:16 }}>🔐 Enter Wallet PIN</h3>
+            <p style={{ color:"var(--text-muted)", fontSize:12, marginBottom:16 }}>Confirm your 4-digit PIN to continue</p>
+            <input type="password" maxLength={4} placeholder="4 digits" value={pinInput}
+              onChange={e => { setPinInput(e.target.value.replace(/[^0-9]/g, "")); setPinError(""); }}
+              style={{ width:"100%", padding:"10px", textAlign:"center", fontSize:22, letterSpacing:8, borderRadius:10, border:"1px solid var(--border-color)", background:"var(--bg-secondary)", color:"var(--text-primary)", marginBottom:8, boxSizing:"border-box" }} />
+            {pinError && <p style={{ color:"#f87171", fontSize:12, marginBottom:8 }}>{pinError}</p>}
+            <button onClick={() => {
+              if (pinInput.length !== 4) { setPinError("Enter 4-digit PIN"); return; }
+              const { action, actionData } = pinPromptAction;
+              setPinPromptAction(null);
+              const pin = pinInput;
+              setPinInput("");
+              executeAction(action, actionData, pin);
+            }} style={{ width:"100%", padding:10, background:"linear-gradient(135deg,#f97316,#dc2626)", color:"#fff", border:"none", borderRadius:10, cursor:"pointer", fontWeight:700, marginBottom:8 }}>Confirm</button>
+            <button onClick={() => { setPinPromptAction(null); setPinInput(""); setPinError(""); }} style={{ background:"none", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:12 }}>Cancel</button>
           </div>
         </div>
       )}
