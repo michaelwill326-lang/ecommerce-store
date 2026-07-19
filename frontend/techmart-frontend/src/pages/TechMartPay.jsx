@@ -99,12 +99,12 @@ export default function TechMartPay() {
     } finally { setFundLoading(false); }
   };
 
-  const sendMoney = async () => {
+  const sendMoney = async (pin) => {
     setMsg({ text: "", type: "" });
     if (!sendForm.recipientEmail || !sendForm.amount) { setMsg({ text: "Please fill all fields", type: "error" }); return; }
     setSendLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/send`, sendForm, { headers });
+      const res = await axios.post(`${API}/api/pay/send`, { ...sendForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setSendForm({ recipientEmail: "", amount: "", note: "" });
       fetchDashboard();
@@ -125,14 +125,14 @@ export default function TechMartPay() {
     } finally { setVerifyingAccount(false); }
   };
 
-  const withdraw = async () => {
+  const withdraw = async (pin) => {
     setMsg({ text: "", type: "" });
     if (!withdrawForm.amount || !withdrawForm.bankCode || !withdrawForm.accountNumber || !withdrawForm.accountName) {
       setMsg({ text: "Please fill all fields and verify account", type: "error" }); return;
     }
     setWithdrawLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/withdraw`, withdrawForm, { headers });
+      const res = await axios.post(`${API}/api/pay/withdraw`, { ...withdrawForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setWithdrawForm({ amount: "", bankCode: "", accountNumber: "", accountName: "" });
       fetchDashboard();
@@ -141,14 +141,14 @@ export default function TechMartPay() {
     } finally { setWithdrawLoading(false); }
   };
 
-  const buyAirtime = async () => {
+  const buyAirtime = async (pin) => {
     setMsg({ text: "", type: "" });
     if (!airtimeForm.phone || !airtimeForm.amount || !airtimeForm.network) {
       setMsg({ text: "Please fill all fields", type: "error" }); return;
     }
     setAirtimeLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/airtime`, airtimeForm, { headers });
+      const res = await axios.post(`${API}/api/pay/airtime`, { ...airtimeForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setAirtimeForm({ phone: "", amount: "", network: "" });
       fetchDashboard();
@@ -166,13 +166,13 @@ export default function TechMartPay() {
     } catch { setMsg({ text: "Failed to load data plans", type: "error" }); }
     finally { setDataPlansLoading(false); }
   };
-  const buyData = async () => {
+  const buyData = async (pin) => {
     if (!dataForm.phone || !dataForm.network || !dataForm.planId) {
       return setMsg({ text: "Please select network, plan and enter phone number", type: "error" });
     }
     setDataLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/data`, dataForm, { headers });
+      const res = await axios.post(`${API}/api/pay/data`, { ...dataForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setDataForm({ phone: "", network: "", planId: "", planName: "", amount: "" });
       setDataPlans([]);
@@ -196,12 +196,12 @@ export default function TechMartPay() {
       setMsg({ text: "Could not verify meter. Check the number and try again.", type: "error" });
     } finally { setElecVerifying(false); }
   };
-  const payElectricity = async () => {
+  const payElectricity = async (pin) => {
     if (!elecVerified) return setMsg({ text: "Please verify your meter first", type: "error" });
     if (!elecForm.amount || Number(elecForm.amount) < 500) return setMsg({ text: "Minimum payment is N500", type: "error" });
     setElecLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/electricity`, elecForm, { headers });
+      const res = await axios.post(`${API}/api/pay/electricity`, { ...elecForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setElecForm({ meterNumber: "", disco: "", meterType: "prepaid", amount: "", customerName: "" });
       setElecVerified(false);
@@ -231,12 +231,12 @@ export default function TechMartPay() {
     } catch { setMsg({ text: "Could not verify smartcard. Check the number and try again.", type: "error" }); }
     finally { setCtvVerifying(false); }
   };
-  const payCableTV = async () => {
+  const payCableTV = async (pin) => {
     if (!ctvVerified) return setMsg({ text: "Please verify your smartcard first", type: "error" });
     if (!ctvForm.planId) return setMsg({ text: "Please select a package", type: "error" });
     setCtvLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/cabletv`, ctvForm, { headers });
+      const res = await axios.post(`${API}/api/pay/cabletv`, { ...ctvForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setCtvForm({ smartcardNumber: "", provider: "", planId: "", planName: "", amount: "", customerName: "" });
       setCtvVerified(false);
@@ -258,9 +258,10 @@ export default function TechMartPay() {
     try {
       await axios.post(`${API}/api/pay/pin/verify`, { pin: pinInput }, { headers });
       const cb = pinModal.onSuccess;
+      const confirmedPin = pinInput;
       setPinModal({ open: false, onSuccess: null });
       setPinInput("");
-      cb && cb();
+      cb && cb(confirmedPin);
     } catch (err) {
       setPinError(err.response?.data?.error || "Incorrect PIN");
     } finally { setPinLoading(false); }
@@ -277,11 +278,11 @@ export default function TechMartPay() {
       setMsg({ text: err.response?.data?.error || "Failed to set PIN", type: "error" });
     }
   };
-  const fundBetting = async () => {
+  const fundBetting = async (pin) => {
     if (!betForm.platform || !betForm.bettingId || !betForm.amount) return setMsg({ text: "Please fill all fields", type: "error" });
     setBetLoading(true);
     try {
-      const res = await axios.post(`${API}/api/pay/betting`, betForm, { headers });
+      const res = await axios.post(`${API}/api/pay/betting`, { ...betForm, pin }, { headers });
       setMsg({ text: res.data.message, type: "success" });
       setBetForm({ platform: "", bettingId: "", amount: "" });
       fetchDashboard();
@@ -482,7 +483,7 @@ export default function TechMartPay() {
                   <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: 0 }}>{withdrawForm.accountName}</p>
                 </div>
               )}
-              <button onClick={withdraw} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: !withdrawForm.accountName ? 0.6 : 1 }}>
+              <button onClick={() => requirePin(withdraw)} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: !withdrawForm.accountName ? 0.6 : 1 }}>
                 {withdrawLoading ? "Processing..." : `Withdraw ₦${Number(withdrawForm.amount || 0).toLocaleString()}`}
               </button>
             </div>
