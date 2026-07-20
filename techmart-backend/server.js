@@ -48,6 +48,14 @@ app.set("trust proxy", 1);
    🔒 SECURITY
 =========================== */
 app.use(helmet());
+// Skip JSON parsing for the Paystack webhook path — it needs the raw,
+// unparsed body to verify the HMAC signature. Runs before rate limiters
+// so req.body is available to the auth rate limiter's keyGenerator on
+// every other route.
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/paystack/webhook") return next();
+  express.json({ limit: "10mb" })(req, res, next);
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -109,7 +117,7 @@ app.options("*", cors());
 /* ===========================
    📦 BODY PARSER
 =========================== */
-app.use(express.json({ limit: "10mb" }));
+
 
 /* ===========================
    🤖 AI ROUTES
