@@ -3184,7 +3184,7 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
 
     // 5. NOTIFY FRONTEND
     if (io) {
-      io.emit("paymentConfirmed", { reference, email: order.email });
+      io.to(order.email).emit("paymentConfirmed", { reference, email: order.email });
     }
 
     return res.status(200).json({ status: "success" });
@@ -3535,8 +3535,9 @@ app.put("/api/orders/:id/tracking", adminOnly, async (req, res) => {
       { trackingNumber, status },
       { new: true }
     );
-    io.emit("orderUpdated", {
+    io.to(order.email).emit("orderUpdated", {
       orderId: order._id,
+      reference: order.reference,
       status: order.status,
       trackingNumber: order.trackingNumber
     });
@@ -3623,6 +3624,13 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
   console.log("⚡ Connected:", socket.id);
+  // Client joins a private room keyed by their email so order updates
+  // are only delivered to that customer, never broadcast to everyone.
+  socket.on("join", (email) => {
+    if (email && typeof email === "string") {
+      socket.join(email.toLowerCase().trim());
+    }
+  });
   socket.on("disconnect", () => {
     console.log("❌ Disconnected:", socket.id);
   });
@@ -4801,7 +4809,7 @@ app.post("/api/orders/checkout-escrow", auth, async (req, res) => {
     });
 
     // Notify via socket
-    io.emit("orderUpdated", { orderId: order._id, status: "Paid", trackingNumber });
+    io.to(order.email).emit("orderUpdated", { orderId: order._id, reference: order.reference, status: "Paid", trackingNumber });
 
     res.json({ success: true, order, message: `Order placed! ₦${Number(amount).toLocaleString()} held in escrow until delivery confirmed.` });
   } catch (err) {
@@ -4824,7 +4832,7 @@ app.post("/api/orders/:orderId/ship", auth, async (req, res) => {
     if (courierName) order.courierName = courierName;
     await order.save();
 
-    io.emit("orderUpdated", { orderId: order._id, status: "Shipped", trackingNumber: order.trackingNumber });
+    io.to(order.email).emit("orderUpdated", { orderId: order._id, reference: order.reference, status: "Shipped", trackingNumber: order.trackingNumber });
     res.json({ success: true, order, message: "Order marked as shipped" });
   } catch (err) {
     res.status(500).json({ error: "Failed to mark as shipped" });
