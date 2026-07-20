@@ -4582,6 +4582,28 @@ async function executeTool(toolName, toolArgs, user) {
       };
     }
 
+    case "seller_flash_sale": {
+      if (!["seller", "admin"].includes(user.role)) return { error: "Only sellers can create flash sales" };
+      const { productName, discount, endDate } = toolArgs;
+      if (!productName || !discount || !endDate) return { error: "Product name, discount percentage, and end date are required" };
+      const query = { name: new RegExp(productName, "i") };
+      if (user.role === "seller") query.vendorId = user._id.toString();
+      const product = await Product.findOne(query);
+      if (!product) return { error: `Could not find a product matching "${productName}"${user.role === "seller" ? " in your store" : ""}` };
+      const discountPct = Math.min(90, Math.max(1, Number(discount)));
+      const salePrice = Math.round(product.price * (1 - discountPct / 100));
+      const endTime = new Date(endDate);
+      if (isNaN(endTime.getTime()) || endTime <= new Date()) return { error: "End date must be a valid future date" };
+      const sale = await FlashSale.create({
+        productId: product._id,
+        productName: product.name,
+        originalPrice: product.price,
+        salePrice,
+        startTime: new Date(),
+        endTime
+      });
+      return { success: true, message: `Flash sale created for ${product.name}: ₦${product.price.toLocaleString()} → ₦${salePrice.toLocaleString()} (${discountPct}% off) until ${endTime.toLocaleDateString()}`, flashSaleId: sale._id };
+    }
     default:
       return { error: "Unknown tool" };
   }
