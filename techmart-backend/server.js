@@ -148,7 +148,7 @@ const User = mongoose.model(
   "User",
   new mongoose.Schema({
     name: String,
-    email: { type: String, unique: true },
+    email: { type: String, unique: true, lowercase: true, trim: true },
     password: String,
     phone: { type: String, default: "" },
     role: { type: String, default: "customer" },
@@ -328,7 +328,8 @@ app.get("/", (req, res) => {
 /* SIGNUP */
 app.post("/api/auth/signup", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, password } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     if (!name || !email || !password || !req.body.phone) return res.status(400).json({ error: "Name, email, password, and phone number are required" });
     const { referralCode } = req.body;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -390,7 +391,8 @@ app.post("/api/auth/signup", async (req, res) => {
 /* LOGIN */
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: "User not found" });
     const match = await bcrypt.compare(password, user.password);
@@ -418,7 +420,7 @@ app.post("/api/auth/login", async (req, res) => {
 /* FORGOT PASSWORD */
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     if (!email) return res.status(400).json({ error: "Email is required" });
 
     const user = await User.findOne({ email });
@@ -670,7 +672,7 @@ app.get("/api/orders/me", auth, async (req, res) => {
 // Seller Model
 const SellerSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   phone: { type: String, default: "" },
   storeName: { type: String, required: true },
@@ -2557,7 +2559,8 @@ app.post("/api/admin/wallets/:userId", adminOnly, async (req, res) => {
 // Seller application
 app.post("/api/seller/apply", async (req, res) => {
   try {
-    const { name, email, password, phone, storeName, storeDescription } = req.body;
+    const { name, password, phone, storeName, storeDescription } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     if (!name || !email || !password || !storeName) {
       return res.status(400).json({ error: "Name, email, password and store name are required" });
     }
@@ -2580,7 +2583,8 @@ app.post("/api/seller/apply", async (req, res) => {
 // Seller login
 app.post("/api/seller/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     const seller = await Seller.findOne({ email });
     if (!seller) return res.status(400).json({ error: "Seller account not found" });
     const match = await bcrypt.compare(password, seller.password);
@@ -3840,7 +3844,7 @@ app.get("/api/seller/analytics", auth, async (req, res) => {
 // Send OTP for 2FA
 app.post("/api/auth/send-otp", async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     if (!email) return res.status(400).json({ error: "Email is required" });
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -3861,7 +3865,8 @@ app.post("/api/auth/send-otp", async (req, res) => {
 // Verify OTP
 app.post("/api/auth/verify-otp", async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { otp } = req.body;
+    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
     if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
