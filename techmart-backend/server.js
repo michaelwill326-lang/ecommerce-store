@@ -3293,7 +3293,7 @@ app.get("/api/admin/analytics", adminOnly, async (req, res) => {
       .filter((o) => o.status !== "Cancelled" && o.status !== "Pending")
       .forEach((o) => {
         const date = new Date(o.createdAt).toLocaleDateString("en-NG");
-        revenueByDate[date] = (revenueByDate[date] || 0) + o.amount;
+        revenueByDate[date] = (revenueByDate[date] || 0) + (o.amount || 0);
       });
     res.json({
       totalOrders: orders.length,
