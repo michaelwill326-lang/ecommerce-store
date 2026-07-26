@@ -5,7 +5,7 @@ import { useWishlist } from "../context/WishlistContext";
 import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Navbar() {
-  const { cart } = useContext(CartContext);
+  const { cart, clearCart } = useContext(CartContext);
   const { wishlist } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
@@ -40,6 +40,7 @@ export default function Navbar() {
   const handleLogout = () => {
     const t = localStorage.getItem("token");
     if (t) fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
+    clearCart();
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("deviceToken");
