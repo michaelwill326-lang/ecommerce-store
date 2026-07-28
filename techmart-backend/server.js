@@ -5166,39 +5166,6 @@ app.post("/api/admin/reconcile-wallets", adminOnly, async (req, res) => {
 /* ===========================
    🔄 PAYSTACK RECONCILIATION (admin)
 =========================== */
-app.post("/api/admin/reconcile-wallets", adminOnly, async (req, res) => {
-  try {
-    const response = await axios.get("https://api.paystack.co/transaction", {
-      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-      params: { perPage: 100, status: "success" }
-    });
-    const walletTxns = response.data.data.filter(t => t.reference.startsWith("WAL-"));
-    const fixed = [];
-    for (const txn of walletTxns) {
-      const user = await User.findOne({ email: txn.customer.email });
-      if (!user) continue;
-      const alreadyCredited = (user.walletTransactions || []).some(t => t.reference === txn.reference);
-      if (alreadyCredited) continue;
-      const amount = txn.amount / 100;
-      user.walletBalance = (user.walletBalance || 0) + amount;
-      user.walletTransactions = user.walletTransactions || [];
-      user.walletTransactions.push({
-        type: "credit",
-        amount,
-        description: "Wallet funded via Paystack (reconciled)",
-        reference: txn.reference,
-        createdAt: new Date(txn.paid_at)
-      });
-      await user.save();
-      fixed.push({ email: user.email, amount, reference: txn.reference });
-    }
-    res.json({ success: true, checked: walletTxns.length, fixed: fixed.length, details: fixed });
-  } catch (err) {
-    console.error("Reconciliation error:", err.message);
-    res.status(500).json({ error: "Reconciliation failed" });
-  }
-});
-
 // Multer-specific error handler (must come before the generic error handler)
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
