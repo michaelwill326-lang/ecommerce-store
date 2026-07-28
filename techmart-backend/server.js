@@ -1009,6 +1009,8 @@ app.post("/api/pay/fund-wallet", auth, async (req, res) => {
         reference,
         metadata: {
           userId: user._id.toString(),
+          email: user.email,
+          name: user.name,
           purpose: "wallet_funding",
           custom_fields: [
             { display_name: "Purpose", variable_name: "purpose", value: "TechMart Wallet Funding" }
@@ -3042,23 +3044,62 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     // Handle Wallet Funding
     if (paymentData.metadata?.purpose === "wallet_funding") {
       try {
-        const userId = paymentData.metadata.userId;
-        const amount = paymentData.amount / 100; // convert from kobo
-        const user = await User.findById(userId);
-        if (user) {
-          user.walletBalance = (user.walletBalance || 0) + amount;
-          user.walletTransactions.push({
-            type: "credit",
-            amount,
-            description: `Wallet funded via Paystack`,
-            reference: paymentData.reference
-          });
-          await user.save();
-          console.log(`Wallet credited: ${user.email} +N${amount}`);
+        const amount = paymentData.amount / 100;
+        const reference = paymentData.reference;
+
+        const email = paymentData.customer?.email
+          ?.toLowerCase()
+          .trim();
+
+        let user = null;
+
+        if (paymentData.metadata?.userId) {
+          user = await User.findById(paymentData.metadata.userId);
         }
+
+        if (!user && email) {
+          user = await User.findOne({ email });
+        }
+
+        if (!user) {
+          console.error(
+            "❌ Wallet webhook: user not found",
+            { reference, email }
+          );
+          return res.status(200).json({ status: "ignored" });
+        }
+
+        user.walletTransactions = user.walletTransactions || [];
+
+        const alreadyCredited = user.walletTransactions.some(
+          t => t.reference === reference
+        );
+
+        if (alreadyCredited) {
+          console.log("ℹ️ Wallet already credited:", reference);
+          return res.status(200).json({ status: "duplicate" });
+        }
+
+        user.walletBalance =
+          (user.walletBalance || 0) + amount;
+
+        user.walletTransactions.push({
+          type: "credit",
+          amount,
+          description: "Wallet funded via Paystack",
+          reference,
+          createdAt: new Date(paymentData.paid_at)
+        });
+
+        await user.save();
+
+        console.log(
+          `✅ Wallet credited: ${user.email} +₦${amount}`
+        );
       } catch (e) {
-        console.error("Wallet funding webhook error:", e.message);
+        console.error("Wallet funding webhook error:", e);
       }
+
       return res.status(200).json({ status: "success" });
     }
 
