@@ -3013,7 +3013,7 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     const crypto = require("crypto");
     const hash = crypto
       .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(JSON.stringify(req.body))
+      .update(req.body)
       .digest("hex");
 
     if (hash !== req.headers["x-paystack-signature"]) {
@@ -3021,7 +3021,12 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
       return res.status(401).send("Invalid signature");
     }
 
-    const event = req.body;
+    const event = JSON.parse(req.body.toString("utf8"));
+
+    console.log("📩 Paystack webhook:", {
+      event: event.event,
+      reference: event.data?.reference
+    });
 
     if (!event || event.event !== "charge.success") {
       return res.status(200).send("Event ignored");
