@@ -52,6 +52,11 @@ export default function TechMartPay() {
   const [showSetPin, setShowSetPin] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [pinSet, setPinSet] = useState(false);
+
+  const [showChangePin, setShowChangePin] = useState(false);
+  const [oldPin, setOldPin] = useState("");
+  const [changePin, setChangePin] = useState("");
+  const [changeLoading, setChangeLoading] = useState(false);
   // Betting state
   const [betForm, setBetForm] = useState({ platform: "", bettingId: "", amount: "" });
   const [betLoading, setBetLoading] = useState(false);
@@ -277,7 +282,49 @@ export default function TechMartPay() {
     } catch (err) {
       setMsg({ text: err.response?.data?.error || "Failed to set PIN", type: "error" });
     }
+  }
+
+  const changeWalletPin = async () => {
+    if (oldPin.length !== 4 || changePin.length !== 4) {
+      return setMsg({
+        text: "Both PINs must be exactly 4 digits",
+        type: "error"
+      });
+    }
+
+    setChangeLoading(true);
+
+    try {
+      const res = await axios.post(
+        `${API}/api/pay/pin/change`,
+        {
+          oldPin,
+          newPin: changePin,
+          confirmPin: changePin
+        },
+        { headers }
+      );
+
+      setMsg({
+        text: res.data.message,
+        type: "success"
+      });
+
+      setOldPin("");
+      setChangePin("");
+      setShowChangePin(false);
+
+    } catch (err) {
+      setMsg({
+        text: err.response?.data?.error || "Failed to change PIN",
+        type: "error"
+      });
+    } finally {
+      setChangeLoading(false);
+    }
   };
+
+;
   const fundBetting = async (pin) => {
     if (!betForm.platform || !betForm.bettingId || !betForm.amount) return setMsg({ text: "Please fill all fields", type: "error" });
     setBetLoading(true);
@@ -752,6 +799,49 @@ export default function TechMartPay() {
           </div>
         </div>
       )}
+
+      {showChangePin && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+          <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"320px"}}>
+            <h3 style={{marginBottom:"15px"}}>Change Wallet PIN</h3>
+
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="Current PIN"
+              value={oldPin}
+              onChange={e=>setOldPin(e.target.value.replace(/\D/g,''))}
+              style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",marginBottom:"12px"}}
+            />
+
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="New PIN"
+              value={changePin}
+              onChange={e=>setChangePin(e.target.value.replace(/\D/g,''))}
+              style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",marginBottom:"20px"}}
+            />
+
+            <button
+              onClick={changeWalletPin}
+              disabled={changeLoading}
+              style={{width:"100%",padding:"12px",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,#f97316,#dc2626)",color:"#fff",fontWeight:"700"}}
+            >
+              {changeLoading ? "Updating..." : "Change PIN"}
+            </button>
+
+            <button
+              onClick={()=>setShowChangePin(false)}
+              style={{marginTop:"10px",width:"100%",background:"none",border:"none",cursor:"pointer"}}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+
     </>
   );
 }
