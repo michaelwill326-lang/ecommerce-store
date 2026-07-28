@@ -1467,20 +1467,59 @@ app.post("/api/pay/pin/verify", auth, async (req, res) => {
 // Change Wallet PIN
 app.post("/api/pay/pin/change", auth, async (req, res) => {
   try {
-    const { oldPin, newPin } = req.body;
-    if (!oldPin || !newPin) return res.status(400).json({ error: "Old and new PIN are required" });
-    if (!/^\d{4}$/.test(newPin)) return res.status(400).json({ error: "New PIN must be exactly 4 digits" });
+    const { oldPin, newPin, confirmPin } = req.body;
+
+    if (!oldPin || !newPin || !confirmPin) {
+      return res.status(400).json({
+        error: "Old PIN, new PIN and confirmation are required"
+      });
+    }
+
+    if (!/^\d{4}$/.test(newPin)) {
+      return res.status(400).json({
+        error: "New PIN must be exactly 4 digits"
+      });
+    }
+
+    if (newPin !== confirmPin) {
+      return res.status(400).json({
+        error: "PIN confirmation does not match"
+      });
+    }
+
     const user = await User.findById(req.user.id);
-    const match = await bcrypt.compare(oldPin, user.walletPin);
-    if (!match) return res.status(401).json({ error: "Incorrect current PIN" });
-    const hashed = await bcrypt.hash(newPin, 10);
-    await User.findByIdAndUpdate(req.user.id, { walletPin: hashed });
-    res.json({ success: true, message: "PIN changed successfully" });
+
+    const pinCheck = await verifyWalletPin(user, oldPin);
+
+    if (!pinCheck.ok) {
+      return res.status(400).json({
+        error: pinCheck.error
+      });
+    }
+
+    const samePin = await bcrypt.compare(String(newPin), user.walletPin || "");
+
+    if (samePin) {
+      return res.status(400).json({
+        error: "New PIN must be different from the current PIN"
+      });
+    }
+
+    user.walletPin = await bcrypt.hash(String(newPin), 10);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Wallet PIN changed successfully"
+    });
+
   } catch (err) {
-    res.status(500).json({ error: "Failed to change PIN" });
+    console.error("PIN change error:", err);
+    res.status(500).json({
+      error: "Failed to change PIN"
+    });
   }
 });
-
 
 // 15. Get Betting Platforms
 app.get("/api/pay/betting/platforms", auth, async (req, res) => {
