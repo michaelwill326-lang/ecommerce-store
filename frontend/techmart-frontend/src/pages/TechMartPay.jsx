@@ -345,7 +345,17 @@ export default function TechMartPay() {
         type: "success"
       });
 
-      setShowForgotPin(true);
+      // Close the Enter PIN dialog
+      setPinModal({
+        open: false,
+        onSuccess: null
+      });
+
+      // Open the Reset PIN dialog
+      setTimeout(() => {
+        console.log("Opening Forgot PIN dialog...");
+        setShowForgotPin(true);
+      }, 150);
     } catch (err) {
       setMsg({
         text: err.response?.data?.error || "Unable to send OTP",
