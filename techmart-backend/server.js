@@ -1658,7 +1658,7 @@ app.post("/api/pay/betting", auth, async (req, res) => {
 // 7. TechMart Pay Dashboard Data
 app.get("/api/pay/dashboard", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank");
+    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank walletPinSet");
     
     // Recent transactions (last 10)
     const recent = [...(user.walletTransactions || [])].reverse().slice(0, 10);
@@ -1668,6 +1668,7 @@ app.get("/api/pay/dashboard", auth, async (req, res) => {
     const totalOut = (user.walletTransactions || []).filter(t => t.type === "debit").reduce((sum, t) => sum + t.amount, 0);
 
     res.json({
+      walletPinSet: user.walletPinSet,
       balance: user.walletBalance || 0,
       virtualAccount: user.virtualAccountNumber ? {
         accountNumber: user.virtualAccountNumber,
