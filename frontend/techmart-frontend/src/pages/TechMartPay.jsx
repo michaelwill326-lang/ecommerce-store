@@ -57,6 +57,11 @@ export default function TechMartPay() {
   const [oldPin, setOldPin] = useState("");
   const [changePin, setChangePin] = useState("");
   const [changeLoading, setChangeLoading] = useState(false);
+
+  const [showForgotPin, setShowForgotPin] = useState(false);
+  const [resetOtp, setResetOtp] = useState("");
+  const [resetPin, setResetPin] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   // Betting state
   const [betForm, setBetForm] = useState({ platform: "", bettingId: "", amount: "" });
   const [betLoading, setBetLoading] = useState(false);
@@ -324,8 +329,75 @@ export default function TechMartPay() {
     }
   };
 
+
+  const requestPinReset = async () => {
+    try {
+      setResetLoading(true);
+
+      await axios.post(
+        `${API}/api/pay/pin/forgot`,
+        {},
+        { headers }
+      );
+
+      setMsg({
+        text: "OTP sent to your email.",
+        type: "success"
+      });
+
+      setShowForgotPin(true);
+    } catch (err) {
+      setMsg({
+        text: err.response?.data?.error || "Unable to send OTP",
+        type: "error"
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const resetWalletPin = async () => {
+    if (resetPin.length !== 4) {
+      return setMsg({
+        text: "PIN must be exactly 4 digits",
+        type: "error"
+      });
+    }
+
+    try {
+      setResetLoading(true);
+
+      await axios.post(
+        `${API}/api/pay/pin/reset`,
+        {
+          otp: resetOtp,
+          newPin: resetPin
+        },
+        { headers }
+      );
+
+      setShowForgotPin(false);
+      setResetOtp("");
+      setResetPin("");
+
+      setMsg({
+        text: "Wallet PIN reset successfully.",
+        type: "success"
+      });
+
+    } catch (err) {
+      setMsg({
+        text: err.response?.data?.error || "Reset failed",
+        type: "error"
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
 ;
   const fundBetting = async (pin) => {
+
     if (!betForm.platform || !betForm.bettingId || !betForm.amount) return setMsg({ text: "Please fill all fields", type: "error" });
     setBetLoading(true);
     try {
@@ -802,6 +874,21 @@ export default function TechMartPay() {
             <button onClick={confirmPin} disabled={pinLoading} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
               {pinLoading ? "Verifying..." : "Confirm"}
             </button>
+
+            <button
+              onClick={requestPinReset}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#3b82f6",
+                cursor: "pointer",
+                fontSize: "13px",
+                marginBottom: "10px"
+              }}
+            >
+              Forgot Wallet PIN?
+            </button>
+
             <button onClick={() => setPinModal({ open: false, onSuccess: null })} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
           </div>
         </div>
@@ -856,6 +943,73 @@ export default function TechMartPay() {
             <button
               onClick={()=>setShowChangePin(false)}
               style={{marginTop:"10px",width:"100%",background:"none",border:"none",cursor:"pointer"}}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+
+      )}
+
+      {showForgotPin && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+          <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"340px"}}>
+            <h3 style={{marginBottom:"10px",color:"var(--text-primary)"}}>
+              Reset Wallet PIN
+            </h3>
+
+            <p style={{fontSize:"13px",color:"var(--text-muted)",marginBottom:"18px"}}>
+              Enter the OTP sent to your email and choose a new 4-digit PIN.
+            </p>
+
+            <input
+              type="text"
+              placeholder="Email OTP"
+              value={resetOtp}
+              onChange={e=>setResetOtp(e.target.value)}
+              style={inp}
+            />
+
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="New 4-digit PIN"
+              value={resetPin}
+              onChange={e=>setResetPin(e.target.value.replace(/\D/g,""))}
+              style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px"}}
+            />
+
+            <button
+              onClick={resetWalletPin}
+              disabled={resetLoading}
+              style={{
+                width:"100%",
+                padding:"12px",
+                border:"none",
+                borderRadius:"10px",
+                background:"linear-gradient(135deg,#16a34a,#15803d)",
+                color:"#fff",
+                fontWeight:"700",
+                marginTop:"10px"
+              }}
+            >
+              {resetLoading ? "Resetting..." : "Reset PIN"}
+            </button>
+
+            <button
+              onClick={()=>{
+                setShowForgotPin(false);
+                setResetOtp("");
+                setResetPin("");
+              }}
+              style={{
+                width:"100%",
+                marginTop:"10px",
+                background:"none",
+                border:"none",
+                cursor:"pointer",
+                color:"var(--text-muted)"
+              }}
             >
               Cancel
             </button>
