@@ -171,6 +171,8 @@ const User = mongoose.model(
     paystackCustomerCode: { type: String, default: null },
     walletPin: { type: String, default: null },
     walletPinSet: { type: Boolean, default: false },
+    walletPinResetOtp: { type: String, default: null },
+    walletPinResetExpires: { type: Date, default: null },
     otpCode: { type: String, default: null },
     otpExpires: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
@@ -1463,6 +1465,87 @@ app.post("/api/pay/pin/verify", auth, async (req, res) => {
     res.status(500).json({ error: "PIN verification failed" });
   }
 });
+
+
+// Forgot Wallet PIN - Send OTP
+app.post("/api/pay/pin/forgot", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    user.walletPinResetOtp = otp;
+    user.walletPinResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    await user.save();
+
+    await sendOTPEmail(
+      user.email,
+      otp,
+      "Wallet PIN Reset"
+    );
+
+    res.json({
+      success: true,
+      message: "Wallet PIN reset OTP sent."
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Failed to send reset OTP"
+    });
+  }
+});
+
+
+// Reset Wallet PIN
+app.post("/api/pay/pin/reset", auth, async (req, res) => {
+  try {
+
+    const { otp, newPin } = req.body;
+
+    if (!otp || !newPin)
+      return res.status(400).json({
+        error: "OTP and new PIN are required"
+      });
+
+    if (!/^\d{4}$/.test(newPin))
+      return res.status(400).json({
+        error: "PIN must be exactly 4 digits"
+      });
+
+    const user = await User.findById(req.user.id);
+
+    if (
+      user.walletPinResetOtp !== otp ||
+      !user.walletPinResetExpires ||
+      user.walletPinResetExpires < new Date()
+    ) {
+      return res.status(400).json({
+        error: "Invalid or expired OTP"
+      });
+    }
+
+    user.walletPin = await bcrypt.hash(newPin, 10);
+    user.walletPinSet = true;
+    user.walletPinResetOtp = null;
+    user.walletPinResetExpires = null;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Wallet PIN reset successfully."
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Failed to reset Wallet PIN"
+    });
+  }
+});
+
 
 // Change Wallet PIN
 app.post("/api/pay/pin/change", auth, async (req, res) => {
