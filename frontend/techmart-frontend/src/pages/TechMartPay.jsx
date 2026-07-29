@@ -80,11 +80,9 @@ export default function TechMartPay() {
     try {
       const res = await axios.get(`${API}/api/pay/dashboard`, { headers });
       setDashboard(res.data);
-      // Sync pinSet from user profile
-      try {
-        const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
-        if (user?.walletPinSet) setPinSet(true);
-      } catch {}
+
+      // Always trust the backend
+      setPinSet(Boolean(res.data.walletPinSet));
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
