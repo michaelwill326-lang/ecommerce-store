@@ -440,7 +440,29 @@ export default function TechMartPay() {
                   Add Money
                 </button>
               </div>
+
             )}
+
+            {pinSet && (
+              <div style={{ marginBottom: "16px" }}>
+                <button
+                  onClick={() => setShowChangePin(true)}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "10px",
+                    fontWeight: "700",
+                    cursor: "pointer"
+                  }}
+                >
+                  🔑 Change Wallet PIN
+                </button>
+              </div>
+            )}
+
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
               <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 12px" }}>Recent Transactions</p>
               {(dashboard?.recentTransactions || []).length === 0 ? (
