@@ -1504,6 +1504,13 @@ app.post("/api/pay/pin/reset", auth, async (req, res) => {
 
     const { otp, newPin } = req.body;
 
+    console.log("========== PIN RESET REQUEST ==========");
+    console.log("User:", req.user.id);
+    console.log("Body:", req.body);
+    console.log("OTP:", otp);
+    console.log("New PIN:", newPin);
+    console.log("=======================================");
+
     if (!otp || !newPin)
       return res.status(400).json({
         error: "OTP and new PIN are required"
@@ -1515,6 +1522,12 @@ app.post("/api/pay/pin/reset", auth, async (req, res) => {
       });
 
     const user = await User.findById(req.user.id);
+
+    console.log("===== WALLET PIN RESET DEBUG =====");
+    console.log("OTP received:", otp);
+    console.log("OTP stored:", user.walletPinResetOtp);
+    console.log("Expires:", user.walletPinResetExpires);
+    console.log("Now:", new Date());
 
     if (
       user.walletPinResetOtp !== otp ||
