@@ -1480,8 +1480,8 @@ app.post("/api/pay/pin/forgot", auth, async (req, res) => {
 
     await sendOTPEmail(
       user.email,
-      otp,
-      "Wallet PIN Reset"
+      user.name,
+      otp
     );
 
     res.json({
