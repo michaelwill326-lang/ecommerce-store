@@ -59,6 +59,11 @@ export default function TechMartPay() {
   const [changeLoading, setChangeLoading] = useState(false);
 
   const [showForgotPin, setShowForgotPin] = useState(false);
+
+useEffect(() => {
+  console.log("showForgotPin changed:", showForgotPin);
+}, [showForgotPin]);
+
   const [resetOtp, setResetOtp] = useState("");
   const [resetPin, setResetPin] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
@@ -349,11 +354,11 @@ export default function TechMartPay() {
         onSuccess: null
       });
 
-      // Open the Reset PIN dialog
-      setTimeout(() => {
-        console.log("Opening Forgot PIN dialog...");
-        setShowForgotPin(true);
-      }, 150);
+      // Open the Reset PIN dialog immediately
+      console.log("Opening Forgot PIN dialog...");
+      console.log("Before:", showForgotPin);
+      setShowForgotPin(true);
+      console.log("After calling setter");
     } catch (err) {
       setMsg({
         text: err.response?.data?.error || "Unable to send OTP",
@@ -959,6 +964,7 @@ export default function TechMartPay() {
 
       )}
 
+      {console.log("showForgotPin =", showForgotPin)}
       {showForgotPin && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
           <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"340px"}}>
