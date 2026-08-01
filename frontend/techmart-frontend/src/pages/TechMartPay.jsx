@@ -341,7 +341,7 @@ export default function TechMartPay() {
       );
 
       setMsg({
-        text: "OTP sent to your email.",
+        text: "OTP sent to your phone via SMS.",
         type: "success"
       });
 
