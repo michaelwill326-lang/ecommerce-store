@@ -64,6 +64,7 @@ export default function TechMartPay() {
   const [resetOtp, setResetOtp] = useState("");
   const [resetPin, setResetPin] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+const [otpTimer, setOtpTimer] = useState(600);
   // Betting state
   const [betForm, setBetForm] = useState({ platform: "", bettingId: "", amount: "" });
   const [betLoading, setBetLoading] = useState(false);
@@ -99,7 +100,9 @@ export default function TechMartPay() {
 
   const fundWallet = async (amount) => {
     const amt = amount || fundAmount;
-    if (!amt || Number(amt) < 100) return setMsg({ text: "Minimum deposit is N100", type: "error" });
+    if (!amt || Number(amt) < 100) return setOtpTimer(600);
+
+      setMsg({ text: "Minimum deposit is N100", type: "error" });
     setFundLoading(true);
     try {
       const res = await axios.post(`${API}/api/pay/fund-wallet`, { amount: amt }, { headers });
@@ -330,7 +333,24 @@ export default function TechMartPay() {
   };
 
 
-  const requestPinReset = async () => {
+  
+useEffect(() => {
+  if (otpTimer <= 0) return;
+
+  const interval = setInterval(() => {
+    setOtpTimer((prev) => prev - 1);
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [otpTimer]);
+
+const formatOtpTime = () => {
+  const minutes = Math.floor(otpTimer / 60);
+  const seconds = otpTimer % 60;
+  return `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+};
+
+const requestPinReset = async () => {
     try {
       setResetLoading(true);
 
@@ -970,12 +990,41 @@ export default function TechMartPay() {
             </h3>
 
             <p style={{fontSize:"13px",color:"var(--text-muted)",marginBottom:"18px"}}>
-              Enter the OTP sent to your email and choose a new 4-digit PIN.
+              Enter the OTP sent to your phone and choose a new 4-digit PIN.
             </p>
+
+            <div
+              style={{
+                textAlign:"center",
+                marginBottom:"14px",
+                color: otpTimer > 0 ? "#16a34a" : "#dc2626",
+                fontWeight:"bold"
+              }}
+            >
+              {otpTimer > 0
+                ? `OTP expires in ${formatOtpTime()}`
+                : "OTP expired. Tap Resend Code."}
+            </div>
+
+            <button
+              onClick={requestPinReset}
+              disabled={otpTimer > 0}
+              style={{
+                width:"100%",
+                padding:"10px",
+                marginBottom:"16px",
+                borderRadius:"8px",
+                border:"none",
+                cursor: otpTimer > 0 ? "not-allowed" : "pointer",
+                opacity: otpTimer > 0 ? 0.6 : 1
+              }}
+            >
+              Resend Code
+            </button>
 
             <input
               type="text"
-              placeholder="Email OTP"
+              placeholder="SMS OTP"
               value={resetOtp}
               onChange={e=>setResetOtp(e.target.value)}
               style={inp}
