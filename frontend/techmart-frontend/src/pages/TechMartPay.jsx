@@ -100,9 +100,13 @@ const [otpTimer, setOtpTimer] = useState(600);
 
   const fundWallet = async (amount) => {
     const amt = amount || fundAmount;
-    if (!amt || Number(amt) < 100) return setOtpTimer(600);
-
-      setMsg({ text: "Minimum deposit is N100", type: "error" });
+    if (!amt || Number(amt) < 100) {
+      setMsg({
+        text: "Minimum deposit is ₦100",
+        type: "error"
+      });
+      return;
+    }
     setFundLoading(true);
     try {
       const res = await axios.post(`${API}/api/pay/fund-wallet`, { amount: amt }, { headers });
@@ -359,6 +363,8 @@ const requestPinReset = async () => {
         {},
         { headers }
       );
+
+      setOtpTimer(600);
 
       setMsg({
         text: "OTP sent to your phone via SMS.",
