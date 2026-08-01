@@ -58,3 +58,45 @@ export const sendOrderUpdate = async (to, customerName, orderId, status) => {
     console.error('❌ Failed to dispatch notification through Termii engine:', error.response?.data || error.message);
   }
 };
+
+
+export const sendWalletPinResetOTP = async (to, customerName, otp) => {
+  if (!TERMII_API_KEY) {
+    console.log(`⚠️ Wallet PIN OTP for ${customerName}: ${otp}`);
+    return;
+  }
+
+  let formattedPhone = to.trim().replace("+", "");
+
+  if (formattedPhone.startsWith("0")) {
+    formattedPhone = "234" + formattedPhone.substring(1);
+  }
+
+  const messageText =
+    `TechMart Wallet\n\n` +
+    `Hi ${customerName},\n` +
+    `Your Wallet PIN reset code is ${otp}.\n\n` +
+    `This code expires in 10 minutes.`;
+
+  try {
+    const response = await axios.post(
+      `${TERMII_BASE_URL}/api/sms/number/send`,
+      {
+        api_key: TERMII_API_KEY,
+        to: formattedPhone,
+        from: TERMII_SENDER_ID,
+        sms: messageText,
+        type: "plain",
+        channel: "generic"
+      }
+    );
+
+    console.log("📱 Wallet PIN SMS:", response.data);
+
+  } catch (err) {
+    console.error(
+      "❌ Wallet PIN SMS failed:",
+      err.response?.data || err.message
+    );
+  }
+};

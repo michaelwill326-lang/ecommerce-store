@@ -97,6 +97,7 @@ app.use("/api/auth/forgot-password", authLimiter);
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://techmart-store-ppri.onrender.com",
   "https://techmart-frontend.onrender.com"
 ];
@@ -1478,8 +1479,12 @@ app.post("/api/pay/pin/forgot", auth, async (req, res) => {
 
     await user.save();
 
-    await sendOTPEmail(
-      user.email,
+    const {
+      sendWalletPinResetOTP
+    } = await import("./services/notificationService.js");
+
+    await sendWalletPinResetOTP(
+      user.phone,
       user.name,
       otp
     );
