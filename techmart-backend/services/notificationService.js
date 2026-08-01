@@ -44,7 +44,7 @@ export const sendOrderUpdate = async (to, customerName, orderId, status) => {
   };
 
   try {
-    const response = await axios.post(`${TERMII_BASE_URL}/api/sms/number/send`, {
+    const response = await axios.post(`${TERMII_BASE_URL}/api/sms/send`, {
       api_key: TERMII_API_KEY,
       ...payload
     });
@@ -80,7 +80,7 @@ export const sendWalletPinResetOTP = async (to, customerName, otp) => {
 
   try {
     const response = await axios.post(
-      `${TERMII_BASE_URL}/api/sms/number/send`,
+      `${TERMII_BASE_URL}/api/sms/send`,
       {
         api_key: TERMII_API_KEY,
         to: formattedPhone,
