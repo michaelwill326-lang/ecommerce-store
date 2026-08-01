@@ -18,7 +18,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [minPrice, setMinPrice] = useState("");
@@ -28,12 +28,24 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
   const observerRef = useRef(null);
+  
   const loaderRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (deferredSearch) params.set("search", deferredSearch);
+    if (debouncedSearch.length >= 2) {
+      params.set("search", debouncedSearch);
+    }
     if (category !== "All") params.set("category", category);
     if (minPrice) params.set("minPrice", minPrice);
     if (maxPrice) params.set("maxPrice", maxPrice);
@@ -57,7 +69,7 @@ export default function Home() {
         setLoading(false);
       })
       .catch(err => { setError(err.message); setLoading(false); });
-  }, [deferredSearch, category, minPrice, maxPrice]);
+  }, [debouncedSearch, category, minPrice, maxPrice]);
 
   const filtered = useMemo(() => {
     let result = [...products];
