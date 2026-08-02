@@ -11,12 +11,23 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth <= 992 : false);
-  const wishlistCount = wishlist.length;
-
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
-  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } });
-  const cartCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user"));
+    } catch {
+      return null;
+    }
+  });
+
+  const isLoggedIn = !!localStorage.getItem("token");
+
+  const wishlistCount = isLoggedIn ? wishlist.length : 0;
+
+  const cartCount = isLoggedIn
+    ? cart.reduce((total, item) => total + (item.quantity || 1), 0)
+    : 0;
 
   useEffect(() => {
     const handleStorage = () => {
