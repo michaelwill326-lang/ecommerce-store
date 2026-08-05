@@ -1,6 +1,11 @@
-require("dotenv").config();
-
 const { BrevoClient } = require("@getbrevo/brevo");
+
+// 🔍 Runtime Environment Diagnostics Check
+if (!process.env.BREVO_API_KEY) {
+  console.error("❌ DEPLOYMENT CRITICAL: process.env.BREVO_API_KEY is undefined or empty inside Render environment settings!");
+} else {
+  console.log(`📡 BREVO ENV CHECK: Key is present (Length: ${process.env.BREVO_API_KEY.length} chars)`);
+}
 
 // 1. Initialize the modern BrevoClient directly with your key
 const brevo = new BrevoClient({

@@ -3430,33 +3430,29 @@ app.put("/api/admin/orders/:id", adminOnly, async (req, res) => {
       { new: true }
     );
 
-    // 📱 SEND ORDER STATUS SMS
+    // 📱 FETCH BUYER INFO FOR AUTOMATED TERMII SMS ALERTS
     if (order && order.email) {
       try {
         const buyer = await User.findOne({ email: order.email });
-
         if (buyer && buyer.phone) {
-          const { sendOrderUpdate } = require("./services/notificationService");
-
-          await sendOrderUpdate(
-            buyer.phone,
-            buyer.name || "Customer",
-            order._id.toString(),
-            req.body.status
-          );
+          // Dynamic runtime import to safely execute our ES module service from CommonJS
+          const { sendOrderUpdate } = await import("./services/notificationService.js");
+          await sendOrderUpdate(buyer.phone, buyer.name || "Customer", order._id.toString(), req.body.status);
         } else {
-          console.log("⚠️ SMS skipped: Buyer phone not found for " + order.email);
+          console.log("⚠️ Termii Alert skipped: Buyer phone record not found for " + order.email);
         }
       } catch (smsError) {
-        console.error("❌ SMS notification error:", smsError.message);
+        console.error("❌ Termii execution error inside update loop:", smsError.message);
       }
     }
 
-    // 📧 SEND ORDER STATUS EMAIL
-    try {
-      await sendShippingUpdate(order);
-    } catch (e) {
-      console.log("Order status email failed:", e.message);
+    // 📧 SEND SHIPPING EMAIL
+    if (req.body.status === "Shipped") {
+      try {
+        await sendShippingUpdate(order);
+      } catch (e) {
+        console.log("Shipping email failed:", e.message);
+      }
     }
 
     res.json(order);

@@ -1,6 +1,11 @@
-require("dotenv").config();
-
 const { BrevoClient } = require("@getbrevo/brevo");
+
+// 🔍 Runtime Environment Diagnostics Check
+if (!process.env.BREVO_API_KEY) {
+  console.error("❌ DEPLOYMENT CRITICAL: process.env.BREVO_API_KEY is undefined or empty inside Render environment settings!");
+} else {
+  console.log(`📡 BREVO ENV CHECK: Key is present (Length: ${process.env.BREVO_API_KEY.length} chars)`);
+}
 
 // 1. Initialize the modern BrevoClient directly with your key
 const brevo = new BrevoClient({
@@ -139,13 +144,13 @@ const sendShippingUpdate = async (order) => {
 
           <div style="text-align: center; margin-bottom: 32px;">
             <h1 style="color: #f97316; font-size: 28px; font-weight: 900; margin: 0;">TechMart</h1>
-            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">Order Status Update</p>
+            <p style="color: #888; font-size: 13px; margin: 4px 0 0;">Shipping Update</p>
           </div>
 
           <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
-            <p style="font-size: 48px; margin: 0;">${order.status === "Delivered" ? "🎉" : order.status === "Cancelled" ? "❌" : order.status === "Out for Delivery" ? "🛵" : order.status === "Processing" ? "⚙️" : order.status === "Paid" ? "✅" : order.status === "Pending" ? "⏳" : "🚚"}</p>
-            <h2 style="color: #fff; font-size: 24px; font-weight: 800; margin: 16px 0 8px;">Order Status: ${order.status}</h2>
-            <p style="color: rgba(255,255,255,0.9); font-size: 15px; margin: 0;">Your TechMart order status has been updated.</p>
+            <p style="font-size: 48px; margin: 0;">🚚</p>
+            <h2 style="color: #fff; font-size: 24px; font-weight: 800; margin: 16px 0 8px;">Your Order is on its Way!</h2>
+            <p style="color: rgba(255,255,255,0.9); font-size: 15px; margin: 0;">Your TechMart order has been shipped.</p>
           </div>
 
           <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
@@ -157,7 +162,7 @@ const sendShippingUpdate = async (order) => {
               <tr><td colspan="2" style="border-top: 1px solid #222;"></td></tr>
               <tr>
                 <td style="color: #888; font-size: 14px; padding: 8px 0;">Status</td>
-                <td style="color: #3b82f6; font-size: 14px; font-weight: 700; text-align: right;">${order.status}</td>
+                <td style="color: #3b82f6; font-size: 14px; font-weight: 700; text-align: right;">🚚 Shipped</td>
               </tr>
               ${order.trackingNumber ? `
               <tr><td colspan="2" style="border-top: 1px solid #222;"></td></tr>
@@ -188,7 +193,7 @@ const sendShippingUpdate = async (order) => {
     await brevo.transactionalEmails.sendTransacEmail({
       sender: FROM,
       to: [{ email: order.email }],
-      subject: `${order.status === "Delivered" ? "🎉" : order.status === "Cancelled" ? "❌" : order.status === "Out for Delivery" ? "🛵" : order.status === "Processing" ? "⚙️" : order.status === "Paid" ? "✅" : order.status === "Pending" ? "⏳" : "🚚"} TechMart Order ${order.reference} - ${order.status}`,
+      subject: `🚚 Your Order ${order.reference} has been Shipped!`,
       htmlContent: html,
     });
     console.log(`📧 Shipping update sent to ${order.email}`);

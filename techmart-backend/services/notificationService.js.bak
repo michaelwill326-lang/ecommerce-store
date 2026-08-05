@@ -7,7 +7,7 @@ const TERMII_API_KEY = process.env.TERMII_API_KEY;
 const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'TechMart';
 const TERMII_BASE_URL = 'https://api.ng.termii.com';
 
-const sendOrderUpdate = async (to, customerName, orderId, status) => {
+export const sendOrderUpdate = async (to, customerName, orderId, status) => {
   if (!TERMII_API_KEY) {
     console.log(`⚠️ Termii API Key missing. Alert simulated for ${customerName}: Order ${orderId} is now ${status}.`);
     return;
@@ -55,17 +55,12 @@ const sendOrderUpdate = async (to, customerName, orderId, status) => {
       console.warn(`⚠️ Termii API accepted request but returned unexpected response:`, response.data);
     }
   } catch (error) {
-    
-    console.error("❌ Termii Status:", error.response?.status);
-    console.error("❌ Termii Headers:", error.response?.headers);
-    console.error("❌ Termii Body:", error.response?.data);
-    console.error("❌ Axios Error:", error.message);
-
+    console.error('❌ Failed to dispatch notification through Termii engine:', error.response?.data || error.message);
   }
 };
 
 
-const sendWalletPinResetOTP = async (to, customerName, otp) => {
+export const sendWalletPinResetOTP = async (to, customerName, otp) => {
   if (!TERMII_API_KEY) {
     console.log(`⚠️ Wallet PIN OTP for ${customerName}: ${otp}`);
     return;
@@ -104,10 +99,4 @@ const sendWalletPinResetOTP = async (to, customerName, otp) => {
       err.response?.data || err.message
     );
   }
-};
-
-
-module.exports = {
-  sendOrderUpdate,
-  sendWalletPinResetOTP,
 };
