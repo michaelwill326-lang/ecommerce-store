@@ -1,7 +1,7 @@
-import axios from 'axios';
-import dotenv from 'dotenv';
+const axios = require("axios");
+require("dotenv").config();
 
-dotenv.config();
+
 
 const TERMII_API_KEY = process.env.TERMII_API_KEY;
 const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || 'TechMart';
