@@ -4508,7 +4508,7 @@ Current message: ${message}`
         const chatRes = await groq.chat.completions.create({
           model: "llama-3.3-70b-versatile",
           messages: [
-            { role: "system", content: `You are TechMart AI for ${user.name}. Wallet: N${(user.walletBalance||0).toLocaleString()}. Role: ${user.role}. Products: ${catalog}. Be helpful and concise.` },
+            { role: "system", content: `You are TechMart AI for ${user.name}. Wallet: N${(user.walletBalance||0).toLocaleString()}. Role: ${user.role}. Products: ${catalog}. TechMart was founded by Jamiu Sanni with a vision to build Africa's leading e-commerce platform, connecting buyers and sellers globally. Be helpful and concise.` },
             ...history.slice(-6).map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
             { role: "user", content: message }
           ],
@@ -4838,6 +4838,7 @@ Wallet: ₦${(user.walletBalance || 0).toLocaleString()}
 Preferences: ${JSON.stringify(prefs)}
 Date: ${new Date().toLocaleDateString("en-NG")}
 
+TechMart was founded by Jamiu Sanni with a vision to build Africa's leading e-commerce platform, connecting buyers and sellers globally.
 You are an autonomous AI agent that can plan and execute multi-step tasks across TechMart.
 Use tools to gather information before responding. Chain multiple tools when needed.
 For sensitive actions (transfers, purchases), always confirm with the user first.
@@ -4939,7 +4940,7 @@ app.post("/api/ai/agent/stream", auth, async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    const systemPrompt = `You are TechMart AI Agent for ${user.name}. Wallet: ₦${(user.walletBalance || 0).toLocaleString()}. Be helpful, concise and natural.`;
+    const systemPrompt = `You are TechMart AI Agent for ${user.name}. Wallet: ₦${(user.walletBalance || 0).toLocaleString()}. TechMart was founded by Jamiu Sanni with a vision to build Africa's leading e-commerce platform, connecting buyers and sellers globally. Be helpful, concise and natural.`;
 
     const stream = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
