@@ -1483,15 +1483,35 @@ app.post("/api/pay/pin/forgot", auth, async (req, res) => {
       sendWalletPinResetOTP
     } = await import("./services/notificationService.js");
 
-    await sendWalletPinResetOTP(
+    const smsResult = await sendWalletPinResetOTP(
       user.phone,
       user.name,
       otp
     );
 
+    let emailSent = false;
+
+    if (!smsResult.success) {
+      console.warn("⚠️ SMS delivery failed:", smsResult.error);
+
+      try {
+        await sendOTPEmail(user.email, user.name, otp);
+        emailSent = true;
+        console.log("📧 Wallet PIN OTP sent via email fallback.");
+      } catch (emailErr) {
+        console.error("❌ Email fallback failed:", emailErr.message);
+      }
+    }
+
     res.json({
       success: true,
-      message: "Wallet PIN reset OTP sent."
+      smsSent: smsResult.success,
+      emailSent,
+      message: smsResult.success
+        ? "Wallet PIN reset OTP sent via SMS."
+        : emailSent
+          ? "SMS is temporarily unavailable. The OTP has been sent to your email."
+          : "OTP generated successfully, but delivery failed. Please contact support."
     });
 
   } catch (err) {
@@ -5224,6 +5244,40 @@ app.delete("/api/cart/clear", auth, async (req, res) => {
     res.status(500).json({ error: "Failed to clear cart" });
   }
 });
+
+
+
+/* ===============================
+   TERMII DEBUG (TEMPORARY)
+================================ */
+app.get("/api/admin/termii/debug", adminOnly, async (req, res) => {
+  try {
+    const response = await axios.get(
+      `https://api.ng.termii.com/api/get-balance?api_key=${process.env.TERMII_API_KEY}`
+    );
+
+    res.json({
+      success: true,
+      workspace: response.data.application,
+      user: response.data.user,
+      balance: response.data.balance,
+      currency: response.data.currency,
+      senderId: process.env.TERMII_SENDER_ID,
+      apiKeyLoaded: Boolean(process.env.TERMII_API_KEY)
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      status: err.response?.status,
+      data: err.response?.data,
+      message: err.message
+    });
+
+  }
+});
+
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

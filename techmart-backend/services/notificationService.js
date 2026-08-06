@@ -98,11 +98,24 @@ const sendWalletPinResetOTP = async (to, customerName, otp) => {
 
     console.log("📱 Wallet PIN SMS:", response.data);
 
+    return {
+      success: true,
+      provider: "Termii",
+      response: response.data
+    };
+
   } catch (err) {
+
     console.error(
       "❌ Wallet PIN SMS failed:",
       err.response?.data || err.message
     );
+
+    return {
+      success: false,
+      provider: "Termii",
+      error: err.response?.data || err.message
+    };
   }
 };
 

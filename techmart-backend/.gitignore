@@ -23,3 +23,5 @@ yarn-debug.log*
 # Build outputs
 dist/
 build/
+*.backup
+*.before-*
