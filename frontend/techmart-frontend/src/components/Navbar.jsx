@@ -1,7 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
-import { useState } from "react";
 import { useWishlist } from "../context/WishlistContext";
 import ThemeSwitcher from "./ThemeSwitcher";
 
