@@ -1220,6 +1220,23 @@ function checkDailyLimit(user, type, amount) {
   }
 }
 
+// Public Pay Profile
+app.get("/api/pay/profile/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).select("name email bvnVerified ninVerified createdAt");
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({
+      name: user.name,
+      email: user.email,
+      bvnVerified: user.bvnVerified || false,
+      ninVerified: user.ninVerified || false,
+      memberSince: user.createdAt
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
 // BVN Verification
 app.post("/api/pay/verify-bvn", auth, async (req, res) => {
   try {

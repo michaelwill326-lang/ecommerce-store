@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { TransactionSkeleton, SkeletonBlock } from "../components/Skeleton";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
+import QRCode from "qrcode";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
@@ -9,7 +11,10 @@ export default function TechMartPay() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
+  const location = useLocation();
   const [tab, setTab] = useState("Dashboard");
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [showQr, setShowQr] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState({ text: "", type: "" });
@@ -86,12 +91,32 @@ const [otpTimer, setOtpTimer] = useState(600);
     fetchBanks();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sendTo = params.get("sendTo");
+    if (sendTo) {
+      setTab("Send Money");
+      setSendForm(prev => ({ ...prev, recipientEmail: sendTo }));
+    }
+  }, [location.search]);
+
+  const generateQr = async (userId) => {
+    try {
+      const url = `${window.location.origin}/pay/user/${userId}`;
+      const dataUrl = await QRCode.toDataURL(url, { width: 200, margin: 2, color: { dark: "#f97316", light: "#0a0a0a" } });
+      setQrDataUrl(dataUrl);
+    } catch (err) {
+      console.error("QR generation failed:", err);
+    }
+  };
+
   const fetchDashboard = async () => {
     try {
       const res = await axios.get(`${API}/api/pay/dashboard`, { headers });
       setDashboard(res.data);
       setBvnVerified(res.data.bvnVerified || false);
       setNinVerified(res.data.ninVerified || false);
+      if (user?.id) generateQr(user.id);
 
       // Always trust the backend
       setPinSet(Boolean(res.data.walletPinSet));
@@ -530,19 +555,36 @@ const requestPinReset = async () => {
           </div>
         </div>
 
+        {/* TECHMART ID QR CODE */}
+        {showQr && qrDataUrl && (
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
+            <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 4px" }}>🆔 Your TechMart ID</p>
+            <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Scan to pay or view your profile</p>
+            <div style={{ background: "#0a0a0a", borderRadius: "12px", padding: "16px", display: "inline-block", marginBottom: "12px" }}>
+              <img src={qrDataUrl} alt="TechMart QR" style={{ width: "160px", height: "160px", display: "block" }} />
+            </div>
+            <p style={{ color: "#f97316", fontWeight: "700", fontSize: "13px", margin: "0 0 12px" }}>{user?.name}</p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+              <button onClick={() => { const a = document.createElement("a"); a.href = qrDataUrl; a.download = "techmart-qr.png"; a.click(); }} style={{ padding: "8px 16px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>⬇️ Save QR</button>
+              <button onClick={() => setShowQr(false)} style={{ padding: "8px 16px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>✕ Close</button>
+            </div>
+          </div>
+        )}
+
         {/* QUICK ACTIONS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
           {[
             { icon: "➕", label: "Add Money", tab: "Add Money" },
             { icon: "📤", label: "Send", tab: "Send Money" },
             { icon: "🏦", label: "Withdraw", tab: "Withdraw" },
+            { icon: "🆔", label: "My QR", tab: "QR" },
             { icon: "📱", label: "Airtime", tab: "Airtime" },
             { icon: "📶", label: "Data", tab: "Data" },
             { icon: "⚡", label: "Electricity", tab: "Electricity" },
             { icon: "📺", label: "Cable TV", tab: "Cable TV" },
             { icon: "🎯", label: "Betting", tab: "Betting" },
           ].map((a, i) => (
-            <button key={i} onClick={() => setTab(a.tab)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
+            <button key={i} onClick={() => { if (a.tab === "QR") { setShowQr(true); if (!qrDataUrl && user?.id) generateQr(user.id); } else setTab(a.tab); }} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "14px 8px", cursor: "pointer", textAlign: "center" }}>
               <p style={{ fontSize: "22px", margin: "0 0 4px" }}>{a.icon}</p>
               <p style={{ color: "var(--text-primary)", fontSize: "11px", fontWeight: "600", margin: 0 }}>{a.label}</p>
             </button>
