@@ -215,6 +215,19 @@ const Product = mongoose.model(
     vendorId: String,
     vendorName: String,
     category: String,
+    condition: { type: String, default: "New" },
+    variants: [{
+      name: String,
+      color: { type: String, default: "" },
+      size: { type: String, default: "" },
+      storage: { type: String, default: "" },
+      condition: { type: String, default: "New" },
+      price: {
+        type: Number,
+        default: 0
+      },
+      stock: { type: Number, default: 0 }
+    }],
     rating: { type: Number, default: 0 },
     reviews: [
       {
@@ -580,8 +593,49 @@ app.post("/api/products", adminOnly, async (req, res) => {
 
 app.put("/api/products/:id", adminOnly, async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(product);
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    let variants = product.variants;
+
+    try {
+      if (req.body.variants) {
+        const parsed = JSON.parse(req.body.variants);
+        if (Array.isArray(parsed)) {
+          variants = parsed;
+        }
+      }
+    } catch {
+      console.warn("⚠️ Invalid variants JSON");
+    }
+
+    const updates = {
+      name: req.body.name ?? product.name,
+      description: req.body.description ?? product.description,
+      category: req.body.category ?? product.category,
+      condition: req.body.condition ?? product.condition,
+      price:
+        req.body.price !== undefined
+          ? Number(req.body.price)
+          : product.price,
+      stock:
+        req.body.stock !== undefined
+          ? Number(req.body.stock)
+          : product.stock,
+      variants
+    };
+
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true }
+    );
+
+    res.json(updated);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update product" });
@@ -5460,13 +5514,37 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
     } else {
       return res.status(400).json({ message: "Product image asset is required." });
     }
+    let variants = null;
+
+    try {
+      if (req.body.variants) {
+        variants = JSON.parse(req.body.variants);
+      }
+    } catch (err) {
+      console.warn("⚠️ Invalid variants JSON received.");
+    }
+
+    if (!Array.isArray(variants) || variants.length === 0) {
+      variants = [{
+        name: "Default",
+        color: "",
+        size: "",
+        storage: "",
+        condition: req.body.condition || "New",
+        price: Number(req.body.price),
+        stock: Number(req.body.stock)
+      }];
+    }
+
     const newProduct = new Product({
       name: req.body.name,
       price: Number(req.body.price),
       description: req.body.description,
       stock: Number(req.body.stock),
       category: req.body.category || "",
-      images: imageUrls
+      condition: req.body.condition || "New",
+      images: imageUrls,
+      variants
     });
     await newProduct.save();
     res.status(201).json({ success: true, data: newProduct });
