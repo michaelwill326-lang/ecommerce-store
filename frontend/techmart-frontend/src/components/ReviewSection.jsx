@@ -3,8 +3,8 @@ import { useToast } from "../App";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-export default function ReviewSection({
-  const showToast = useToast(); product, onRefresh }) {
+export default function ReviewSection({ product, onRefresh }) {
+  const showToast = useToast();
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
