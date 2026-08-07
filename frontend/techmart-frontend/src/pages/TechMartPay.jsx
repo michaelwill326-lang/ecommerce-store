@@ -718,6 +718,15 @@ const requestPinReset = async () => {
         {tab === "Send Money" && (
           <div>
             <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Send Money</h2>
+            {/* QR Receive Card */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>🆔 Receive via QR</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Show your QR code to receive money</p>
+              </div>
+              <button onClick={() => { setShowQr(true); if (!qrDataUrl && user?.id) generateQr(user.id); }} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px", flexShrink: 0 }}>Show QR</button>
+            </div>
+
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Send to any TechMart user instantly</p>
               <input placeholder="Recipient email address" value={sendForm.recipientEmail} onChange={e => setSendForm({...sendForm, recipientEmail: e.target.value})} style={inp} />
