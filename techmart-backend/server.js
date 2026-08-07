@@ -195,6 +195,7 @@ const User = mongoose.model(
     lastLoginAt: { type: Date, default: null },
     lastLoginIP: { type: String, default: null },
     bvnVerified: { type: Boolean, default: false },
+    ninVerified: { type: Boolean, default: false },
     bvnLastAttempt: { type: Date, default: null },
     dailyFundingTotal: { type: Number, default: 0 },
     dailyFundingDate: { type: String, default: null },
@@ -1107,10 +1108,42 @@ app.post("/api/pay/send", auth, async (req, res) => {
 });
 
 // 3. Withdraw to Bank Account
+// NIN Verification
+app.post("/api/pay/verify-nin", auth, async (req, res) => {
+  try {
+    const { nin } = req.body;
+    if (!nin || nin.length !== 11) return res.status(400).json({ error: "Enter a valid 11-digit NIN" });
+    const user = await User.findById(req.user.id);
+    if (user.ninVerified || user.bvnVerified) return res.status(400).json({ error: "Identity already verified" });
+
+    const response = await axios.get(
+      `https://api.paystack.co/bank/resolve_nin/${nin}`,
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    const ninData = response.data.data;
+    const userName = user.name.toLowerCase();
+    const ninFirst = (ninData.first_name || "").toLowerCase();
+    const ninLast = (ninData.last_name || "").toLowerCase();
+
+    if (!userName.includes(ninFirst) && !userName.includes(ninLast)) {
+      return res.status(400).json({ error: "NIN details do not match your account name" });
+    }
+
+    user.ninVerified = true;
+    await user.save();
+
+    res.json({ success: true, message: "NIN verified successfully! Your transaction limits have been upgraded." });
+  } catch (err) {
+    console.error("NIN verification error:", err.response?.data || err.message);
+    res.status(500).json({ error: "NIN verification failed. Please try again." });
+  }
+});
+
 // Daily limit checker helper
 function checkDailyLimit(user, type, amount) {
   const today = new Date().toISOString().slice(0, 10);
-  const isVerified = user.bvnVerified;
+  const isVerified = user.bvnVerified || user.ninVerified;
   const fundingLimit = isVerified ? 500000 : 50000;
   const transferLimit = isVerified ? 200000 : 20000;
 
@@ -1774,7 +1807,7 @@ app.post("/api/pay/betting", auth, async (req, res) => {
 // 7. TechMart Pay Dashboard Data
 app.get("/api/pay/dashboard", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank walletPinSet bvnVerified");
+    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank walletPinSet bvnVerified ninVerified");
     
     // Recent transactions (last 10)
     const recent = [...(user.walletTransactions || [])].reverse().slice(0, 10);
@@ -1793,7 +1826,8 @@ app.get("/api/pay/dashboard", auth, async (req, res) => {
       } : null,
       recentTransactions: recent,
       stats: { totalIn, totalOut, transactionCount: (user.walletTransactions || []).length },
-      bvnVerified: user.bvnVerified || false
+      bvnVerified: user.bvnVerified || false,
+      ninVerified: user.ninVerified || false
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch dashboard" });

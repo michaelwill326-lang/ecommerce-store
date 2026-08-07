@@ -26,6 +26,10 @@ export default function TechMartPay() {
   const [bvnInput, setBvnInput] = useState("");
   const [bvnLoading, setBvnLoading] = useState(false);
   const [bvnVerified, setBvnVerified] = useState(false);
+  const [ninVerified, setNinVerified] = useState(false);
+  const [ninInput, setNinInput] = useState("");
+  const [ninLoading, setNinLoading] = useState(false);
+  const [kycMethod, setKycMethod] = useState("bvn");
 
   // Airtime state
   const [airtimeForm, setAirtimeForm] = useState({ phone: "", amount: "", network: "" });
@@ -87,6 +91,7 @@ const [otpTimer, setOtpTimer] = useState(600);
       const res = await axios.get(`${API}/api/pay/dashboard`, { headers });
       setDashboard(res.data);
       setBvnVerified(res.data.bvnVerified || false);
+      setNinVerified(res.data.ninVerified || false);
 
       // Always trust the backend
       setPinSet(Boolean(res.data.walletPinSet));
@@ -106,6 +111,19 @@ const [otpTimer, setOtpTimer] = useState(600);
     } catch (err) {
       setMsg({ text: err.response?.data?.error || "BVN verification failed", type: "error" });
     } finally { setBvnLoading(false); }
+  };
+
+  const verifyNin = async () => {
+    if (!ninInput || ninInput.length !== 11) return setMsg({ text: "Enter a valid 11-digit NIN", type: "error" });
+    setNinLoading(true);
+    try {
+      await axios.post(`${API}/api/pay/verify-nin`, { nin: ninInput }, { headers });
+      setNinVerified(true);
+      setMsg({ text: "NIN verified! Your transaction limits have been upgraded.", type: "success" });
+      setNinInput("");
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "NIN verification failed", type: "error" });
+    } finally { setNinLoading(false); }
   };
 
   const fetchBanks = async () => {
@@ -568,7 +586,7 @@ const requestPinReset = async () => {
 
             )}
 
-            {!bvnVerified && (
+            {!bvnVerified && !ninVerified && (
               <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                 <div>
                   <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>🔐 Verify Your BVN</p>
@@ -578,7 +596,7 @@ const requestPinReset = async () => {
               </div>
             )}
 
-            {bvnVerified && (
+            {(bvnVerified || ninVerified) && (
               <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <p style={{ fontSize: "20px", margin: 0 }}>✅</p>
                 <div>
@@ -709,7 +727,7 @@ const requestPinReset = async () => {
         {tab === "KYC" && (
           <div>
             <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>🔐 Identity Verification</h2>
-            {bvnVerified ? (
+            {(bvnVerified || ninVerified) ? (
               <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "24px", textAlign: "center" }}>
                 <p style={{ fontSize: "40px", margin: "0 0 12px" }}>✅</p>
                 <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "18px", margin: "0 0 8px" }}>BVN Verified</p>
@@ -743,19 +761,30 @@ const requestPinReset = async () => {
                   </div>
                 </div>
                 <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Your BVN is an 11-digit number. Dial *565*0# on your registered phone to get it.</p>
-                  <input
-                    placeholder="Enter your 11-digit BVN"
-                    type="number"
-                    value={bvnInput}
-                    onChange={e => setBvnInput(e.target.value)}
-                    maxLength={11}
-                    style={{ width: "100%", padding: "12px 14px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", marginBottom: "12px", boxSizing: "border-box", letterSpacing: "2px" }}
-                  />
-                  <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 16px" }}>🔒 Your BVN is encrypted and never stored. It is only used for identity verification.</p>
-                  <button onClick={verifyBvn} disabled={bvnLoading || bvnInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: bvnInput.length !== 11 ? 0.6 : 1 }}>
-                    {bvnLoading ? "Verifying..." : "Verify BVN"}
-                  </button>
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                    {["bvn", "nin"].map(method => (
+                      <button key={method} onClick={() => setKycMethod(method)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `2px solid ${kycMethod === method ? "#22c55e" : "#333"}`, background: kycMethod === method ? "#0a1a0a" : "#111", color: kycMethod === method ? "#22c55e" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "13px", textTransform: "uppercase" }}>{method}</button>
+                    ))}
+                  </div>
+                  {kycMethod === "bvn" ? (
+                    <div>
+                      <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Your BVN is an 11-digit number. Dial *565*0# on your registered phone to get it.</p>
+                      <input placeholder="Enter your 11-digit BVN" type="number" value={bvnInput} onChange={e => setBvnInput(e.target.value)} maxLength={11} style={{ width: "100%", padding: "12px 14px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", marginBottom: "12px", boxSizing: "border-box", letterSpacing: "2px" }} />
+                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 16px" }}>🔒 Your BVN is encrypted and never stored. It is only used for identity verification.</p>
+                      <button onClick={verifyBvn} disabled={bvnLoading || bvnInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: bvnInput.length !== 11 ? 0.6 : 1 }}>
+                        {bvnLoading ? "Verifying..." : "Verify BVN"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Your NIN is an 11-digit number. Dial *346# to get it or check your NIN slip.</p>
+                      <input placeholder="Enter your 11-digit NIN" type="number" value={ninInput} onChange={e => setNinInput(e.target.value)} maxLength={11} style={{ width: "100%", padding: "12px 14px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", marginBottom: "12px", boxSizing: "border-box", letterSpacing: "2px" }} />
+                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 16px" }}>🔒 Your NIN is encrypted and never stored. It is only used for identity verification.</p>
+                      <button onClick={verifyNin} disabled={ninLoading || ninInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: ninInput.length !== 11 ? 0.6 : 1 }}>
+                        {ninLoading ? "Verifying..." : "Verify NIN"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
