@@ -317,7 +317,10 @@ export default function Tracking() {
                       });
                       const data = await res.json();
                       if (data.success) {
-                        alert("Delivery confirmed! Thank you for shopping on TechMart.");
+                        const msg = data.cashback > 0
+                          ? `Delivery confirmed! 🎉 You earned ₦${data.cashback.toLocaleString()} cashback in your TechMart wallet!`
+                          : "Delivery confirmed! Thank you for shopping on TechMart.";
+                        alert(msg);
                         window.location.reload();
                       } else {
                         alert(data.error || "Could not confirm delivery");

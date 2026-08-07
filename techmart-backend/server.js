@@ -4141,7 +4141,30 @@ app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
     order.status = "Delivered";
     await order.save();
 
-    res.json({ success: true, message: "Delivery confirmed. Payment released to seller." });
+    // 💰 2% Cashback to buyer wallet
+    const cashbackAmount = Math.floor((Number(order.amount) || 0) * 0.02);
+    let cashbackMsg = "";
+    if (cashbackAmount > 0) {
+      try {
+        const buyer = await User.findOne({ email: order.email });
+        if (buyer) {
+          buyer.walletBalance = (buyer.walletBalance || 0) + cashbackAmount;
+          buyer.walletTransactions = buyer.walletTransactions || [];
+          buyer.walletTransactions.push({
+            type: "credit",
+            amount: cashbackAmount,
+            description: `2% cashback on order #${order.trackingNumber || order._id}`,
+            reference: "CBK-" + Date.now()
+          });
+          await buyer.save();
+          cashbackMsg = `You earned ₦${cashbackAmount.toLocaleString()} cashback!`;
+          console.log(`💰 Cashback ₦${cashbackAmount} credited to ${order.email}`);
+        }
+      } catch (cbErr) {
+        console.error("Cashback error:", cbErr.message);
+      }
+    }
+    res.json({ success: true, message: "Delivery confirmed. Payment released to seller.", cashback: cashbackAmount, cashbackMsg });
   } catch (err) {
     console.error("Escrow release error:", err.message);
     res.status(500).json({ error: "Failed to confirm delivery" });
