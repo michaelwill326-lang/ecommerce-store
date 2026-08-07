@@ -1,11 +1,23 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
+import { useState } from "react";
 import { useWishlist } from "../context/WishlistContext";
 import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Navbar() {
   const { cart } = useContext(CartContext);
+  const [sellerMode, setSellerMode] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("techmart_mode") !== "buyer";
+    return true;
+  });
+  const toggleMode = () => {
+    const newMode = !sellerMode;
+    setSellerMode(newMode);
+    localStorage.setItem("techmart_mode", newMode ? "seller" : "buyer");
+    if (newMode) window.location.href = "/seller/dashboard";
+    else window.location.href = "/";
+  };
   const { wishlist } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
@@ -100,6 +112,11 @@ export default function Navbar() {
 
             {user?.role === "admin" && (
               <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
+            )}
+            {user?.role === "seller" && (
+              <button onClick={toggleMode} style={{ padding: "8px 14px", background: sellerMode ? "linear-gradient(135deg, #f97316, #dc2626)" : "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+                {sellerMode ? "🛍️ Shop as Buyer" : "🏪 Manage Store"}
+              </button>
             )}
 
             <Link to="/wishlist" style={{ ...linkStyle("/wishlist"), position: "relative" }}>
@@ -218,6 +235,11 @@ export default function Navbar() {
             <Link to="/admin" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
               👑 Admin Dashboard
             </Link>
+          )}
+          {user?.role === "seller" && (
+            <button onClick={() => { toggleMode(); setMenuOpen(false); }} style={{ width: "100%", padding: "12px 16px", background: sellerMode ? "linear-gradient(135deg, #f97316, #dc2626)" : "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px", marginBottom: "8px", textAlign: "left" }}>
+              {sellerMode ? "🛍️ Shop as Buyer" : "🏪 Manage Store"}
+            </button>
           )}
 
           {user ? (
