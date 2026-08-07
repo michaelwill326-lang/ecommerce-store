@@ -191,6 +191,12 @@ const User = mongoose.model(
     loginAttempts: { type: Number, default: 0 },
     lastLoginAt: { type: Date, default: null },
     lastLoginIP: { type: String, default: null },
+    bvnVerified: { type: Boolean, default: false },
+    bvnLastAttempt: { type: Date, default: null },
+    dailyFundingTotal: { type: Number, default: 0 },
+    dailyFundingDate: { type: String, default: null },
+    dailyTransferTotal: { type: Number, default: 0 },
+    dailyTransferDate: { type: String, default: null },
     createdAt: { type: Date, default: Date.now }
   })
 );
@@ -1002,6 +1008,8 @@ app.post("/api/pay/fund-wallet", auth, async (req, res) => {
     if (!amount || Number(amount) < 100) return res.status(400).json({ error: "Minimum deposit is N100" });
 
     const user = await User.findById(req.user.id);
+    const limitCheck = checkDailyLimit(user, "funding", amount);
+    if (!limitCheck.ok) return res.status(400).json({ error: limitCheck.error });
     const reference = "WAL-" + Date.now();
 
     const response = await axios.post(
@@ -1060,8 +1068,12 @@ app.post("/api/pay/send", auth, async (req, res) => {
     if (!recipient) return res.status(404).json({ error: "No TechMart user found with that email" });
     if (sender.email === recipientEmail) return res.status(400).json({ error: "You cannot send money to yourself" });
     if ((sender.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+    const transferLimit = checkDailyLimit(sender, "transfer", amount);
+    if (!transferLimit.ok) return res.status(400).json({ error: transferLimit.error });
 
     const reference = "TXF-" + Date.now();
+    sender.dailyTransferTotal = transferLimit.total + Number(amount);
+    sender.dailyTransferDate = transferLimit.today;
 
     // Debit sender
     sender.walletBalance = (sender.walletBalance || 0) - Number(amount);
@@ -1092,6 +1104,69 @@ app.post("/api/pay/send", auth, async (req, res) => {
 });
 
 // 3. Withdraw to Bank Account
+// Daily limit checker helper
+function checkDailyLimit(user, type, amount) {
+  const today = new Date().toISOString().slice(0, 10);
+  const isVerified = user.bvnVerified;
+  const fundingLimit = isVerified ? 500000 : 50000;
+  const transferLimit = isVerified ? 200000 : 20000;
+
+  if (type === "funding") {
+    const sameDay = user.dailyFundingDate === today;
+    const total = sameDay ? (user.dailyFundingTotal || 0) : 0;
+    if (total + Number(amount) > fundingLimit) {
+      return { ok: false, error: `Daily funding limit is ₦${fundingLimit.toLocaleString()}. ${!isVerified ? "Verify your BVN to increase limits." : ""}` };
+    }
+    return { ok: true, total, today };
+  }
+
+  if (type === "transfer") {
+    const sameDay = user.dailyTransferDate === today;
+    const total = sameDay ? (user.dailyTransferTotal || 0) : 0;
+    if (total + Number(amount) > transferLimit) {
+      return { ok: false, error: `Daily transfer limit is ₦${transferLimit.toLocaleString()}. ${!isVerified ? "Verify your BVN to increase limits." : ""}` };
+    }
+    return { ok: true, total, today };
+  }
+}
+
+// BVN Verification
+app.post("/api/pay/verify-bvn", auth, async (req, res) => {
+  try {
+    const { bvn } = req.body;
+    if (!bvn || bvn.length !== 11) return res.status(400).json({ error: "Enter a valid 11-digit BVN" });
+    const user = await User.findById(req.user.id);
+    if (user.bvnVerified) return res.status(400).json({ error: "BVN already verified" });
+
+    // Paystack BVN verification
+    const response = await axios.get(
+      `https://api.paystack.co/bank/resolve_bvn/${bvn}`,
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    );
+
+    const bvnData = response.data.data;
+    // Match first name or last name against user name
+    const userName = user.name.toLowerCase();
+    const bvnFirst = (bvnData.first_name || "").toLowerCase();
+    const bvnLast = (bvnData.last_name || "").toLowerCase();
+
+    if (!userName.includes(bvnFirst) && !userName.includes(bvnLast)) {
+      user.bvnLastAttempt = new Date();
+      await user.save();
+      return res.status(400).json({ error: "BVN details do not match your account name" });
+    }
+
+    user.bvnVerified = true;
+    user.bvnLastAttempt = new Date();
+    await user.save();
+
+    res.json({ success: true, message: "BVN verified successfully! Your transaction limits have been upgraded." });
+  } catch (err) {
+    console.error("BVN verification error:", err.response?.data || err.message);
+    res.status(500).json({ error: "BVN verification failed. Please try again." });
+  }
+});
+
 app.post("/api/pay/withdraw", auth, async (req, res) => {
   try {
     const { amount, bankCode, accountNumber, accountName } = req.body;
@@ -1696,7 +1771,7 @@ app.post("/api/pay/betting", auth, async (req, res) => {
 // 7. TechMart Pay Dashboard Data
 app.get("/api/pay/dashboard", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank walletPinSet");
+    const user = await User.findById(req.user.id).select("name email walletBalance walletTransactions virtualAccountNumber virtualAccountBank walletPinSet bvnVerified");
     
     // Recent transactions (last 10)
     const recent = [...(user.walletTransactions || [])].reverse().slice(0, 10);
@@ -1714,7 +1789,8 @@ app.get("/api/pay/dashboard", auth, async (req, res) => {
         accountName: user.name
       } : null,
       recentTransactions: recent,
-      stats: { totalIn, totalOut, transactionCount: (user.walletTransactions || []).length }
+      stats: { totalIn, totalOut, transactionCount: (user.walletTransactions || []).length },
+      bvnVerified: user.bvnVerified || false
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch dashboard" });

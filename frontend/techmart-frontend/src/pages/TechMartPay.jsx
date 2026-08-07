@@ -23,6 +23,9 @@ export default function TechMartPay() {
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", bankCode: "", accountNumber: "", accountName: "" });
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [verifyingAccount, setVerifyingAccount] = useState(false);
+  const [bvnInput, setBvnInput] = useState("");
+  const [bvnLoading, setBvnLoading] = useState(false);
+  const [bvnVerified, setBvnVerified] = useState(false);
 
   // Airtime state
   const [airtimeForm, setAirtimeForm] = useState({ phone: "", amount: "", network: "" });
@@ -83,12 +86,26 @@ const [otpTimer, setOtpTimer] = useState(600);
     try {
       const res = await axios.get(`${API}/api/pay/dashboard`, { headers });
       setDashboard(res.data);
+      setBvnVerified(res.data.bvnVerified || false);
 
       // Always trust the backend
       setPinSet(Boolean(res.data.walletPinSet));
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
+  };
+
+  const verifyBvn = async () => {
+    if (!bvnInput || bvnInput.length !== 11) return setMsg({ text: "Enter a valid 11-digit BVN", type: "error" });
+    setBvnLoading(true);
+    try {
+      await axios.post(`${API}/api/pay/verify-bvn`, { bvn: bvnInput }, { headers });
+      setBvnVerified(true);
+      setMsg({ text: "BVN verified! Your transaction limits have been upgraded.", type: "success" });
+      setBvnInput("");
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || "BVN verification failed", type: "error" });
+    } finally { setBvnLoading(false); }
   };
 
   const fetchBanks = async () => {
@@ -445,7 +462,7 @@ const requestPinReset = async () => {
       setMsg({ text: err.response?.data?.error || "Funding failed", type: "error" });
     } finally { setBetLoading(false); }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History"];
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC"];
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -549,6 +566,26 @@ const requestPinReset = async () => {
                 </button>
               </div>
 
+            )}
+
+            {!bvnVerified && (
+              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                <div>
+                  <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>🔐 Verify Your BVN</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Unlock higher limits: ₦500k/day funding, ₦200k/day transfers</p>
+                </div>
+                <button onClick={() => setTab("KYC")} style={{ padding: "10px 16px", background: "#22c55e", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px", flexShrink: 0 }}>Verify</button>
+              </div>
+            )}
+
+            {bvnVerified && (
+              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+                <p style={{ fontSize: "20px", margin: 0 }}>✅</p>
+                <div>
+                  <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>BVN Verified</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>You have access to higher transaction limits</p>
+                </div>
+              </div>
             )}
 
             {pinSet && (
@@ -665,6 +702,63 @@ const requestPinReset = async () => {
                 {withdrawLoading ? "Processing..." : `Withdraw ₦${Number(withdrawForm.amount || 0).toLocaleString()}`}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* KYC TAB */}
+        {tab === "KYC" && (
+          <div>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>🔐 Identity Verification</h2>
+            {bvnVerified ? (
+              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "24px", textAlign: "center" }}>
+                <p style={{ fontSize: "40px", margin: "0 0 12px" }}>✅</p>
+                <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "18px", margin: "0 0 8px" }}>BVN Verified</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Your identity has been verified. You have access to higher transaction limits.</p>
+                <div style={{ marginTop: "16px", background: "var(--bg-card)", borderRadius: "10px", padding: "16px" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px", margin: "0 0 8px" }}>Your Limits</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Daily Funding</p>
+                    <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦500,000</p>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Daily Transfers</p>
+                    <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦200,000</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 8px" }}>Why verify your BVN?</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {[["💰", "Daily funding limit", "₦50,000 → ₦500,000"], ["📤", "Daily transfer limit", "₦20,000 → ₦200,000"], ["🔒", "Account security", "Extra protection on your wallet"]].map(([icon, label, value]) => (
+                      <div key={label} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <p style={{ fontSize: "20px", margin: 0 }}>{icon}</p>
+                        <div>
+                          <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{label}</p>
+                          <p style={{ color: "#22c55e", fontSize: "12px", margin: 0 }}>{value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Your BVN is an 11-digit number. Dial *565*0# on your registered phone to get it.</p>
+                  <input
+                    placeholder="Enter your 11-digit BVN"
+                    type="number"
+                    value={bvnInput}
+                    onChange={e => setBvnInput(e.target.value)}
+                    maxLength={11}
+                    style={{ width: "100%", padding: "12px 14px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", marginBottom: "12px", boxSizing: "border-box", letterSpacing: "2px" }}
+                  />
+                  <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 16px" }}>🔒 Your BVN is encrypted and never stored. It is only used for identity verification.</p>
+                  <button onClick={verifyBvn} disabled={bvnLoading || bvnInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: bvnInput.length !== 11 ? 0.6 : 1 }}>
+                    {bvnLoading ? "Verifying..." : "Verify BVN"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
