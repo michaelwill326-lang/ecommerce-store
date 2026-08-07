@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useToast } from "../App";
 import { OrderCardSkeleton, TransactionSkeleton, ProfileSkeleton } from "../components/Skeleton";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function Account() {
+  const showToast = useToast();
   const navigate = useNavigate();
   const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
   const token = localStorage.getItem("token");
@@ -164,7 +166,7 @@ export default function Account() {
               <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 12px" }}>Share your code and earn ₦500 for every friend who signs up!</p>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <div style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "10px 14px", fontFamily: "monospace", fontWeight: "700", fontSize: "16px", color: "var(--text-primary)", letterSpacing: "2px" }}>{user.referralCode}</div>
-                <button onClick={() => { navigator.clipboard?.writeText(user.referralCode); alert("Referral code copied!"); }} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Copy</button>
+                <button onClick={() => { navigator.clipboard?.writeText(user.referralCode); showToast("Referral code copied!", "success"); }} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Copy</button>
               </div>
             </div>
           )}

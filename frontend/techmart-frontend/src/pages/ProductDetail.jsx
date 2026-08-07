@@ -347,8 +347,8 @@ export default function ProductDetail() {
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                     body: JSON.stringify({ sellerId: product.vendorId, productId: product._id, productName: product.name, message: msg })
                   });
-                  alert("Message sent to seller!");
-                } catch { alert("Failed to send message"); }
+                  showToast("Message sent to seller!", "success");
+                } catch { showToast("Failed to send message", "error"); }
               }}
               style={{ padding: "14px", background: "transparent", border: "1px solid #3b82f6", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", color: "#3b82f6", width: "100%" }}
             >
@@ -372,7 +372,7 @@ export default function ProductDetail() {
       <ReviewSection product={product} onRefresh={fetchProduct} />
       <AIBundle productId={product._id} onAddBundle={(bundleProducts) => {
         bundleProducts.forEach(p => addToCart(p));
-        alert("Bundle added to cart!");
+        showToast("Bundle added to cart!", "success");
       }} />
 
       {/* YOU MAY ALSO LIKE */}

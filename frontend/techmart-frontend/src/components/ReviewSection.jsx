@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useToast } from "../App";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-export default function ReviewSection({ product, onRefresh }) {
+export default function ReviewSection({
+  const showToast = useToast(); product, onRefresh }) {
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,17 +52,17 @@ export default function ReviewSection({ product, onRefresh }) {
   };
 
   const flagReview = async (reviewId) => {
-    if (!token) { alert("Please login to flag a review"); return; }
+    if (!token) { showToast("Please login to flag a review", "warning"); return; }
     try {
       setFlagging(reviewId);
       await fetch(`${API}/api/products/${product._id}/review/${reviewId}/flag`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("⚠️ Review flagged for moderation. Thank you!");
+      showToast("⚠️ Review flagged for moderation. Thank you!", "success");
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Failed to flag review");
+      showToast("Failed to flag review", "error");
     } finally {
       setFlagging(null);
     }

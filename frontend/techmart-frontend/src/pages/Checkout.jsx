@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { useToast } from "../App";
 import { useNavigate, Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
@@ -7,6 +8,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 const FALLBACK_IMG = "https://placehold.co/80x80?text=No+Image";
 
 export default function Checkout() {
+  const showToast = useToast();
   const { cart, clearCart } = useContext(CartContext);
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
@@ -124,8 +126,8 @@ export default function Checkout() {
   };
 
   const handleEscrowCheckout = async () => {
-    if (!address.trim()) return alert("Please enter your delivery address");
-    if (!phone.trim()) return alert("Please enter your phone number");
+    if (!address.trim()) return showToast("Please enter your delivery address", "warning");
+    if (!phone.trim()) return showToast("Please enter your phone number", "warning");
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -143,7 +145,7 @@ export default function Checkout() {
         navigate(`/tracking?ref=${res.data.order.reference}&escrow=true`);
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Checkout failed");
+      showToast(err.response?.data?.error || "Checkout failed", "error");
     } finally { setLoading(false); }
   };
 

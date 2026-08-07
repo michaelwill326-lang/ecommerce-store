@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToast } from "../App";
 import { OrderCardSkeleton } from "../components/Skeleton";
 import { io } from "socket.io-client";
 import { Link } from "react-router-dom";
@@ -14,6 +15,7 @@ const STEPS = [
 ];
 
 export default function Tracking() {
+  const showToast = useToast();
   const [reference, setReference] = useState("");
   const [order, setOrder] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
@@ -265,12 +267,12 @@ export default function Tracking() {
                       });
                       const data = await res.json();
                       if (data.success) {
-                        alert("Order cancelled. Refund added to your TechMart wallet.");
+                        showToast("Order cancelled. Refund added to your TechMart wallet.", "success");
                         window.location.reload();
                       } else {
-                        alert(data.error || "Could not cancel order");
+                        showToast(data.error || "Could not cancel order", "error");
                       }
-                    } catch { alert("Failed to cancel order"); }
+                    } catch { showToast("Failed to cancel order", "error"); }
                   }} style={{ width: "100%", padding: "12px", background: "#2a0a0a", border: "1px solid #dc2626", color: "#f87171", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
                     ❌ Cancel Order & Get Refund
                   </button>
@@ -293,11 +295,11 @@ export default function Tracking() {
                       });
                       const data = await res.json();
                       if (data.success) {
-                        alert("Return request submitted! We will review it within 24 hours.");
+                        showToast("Return request submitted! We will review it within 24 hours.", "success");
                       } else {
-                        alert(data.error || "Could not submit return request");
+                        showToast(data.error || "Could not submit return request", "error");
                       }
-                    } catch { alert("Failed to submit return request"); }
+                    } catch { showToast("Failed to submit return request", "error"); }
                   }} style={{ width: "100%", padding: "12px", background: "#1a1a2a", border: "1px solid #3b82f6", color: "#60a5fa", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
                     ↩️ Request Return / Refund
                   </button>
@@ -320,12 +322,12 @@ export default function Tracking() {
                         const msg = data.cashback > 0
                           ? `Delivery confirmed! 🎉 You earned ₦${data.cashback.toLocaleString()} cashback in your TechMart wallet!`
                           : "Delivery confirmed! Thank you for shopping on TechMart.";
-                        alert(msg);
+                        showToast(msg, "success");
                         window.location.reload();
                       } else {
-                        alert(data.error || "Could not confirm delivery");
+                        showToast(data.error || "Could not confirm delivery", "error");
                       }
-                    } catch { alert("Failed to confirm delivery"); }
+                    } catch { showToast("Failed to confirm delivery", "error"); }
                   }} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", color: "var(--text-primary)", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
                     ✅ Confirm Delivery & Release Payment
                   </button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToast } from "../App";
 import AIInventoryForecast from "../components/AIInventoryForecast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -12,6 +13,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow"];
 
 export default function Admin() {
+  const showToast = useToast();
   const navigate = useNavigate();
   const [tab, setTab] = useState("Dashboard");
   const [analytics, setAnalytics] = useState(null);
@@ -115,7 +117,7 @@ export default function Admin() {
       setNewProduct(prev => ({ ...prev, images: [...(prev.images.filter(u => u)), ...urls] }));
       setUploadPreview(urls[0]);
     } catch (err) {
-      alert("Image upload failed. Please try again.");
+      showToast("Image upload failed. Please try again.", "error");
     } finally {
       setUploading(false);
     }
@@ -126,7 +128,7 @@ export default function Admin() {
       await axios.put(`${API}/api/admin/orders/${id}`, { status }, { headers });
       setOrders(orders.map(o => o._id === id ? { ...o, status } : o));
     } catch (err) {
-      alert("Failed to update order");
+      showToast("Failed to update order", "error");
     }
   };
 
@@ -136,7 +138,7 @@ export default function Admin() {
       await axios.delete(`${API}/api/products/${id}`, { headers });
       setProducts(products.filter(p => p._id !== id));
     } catch (err) {
-      alert("Failed to delete product");
+      showToast("Failed to delete product", "error");
     }
   };
 
@@ -154,7 +156,7 @@ export default function Admin() {
       setUploadPreview(null);
       setNewProduct({ name: "", price: "", description: "", category: "", stock: "", images: [""] });
     } catch (err) {
-      alert("Failed to save product");
+      showToast("Failed to save product", "error");
     }
   };
 
@@ -173,9 +175,9 @@ export default function Admin() {
       await axios.put(`${API}/api/products/${productId}/review/${reviewId}/approve`, {}, { headers });
       setPendingReviews(pendingReviews.filter(r => r._id !== reviewId));
       setFlaggedReviews(flaggedReviews.filter(r => r._id !== reviewId));
-      alert("✅ Review approved!");
+      showToast("✅ Review approved!", "success");
     } catch (err) {
-      alert("Failed to approve review");
+      showToast("Failed to approve review", "error");
     }
   };
 
@@ -185,9 +187,9 @@ export default function Admin() {
       await axios.delete(`${API}/api/products/${productId}/review/${reviewId}`, { headers });
       setPendingReviews(pendingReviews.filter(r => r._id !== reviewId));
       setFlaggedReviews(flaggedReviews.filter(r => r._id !== reviewId));
-      alert("🗑️ Review deleted!");
+      showToast("🗑️ Review deleted!", "success");
     } catch (err) {
-      alert("Failed to delete review");
+      showToast("Failed to delete review", "error");
     }
   };
 
@@ -372,12 +374,12 @@ export default function Admin() {
                             const res = await axios.post(`${API}/api/admin/orders/${o._id}/send-payment-link`, {}, { headers });
                             const url = res.data.paymentUrl;
                             await navigator.clipboard.writeText(url);
-                            alert(`Payment link copied to clipboard!
+                            showToast(`Payment link copied to clipboard!
 
 Send this to the customer:
-${url}`);
+${url}`, "success");
                           } catch (err) {
-                            alert("Failed to generate payment link");
+                            showToast("Failed to generate payment link", "error");
                           }
                         }}
                         style={{ marginTop: "6px", width: "100%", padding: "6px 8px", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "var(--text-primary)", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}
@@ -633,7 +635,7 @@ ${url}`);
             try {
               const res = await axios.get(`${API}/api/admin/fraud/flagged`, { headers });
               setFlaggedUsers(res.data);
-            } catch { alert("Failed to load flagged users"); }
+            } catch { showToast("Failed to load flagged users", "error"); }
           }} style={{ ...styles.addBtn, marginBottom: 16 }}>Load Flagged Users</button>
           {flaggedUsers.length === 0 ? (
             <p style={{ color: "var(--text-muted)" }}>No flagged users yet. Click Load to fetch.</p>
@@ -693,7 +695,7 @@ ${url}`);
             try {
               const res = await axios.get(`${API}/api/admin/returns`, { headers });
               setReturns(res.data);
-            } catch { alert("Failed to load returns"); }
+            } catch { showToast("Failed to load returns", "error"); }
           }} style={{ ...styles.addBtn, marginBottom: 16 }}>Load Return Requests</button>
           {returns.length === 0 ? (
             <p style={{ color: "var(--text-muted)" }}>No return requests yet. Click Load to fetch.</p>
