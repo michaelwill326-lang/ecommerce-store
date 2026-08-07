@@ -73,6 +73,12 @@ export default function SellerDashboard() {
     finally { setUploading(false); }
   };
 
+  const [variants, setVariants] = useState([{ name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
+
+  const addVariant = () => setVariants(prev => [...prev, { name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
+  const removeVariant = (i) => setVariants(prev => prev.filter((_, j) => j !== i));
+  const updateVariant = (i, field, value) => setVariants(prev => prev.map((v, j) => j === i ? { ...v, [field]: value } : v));
+
   const addProduct = async () => {
     setMsg("");
     if (!newProduct.name || !newProduct.price || !newProduct.stock) { setMsg("Name, price and stock are required"); return; }
@@ -84,10 +90,12 @@ export default function SellerDashboard() {
       formData.append("category", newProduct.category || "");
       formData.append("description", newProduct.description || "");
       formData.append("images", JSON.stringify(images));
+      formData.append("variants", JSON.stringify(variants.filter(v => v.price && v.stock)));
       const res = await axios.post(`${API}/api/seller/products`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       setData(prev => ({ ...prev, products: [res.data.data, ...(prev?.products || [])] }));
       setShowAddProduct(false);
       setNewProduct({ name: "", price: "", description: "", category: "", stock: "" });
+      setVariants([{ name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
       setImages([]);
       setMsg("✅ Product added successfully!");
     } catch (err) { setMsg(err.response?.data?.error || "Failed to add product"); }
@@ -337,6 +345,38 @@ export default function SellerDashboard() {
                   <p style={{ color: "#22c55e", margin: 0, fontSize: "13px", fontWeight: "600" }}>✅ {images.length} image{images.length > 1 ? "s" : ""} ready to upload with product</p>
                 </div>
               )}
+              {/* VARIANTS */}
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>🎨 Product Variants</p>
+                  <button onClick={addVariant} style={{ padding: "6px 14px", background: "#1a2a1a", border: "1px solid #22c55e", color: "#22c55e", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px" }}>+ Add Variant</button>
+                </div>
+                <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 10px" }}>Add variants like different colors, sizes, or storage options. Each can have its own price and stock.</p>
+                {variants.map((v, i) => (
+                  <div key={i} style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <p style={{ color: "#f97316", fontWeight: "700", fontSize: "13px", margin: 0 }}>Variant {i + 1}</p>
+                      {variants.length > 1 && <button onClick={() => removeVariant(i)} style={{ background: "#dc2626", border: "none", color: "#fff", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontSize: "11px" }}>Remove</button>}
+                    </div>
+                    <input placeholder="Variant name (e.g. 128GB Black)" value={v.name} onChange={e => updateVariant(i, "name", e.target.value)} style={{ ...inp, marginBottom: "8px" }} />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                      <input placeholder="Color (e.g. Black)" value={v.color} onChange={e => updateVariant(i, "color", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                      <input placeholder="Size (e.g. XL)" value={v.size} onChange={e => updateVariant(i, "size", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                      <input placeholder="Storage (e.g. 128GB)" value={v.storage} onChange={e => updateVariant(i, "storage", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                      <select value={v.condition} onChange={e => updateVariant(i, "condition", e.target.value)} style={{ ...inp, marginBottom: 0, appearance: "none" }}>
+                        <option value="New">New</option>
+                        <option value="Used">Used</option>
+                        <option value="Refurbished">Refurbished</option>
+                      </select>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                      <input placeholder="Price (₦) *" type="number" value={v.price} onChange={e => updateVariant(i, "price", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                      <input placeholder="Stock *" type="number" value={v.stock} onChange={e => updateVariant(i, "stock", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <button onClick={addProduct} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>Add Product</button>
             </div>
           )}

@@ -36,6 +36,7 @@ export default function ProductDetail() {
   const [recommendations, setRecommendations] = useState([]);
   const [recLoading, setRecLoading] = useState(false);
 
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const inCart = cart.some((item) => item._id === id);
   const wishlisted = isInWishlist(id);
 
@@ -48,6 +49,9 @@ export default function ProductDetail() {
       setLoading(true);
       const res = await axios.get(`${API}/api/products/${id}`);
       setProduct(res.data);
+      if (res.data.variants && res.data.variants.length > 0) {
+        setSelectedVariant(res.data.variants[0]);
+      }
       setError("");
       fetchRecommendations(res.data);
 
@@ -82,8 +86,11 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (cartLoading) return;
     setCartLoading(true);
+    const itemToAdd = selectedVariant
+      ? { ...product, price: selectedVariant.price, selectedVariant, name: `${product.name} — ${selectedVariant.name || selectedVariant.color || selectedVariant.storage || ""}`.trim().replace(/— $/, "") }
+      : product;
     for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+      addToCart(itemToAdd);
     }
     setAdded(true);
     if (showToast) showToast(`${product.name} added to cart!`);
@@ -137,6 +144,26 @@ export default function ProductDetail() {
               onError={(e) => { e.target.src = FALLBACK_IMG; }}
               style={styles.mainImg}
             />
+            {product.variants && product.variants.length > 1 && (
+              <div style={{ marginBottom: "16px" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 10px" }}>Select Variant</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {product.variants.map((v, i) => (
+                    <button key={i} onClick={() => setSelectedVariant(v)}
+                      style={{ padding: "8px 14px", borderRadius: "8px", border: `2px solid ${selectedVariant?._id === v._id || (selectedVariant === v) ? "#f97316" : "#333"}`, background: selectedVariant === v ? "#1a0a00" : "#111", color: selectedVariant === v ? "#f97316" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>
+                      {v.name || [v.color, v.storage, v.size, v.condition].filter(Boolean).join(" / ")}
+                      <span style={{ display: "block", fontSize: "11px", color: selectedVariant === v ? "#f97316" : "#666" }}>₦{Number(v.price).toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedVariant && (
+                  <p style={{ color: selectedVariant.stock > 0 ? "#22c55e" : "#dc2626", fontSize: "12px", marginTop: "8px", fontWeight: "600" }}>
+                    {selectedVariant.stock > 0 ? `✅ ${selectedVariant.stock} in stock` : "❌ Out of stock"}
+                  </p>
+                )}
+              </div>
+            )}
+
             {product.stock === 0 && (
               <div style={styles.outOfStockBadge}>Out of Stock</div>
             )}
@@ -217,7 +244,7 @@ export default function ProductDetail() {
           {/* STOCK */}
           <p style={{
             ...styles.stockText,
-            color: product.stock > 0 ? "#22c55e" : "#dc2626"
+            color: (selectedVariant ? selectedVariant.stock : product.stock) > 0 ? "#22c55e" : "#dc2626"
           }}>
             {product.stock > 0 ? `✅ ${product.stock} in stock` : "❌ Out of stock"}
           </p>
