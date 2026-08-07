@@ -637,6 +637,11 @@ const requestPinReset = async () => {
         {tab === "Withdraw" && (
           <div>
             <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Withdraw to Bank</h2>
+            <div style={{ background: "#0a1a2a", border: "1px solid #3b82f6", borderRadius: "12px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
+              <p style={{ fontSize: "28px", margin: "0 0 8px" }}>🏦</p>
+              <p style={{ color: "#3b82f6", fontWeight: "700", fontSize: "16px", margin: "0 0 8px" }}>Bank Withdrawals Coming Soon</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0, lineHeight: "1.6" }}>We're completing our business registration to enable secure bank withdrawals. In the meantime, you can use your wallet balance to shop, pay for orders, and transfer to other TechMart users.</p>
+            </div>
 
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
               <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
