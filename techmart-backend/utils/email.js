@@ -426,7 +426,52 @@ const sendOTPEmail = async (email, name, otp) => {
   }
 };
 
+
+const sendAbandonedCartEmail = async (user, cartItems) => {
+  const itemRows = cartItems.map(item => `
+    <tr>
+      <td style="padding:10px;border-bottom:1px solid #2a2a2a;">
+        <img src="${item.image || ''}" alt="${item.name}" style="width:50px;height:50px;object-fit:cover;border-radius:6px;" />
+      </td>
+      <td style="padding:10px;border-bottom:1px solid #2a2a2a;color:#ffffff;font-size:14px;">${item.name}</td>
+      <td style="padding:10px;border-bottom:1px solid #2a2a2a;color:#f97316;font-weight:700;font-size:14px;">₦${Number(item.price).toLocaleString()}</td>
+      <td style="padding:10px;border-bottom:1px solid #2a2a2a;color:#888;font-size:13px;">x${item.quantity || 1}</td>
+    </tr>
+  `).join("");
+
+  const html = `
+    <div style="background:#0a0a0a;padding:32px;font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border-radius:12px;">
+      <h1 style="color:#f97316;font-size:24px;margin:0 0 8px;">TechMart</h1>
+      <h2 style="color:#ffffff;font-size:20px;margin:0 0 16px;">You left something behind, ${user.name.split(" ")[0]}! 🛒</h2>
+      <p style="color:#888;font-size:14px;margin:0 0 24px;">You have items waiting in your cart. Complete your purchase before they sell out!</p>
+      <table style="width:100%;border-collapse:collapse;background:#111;border-radius:10px;overflow:hidden;margin-bottom:24px;">
+        <thead>
+          <tr style="background:#1a1a1a;">
+            <th style="padding:10px;color:#888;font-size:12px;text-align:left;">Image</th>
+            <th style="padding:10px;color:#888;font-size:12px;text-align:left;">Product</th>
+            <th style="padding:10px;color:#888;font-size:12px;text-align:left;">Price</th>
+            <th style="padding:10px;color:#888;font-size:12px;text-align:left;">Qty</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <a href="${process.env.FRONTEND_URL || 'https://techmart-frontend.onrender.com'}/cart" style="display:block;text-align:center;padding:14px 24px;background:linear-gradient(135deg,#f97316,#dc2626);color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;margin-bottom:24px;">
+        Complete My Purchase →
+      </a>
+      <p style="color:#555;font-size:12px;text-align:center;margin:0;">You're receiving this because you have items in your TechMart cart.<br/>TechMart — Africa's Leading Marketplace</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: \`"TechMart" <\${process.env.BREVO_FROM || process.env.EMAIL_FROM}>\`,
+    to: user.email,
+    subject: \`${user.name.split(" ")[0]}, you left something in your cart! 🛒\`,
+    html
+  });
+};
+
 module.exports = {
+  sendAbandonedCartEmail,
   sendOrderConfirmation,
   sendWelcomeEmail,
   sendShippingUpdate,

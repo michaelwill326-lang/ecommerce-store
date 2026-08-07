@@ -21,7 +21,8 @@ const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert, sendOTPEmail } = require("./utils/email");
+const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert, sendOTPEmail, sendAbandonedCartEmail } = require("./utils/email");
+const cron = require("node-cron");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
@@ -180,6 +181,8 @@ const User = mongoose.model(
     deviceTokens: { type: [String], default: [] },
     aiPreferences: { type: Object, default: {} },
     savedCart: { type: Array, default: [] },
+    cartUpdatedAt: { type: Date, default: null },
+    cartReminderSent: { type: Boolean, default: false },
     fraudScore: { type: Number, default: 0 },
     isFlagged: { type: Boolean, default: false },
     fraudFlags: [{
@@ -5316,7 +5319,7 @@ app.get("/api/admin/escrow", adminOnly, async (req, res) => {
 app.post("/api/cart/sync", auth, async (req, res) => {
   try {
     const { items } = req.body;
-    await User.findByIdAndUpdate(req.user.id, { savedCart: items || [] });
+    await User.findByIdAndUpdate(req.user.id, { savedCart: items || [], cartUpdatedAt: items && items.length > 0 ? new Date() : null, cartReminderSent: false });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to sync cart" });
@@ -5376,6 +5379,31 @@ app.get("/api/admin/termii/debug", adminOnly, async (req, res) => {
   }
 });
 
+
+// ── Abandoned Cart Recovery Cron (runs every 15 mins) ──
+cron.schedule("*/15 * * * *", async () => {
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const users = await User.find({
+      cartUpdatedAt: { $lte: oneHourAgo },
+      cartReminderSent: false,
+      savedCart: { $exists: true, $ne: [] }
+    }).select("name email savedCart cartUpdatedAt");
+
+    for (const user of users) {
+      if (!user.savedCart || user.savedCart.length === 0) continue;
+      try {
+        await sendAbandonedCartEmail(user, user.savedCart);
+        await User.findByIdAndUpdate(user._id, { cartReminderSent: true });
+        console.log("📧 Abandoned cart email sent to " + user.email);
+      } catch (e) {
+        console.error("❌ Failed to send cart email to " + user.email + ":", e.message);
+      }
+    }
+  } catch (e) {
+    console.error("❌ Abandoned cart cron error:", e.message);
+  }
+});
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
