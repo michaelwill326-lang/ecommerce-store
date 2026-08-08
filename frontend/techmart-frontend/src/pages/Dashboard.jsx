@@ -33,11 +33,11 @@ export default function Dashboard() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const [{ data }, trendRes] = await Promise.allSettled([
+      const [productsRes, trendRes] = await Promise.allSettled([
         axios.get(`${API}/api/products`),
         fetch(`${API}/api/behavior/heatmap/public`).then(r => r.json()).catch(() => ({ trending: [] }))
       ]);
-      if (data) setProducts(data.value || data);
+      if (productsRes.status === "fulfilled") setProducts(productsRes.value?.data || []);
       if (trendRes.status === "fulfilled") setTrendingData(trendRes.value?.trending || []);
       setError("");
     } catch (err) {
