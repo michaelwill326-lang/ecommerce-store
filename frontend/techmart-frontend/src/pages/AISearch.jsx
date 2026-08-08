@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ProductGridSkeleton } from "../components/Skeleton";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -65,12 +66,7 @@ export default function AISearch() {
           </div>
         )}
 
-        {loading && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            <div style={{ width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-            <p style={{ color: "var(--text-muted)" }}>AI is searching...</p>
-          </div>
-        )}
+        {loading && <ProductGridSkeleton count={4} />}
 
         {searched && !loading && (
           <div>

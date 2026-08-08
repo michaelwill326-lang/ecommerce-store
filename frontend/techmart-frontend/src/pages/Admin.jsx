@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SkeletonBlock, ProductGridSkeleton } from "../components/Skeleton";
 import { useToast } from "../App";
 import AIInventoryForecast from "../components/AIInventoryForecast";
 import { useNavigate } from "react-router-dom";
@@ -208,9 +209,9 @@ export default function Admin() {
   };
 
   if (loading) return (
-    <div style={styles.centered}>
-      <div style={styles.spinner} />
-      <p style={{ color: "var(--text-muted)", marginTop: "16px" }}>Loading dashboard...</p>
+    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+      <SkeletonBlock height="40px" style={{ marginBottom: "20px" }} />
+      <ProductGridSkeleton count={6} />
     </div>
   );
 

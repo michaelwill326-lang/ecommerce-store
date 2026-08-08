@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext } from "react";
+import { ProductGridSkeleton } from "../components/Skeleton";
 import { Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
@@ -198,12 +199,7 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {loading && (
-            <div style={styles.centered}>
-              <div style={styles.spinner} />
-              <p style={{ color: "var(--text-muted)", marginTop: "16px" }}>Loading products...</p>
-            </div>
-          )}
+          {loading && <ProductGridSkeleton count={8} />}
 
           {error && (
             <div style={styles.centered}>
