@@ -204,6 +204,21 @@ const User = mongoose.model(
     createdAt: { type: Date, default: Date.now }
   })
 );
+// 🧠 Behavioral Intelligence Schema
+const BehaviorEvent = mongoose.model("BehaviorEvent", new mongoose.Schema({
+  userId: { type: String, default: null },
+  sessionId: { type: String, default: null },
+  type: { type: String, enum: ["view", "search", "click", "add_to_cart", "abandon", "purchase", "wishlist"], required: true },
+  productId: { type: String, default: null },
+  productName: { type: String, default: null },
+  category: { type: String, default: null },
+  searchQuery: { type: String, default: null },
+  price: { type: Number, default: null },
+  metadata: { type: Object, default: {} },
+  city: { type: String, default: "Lagos" },
+  createdAt: { type: Date, default: Date.now }
+}));
+
 const Product = mongoose.model(
   "Product",
   new mongoose.Schema({
@@ -1234,6 +1249,157 @@ app.get("/api/pay/profile/:userId", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
+// 🧠 Track Behavior Event
+app.post("/api/behavior/track", async (req, res) => {
+  try {
+    const { type, productId, productName, category, searchQuery, price, metadata, sessionId, city } = req.body;
+    if (!type) return res.status(400).json({ error: "Event type required" });
+
+    // Get userId from token if available
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.id;
+      } catch {}
+    }
+
+    await BehaviorEvent.create({
+      userId,
+      sessionId,
+      type,
+      productId,
+      productName,
+      category,
+      searchQuery,
+      price,
+      metadata,
+      city: city || "Lagos"
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to track event" });
+  }
+});
+
+// 🧠 Get Demand Heatmap (trending products)
+app.get("/api/behavior/heatmap", adminOnly, async (req, res) => {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // last 7 days
+
+    const trending = await BehaviorEvent.aggregate([
+      { $match: { createdAt: { $gte: since }, productId: { $ne: null }, type: { $in: ["view", "add_to_cart", "purchase"] } } },
+      { $group: {
+        _id: "$productId",
+        productName: { $first: "$productName" },
+        category: { $first: "$category" },
+        views: { $sum: { $cond: [{ $eq: ["$type", "view"] }, 1, 0] } },
+        addToCarts: { $sum: { $cond: [{ $eq: ["$type", "add_to_cart"] }, 1, 0] } },
+        purchases: { $sum: { $cond: [{ $eq: ["$type", "purchase"] }, 1, 0] } },
+        score: { $sum: { $switch: { branches: [
+          { case: { $eq: ["$type", "purchase"] }, then: 10 },
+          { case: { $eq: ["$type", "add_to_cart"] }, then: 3 },
+          { case: { $eq: ["$type", "view"] }, then: 1 }
+        ], default: 0 } } }
+      }},
+      { $sort: { score: -1 } },
+      { $limit: 20 }
+    ]);
+
+    const searches = await BehaviorEvent.aggregate([
+      { $match: { createdAt: { $gte: since }, type: "search", searchQuery: { $ne: null } } },
+      { $group: { _id: "$searchQuery", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    res.json({ trending, searches, since });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch heatmap" });
+  }
+});
+
+// 🧠 Buyer Score
+app.get("/api/behavior/buyer-score/:userId", adminOnly, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select("name email walletTransactions fraudScore isFlagged createdAt");
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const orders = await Order.find({ email: user.email });
+    const totalOrders = orders.length;
+    const completedOrders = orders.filter(o => o.status === "Delivered").length;
+    const cancelledOrders = orders.filter(o => o.status === "Cancelled").length;
+    const disputes = await mongoose.connection.db.collection("disputes").countDocuments({ buyerEmail: user.email });
+
+    const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+    const cancellationRate = totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0;
+    const accountAge = Math.floor((Date.now() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24));
+
+    // Score calculation (0-100)
+    let score = 50; // base
+    score += Math.min(completionRate * 0.3, 30); // up to 30 pts for completion
+    score -= Math.min(cancellationRate * 0.2, 20); // up to -20 for cancellations
+    score -= Math.min(disputes * 5, 20); // up to -20 for disputes
+    score += Math.min(accountAge / 30, 10); // up to 10 for account age
+    score -= (user.fraudScore || 0) * 2; // fraud penalty
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    const grade = score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Poor";
+
+    res.json({
+      userId,
+      name: user.name,
+      email: user.email,
+      score,
+      grade,
+      metrics: { totalOrders, completedOrders, cancelledOrders, completionRate: Math.round(completionRate), disputes, accountAgeDays: accountAge }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to calculate buyer score" });
+  }
+});
+
+// 🧠 Seller Performance Index
+app.get("/api/behavior/seller-index/:sellerId", adminOnly, async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const seller = await Seller.findById(sellerId).select("name email createdAt verified");
+    if (!seller) return res.status(404).json({ error: "Seller not found" });
+
+    const orders = await Order.find({ "items.vendorId": sellerId });
+    const totalOrders = orders.length;
+    const fulfilledOrders = orders.filter(o => ["Shipped", "Delivered"].includes(o.status)).length;
+    const cancelledOrders = orders.filter(o => o.status === "Cancelled").length;
+    const disputes = await mongoose.connection.db.collection("disputes").countDocuments({ sellerId });
+
+    const fulfillmentRate = totalOrders > 0 ? (fulfilledOrders / totalOrders) * 100 : 0;
+    const disputeRate = totalOrders > 0 ? (disputes / totalOrders) * 100 : 0;
+
+    let score = 50;
+    score += Math.min(fulfillmentRate * 0.4, 40);
+    score -= Math.min(disputeRate * 2, 30);
+    score -= Math.min(cancelledOrders * 2, 20);
+    score += seller.verified ? 10 : 0;
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    const grade = score >= 80 ? "Top Seller" : score >= 60 ? "Good" : score >= 40 ? "Average" : "Needs Improvement";
+
+    res.json({
+      sellerId,
+      name: seller.name,
+      score,
+      grade,
+      metrics: { totalOrders, fulfilledOrders, cancelledOrders, fulfillmentRate: Math.round(fulfillmentRate), disputes, disputeRate: Math.round(disputeRate) }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to calculate seller index" });
   }
 });
 

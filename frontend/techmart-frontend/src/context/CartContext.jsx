@@ -89,6 +89,7 @@ export function CartProvider({ children }) {
 
   const clearCart = () => {
     setCart([]);
+    localStorage.setItem("lastCartItems", localStorage.getItem("cart") || "[]");
     localStorage.removeItem("cart");
     // Clear from server too
     const token = localStorage.getItem("token");

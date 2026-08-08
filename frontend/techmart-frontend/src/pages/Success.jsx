@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { trackPurchase } from "../utils/tracker";
 import confetti from "canvas-confetti";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useContext } from "react";
@@ -16,6 +17,7 @@ export default function Success() {
   useEffect(() => {
     // Clear cart on successful payment
     clearCart();
+    try { const items = JSON.parse(localStorage.getItem("lastCartItems") || "[]"); if (items.length) trackPurchase(items); } catch {}
 
     // 🎉 Confetti celebration
     const duration = 3000;

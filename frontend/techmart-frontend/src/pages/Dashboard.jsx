@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext } from "react";
+import { trackSearch } from "../utils/tracker";
 import usePullToRefresh from "../hooks/usePullToRefresh";
 import { ProductGridSkeleton } from "../components/Skeleton";
 import { Link } from "react-router-dom";

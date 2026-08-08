@@ -1,4 +1,5 @@
 import { ProductDetailSkeleton } from "../components/Skeleton";
+import { trackView, trackAddToCart, trackWishlist } from "../utils/tracker";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContext } from "react";
@@ -64,6 +65,7 @@ export default function ProductDetail() {
       setLoading(true);
       const res = await axios.get(`${API}/api/products/${id}`);
       setProduct(res.data);
+      trackView(res.data);
       if (res.data.variants && res.data.variants.length > 0) {
         setSelectedVariant(res.data.variants[0]);
       }
@@ -109,6 +111,7 @@ export default function ProductDetail() {
     }
     setAdded(true);
     if (showToast) showToast(`${product.name} added to cart!`);
+    trackAddToCart(itemToAdd);
     setTimeout(() => { setAdded(false); setCartLoading(false); }, 1500);
   };
 
@@ -117,6 +120,7 @@ export default function ProductDetail() {
       removeFromWishlist(id);
     } else {
       addToWishlist(product);
+      trackWishlist(product);
     }
   };
 

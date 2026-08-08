@@ -11,7 +11,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow", "Intelligence"];
 
 export default function Admin() {
   const showToast = useToast();
@@ -40,6 +40,8 @@ export default function Admin() {
   const [wallets, setWallets] = useState({ users: [], totalInCirculation: 0 });
   const [walletAction, setWalletAction] = useState({ userId: "", type: "credit", amount: "", description: "" });
   const [flashSales, setFlashSales] = useState([]);
+  const [heatmap, setHeatmap] = useState(null);
+  const [intelLoading, setIntelLoading] = useState(false);
   const [payouts, setPayouts] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [selectedDispute, setSelectedDispute] = useState(null);
@@ -1072,6 +1074,62 @@ ${url}`, "success");
           </div>
         </div>
       )}
+      {tab === "Intelligence" && (
+        <div>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>🧠 Behavioral Intelligence</h2>
+          <button onClick={async () => {
+            setIntelLoading(true);
+            try {
+              const res = await axios.get(`${API}/api/behavior/heatmap`, { headers });
+              setHeatmap(res.data);
+            } catch (e) { showToast("Failed to load intelligence data", "error"); }
+            finally { setIntelLoading(false); }
+          }} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "20px" }}>
+            {intelLoading ? "Loading..." : "🔄 Load Intelligence Data"}
+          </button>
+          {heatmap && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+                <h3 style={{ color: "#f97316", marginBottom: "16px" }}>🔥 Trending Products (Last 7 Days)</h3>
+                {heatmap.trending.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No data yet — data builds up as users browse</p> : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {heatmap.trending.map((p, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px", background: "#111", borderRadius: "8px" }}>
+                        <span style={{ color: "#f97316", fontWeight: "900", fontSize: "16px", width: "24px" }}>#{i+1}</span>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>{p.productName || "Unknown"}</p>
+                          <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{p.category || "Uncategorized"}</p>
+                        </div>
+                        <div style={{ display: "flex", gap: "10px", fontSize: "12px" }}>
+                          <span style={{ color: "#888" }}>👁 {p.views}</span>
+                          <span style={{ color: "#f97316" }}>🛒 {p.addToCarts}</span>
+                          <span style={{ color: "#22c55e" }}>✅ {p.purchases}</span>
+                          <span style={{ color: "#fff", fontWeight: "700", background: "#222", padding: "2px 8px", borderRadius: "6px" }}>Score: {p.score}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+                <h3 style={{ color: "#3b82f6", marginBottom: "16px" }}>🔍 Top Search Queries</h3>
+                {heatmap.searches.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No searches tracked yet</p> : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {heatmap.searches.map((s, i) => (
+                      <div key={i} style={{ background: "#1a1a2a", border: "1px solid #3b82f6", borderRadius: "20px", padding: "6px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ color: "#3b82f6", fontWeight: "700", fontSize: "13px" }}>{s._id}</span>
+                        <span style={{ background: "#3b82f6", color: "#fff", borderRadius: "10px", padding: "2px 8px", fontSize: "11px", fontWeight: "700" }}>{s.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px" }}>Tracking since: {new Date(heatmap.since).toLocaleDateString()}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === "Reviews" && (
         <div>
           {sentiment && (
