@@ -13,6 +13,10 @@ export default function Account() {
   const headers = { Authorization: `Bearer ${token}` };
   const [tab, setTab] = useState("Wallet");
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
+
+  const [networkStatus, setNetworkStatus] = useState(null);
+  const [networkLoading, setNetworkLoading] = useState(false);
+  const [networkError, setNetworkError] = useState("");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,13 +33,27 @@ export default function Account() {
         axios.get(`${API}/api/orders/me`, { headers }).catch(() => ({ data: [] })),
       ]);
       setWallet({ balance: walletRes.data.balance || 0, transactions: walletRes.data.recentTransactions || [] });
+
+      setNetworkLoading(true);
+      try {
+        const networkRes = await axios.get(`${API}/api/network/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setNetworkStatus(networkRes.data);
+        setNetworkError("");
+      } catch (networkErr) {
+        console.error("Network status error:", networkErr);
+        setNetworkError("Unable to load your TechMart Network status.");
+      } finally {
+        setNetworkLoading(false);
+      }
       setOrders(ordersRes.data || []);
     } catch (err) {
       console.error(err);
     } finally { setLoading(false); }
   };
 
-  const TABS = ["Wallet", "Orders", "Profile"];
+  const TABS = ["Wallet", "Network", "Orders", "Profile"];
 
   if (loading) return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "16px", minHeight: "100vh" }}>
@@ -116,6 +134,376 @@ export default function Account() {
       )}
 
       {/* ORDERS TAB */}
+      {tab === "Network" && (
+        <div style={{
+          maxWidth: "900px",
+          margin: "0 auto",
+          padding: "10px 0 40px"
+        }}>
+          <div style={{
+            padding: "24px",
+            borderRadius: "20px",
+            background: "linear-gradient(135deg, #111827, #172554, #1e1b4b)",
+            border: "1px solid rgba(99,102,241,0.35)",
+            boxShadow: "0 15px 45px rgba(0,0,0,0.25)",
+            marginBottom: "20px"
+          }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "20px",
+              flexWrap: "wrap"
+            }}>
+              <div>
+                <div style={{
+                  fontSize: "12px",
+                  fontWeight: "800",
+                  letterSpacing: "1.5px",
+                  color: "#818cf8",
+                  marginBottom: "8px"
+                }}>
+                  🔗 TECHMART NETWORK
+                </div>
+
+                <h2 style={{
+                  margin: "0 0 8px",
+                  color: "#fff",
+                  fontSize: "26px",
+                  fontWeight: "800"
+                }}>
+                  Your TechMart Membership
+                </h2>
+
+                <p style={{
+                  margin: 0,
+                  color: "rgba(255,255,255,0.72)",
+                  lineHeight: 1.6,
+                  fontSize: "14px",
+                  maxWidth: "600px"
+                }}>
+                  Shop, save, earn loyalty rewards, use your wallet, access BNPL,
+                  grow your savings and unlock increasingly valuable TechMart benefits.
+                </p>
+              </div>
+
+              {networkStatus && (
+                <div style={{
+                  minWidth: "120px",
+                  padding: "14px 18px",
+                  borderRadius: "14px",
+                  background: "rgba(99,102,241,0.18)",
+                  border: "1px solid rgba(129,140,248,0.35)",
+                  textAlign: "center"
+                }}>
+                  <div style={{
+                    color: "#a5b4fc",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    textTransform: "uppercase"
+                  }}>
+                    Current Tier
+                  </div>
+
+                  <div style={{
+                    color: "#fff",
+                    fontSize: "22px",
+                    fontWeight: "900",
+                    marginTop: "4px"
+                  }}>
+                    {networkStatus.tier || networkStatus.networkTier || "Member"}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {networkLoading && (
+            <div style={{
+              padding: "30px",
+              textAlign: "center",
+              color: "var(--text-muted)"
+            }}>
+              Loading your Network benefits...
+            </div>
+          )}
+
+          {networkError && !networkLoading && (
+            <div style={{
+              padding: "18px",
+              borderRadius: "12px",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.25)",
+              color: "#fca5a5",
+              marginBottom: "18px"
+            }}>
+              {networkError}
+            </div>
+          )}
+
+          {networkStatus && !networkLoading && (
+            <>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "12px",
+                marginBottom: "18px"
+              }}>
+                <div style={{
+                  padding: "18px",
+                  borderRadius: "14px",
+                  background: "var(--card-bg, #111)",
+                  border: "1px solid rgba(255,255,255,0.08)"
+                }}>
+                  <div style={{ color: "var(--text-muted)", fontSize: "12px" }}>
+                    Network Score
+                  </div>
+                  <div style={{
+                    color: "var(--text-primary)",
+                    fontSize: "28px",
+                    fontWeight: "900",
+                    marginTop: "5px"
+                  }}>
+                    {Number(networkStatus.score ?? networkStatus.networkScore ?? 0).toLocaleString()}
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: "18px",
+                  borderRadius: "14px",
+                  background: "var(--card-bg, #111)",
+                  border: "1px solid rgba(255,255,255,0.08)"
+                }}>
+                  <div style={{ color: "var(--text-muted)", fontSize: "12px" }}>
+                    Lifetime Spend
+                  </div>
+                  <div style={{
+                    color: "var(--text-primary)",
+                    fontSize: "22px",
+                    fontWeight: "900",
+                    marginTop: "8px"
+                  }}>
+                    ₦{Number(
+                      networkStatus.lifetimeSpend ??
+                      networkStatus.networkLifetimeSpend ??
+                      0
+                    ).toLocaleString()}
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: "18px",
+                  borderRadius: "14px",
+                  background: "var(--card-bg, #111)",
+                  border: "1px solid rgba(255,255,255,0.08)"
+                }}>
+                  <div style={{ color: "var(--text-muted)", fontSize: "12px" }}>
+                    Referrals
+                  </div>
+                  <div style={{
+                    color: "var(--text-primary)",
+                    fontSize: "28px",
+                    fontWeight: "900",
+                    marginTop: "5px"
+                  }}>
+                    {Number(
+                      networkStatus.referralCount ??
+                      networkStatus.networkReferralCount ??
+                      0
+                    ).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {(() => {
+                const score = Number(
+                  networkStatus.score ??
+                  networkStatus.networkScore ??
+                  0
+                );
+
+                const nextThreshold = Number(
+                  networkStatus.nextTierThreshold ??
+                  networkStatus.nextThreshold ??
+                  0
+                );
+
+                const progress = nextThreshold > 0
+                  ? Math.min(100, (score / nextThreshold) * 100)
+                  : 100;
+
+                return (
+                  <div style={{
+                    padding: "20px",
+                    borderRadius: "16px",
+                    background: "var(--card-bg, #111)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    marginBottom: "18px"
+                  }}>
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      marginBottom: "10px"
+                    }}>
+                      <span style={{
+                        color: "var(--text-primary)",
+                        fontWeight: "800"
+                      }}>
+                        Network Progress
+                      </span>
+
+                      <span style={{
+                        color: "#818cf8",
+                        fontWeight: "800",
+                        fontSize: "13px"
+                      }}>
+                        {nextThreshold > 0
+                          ? `${Math.round(progress)}%`
+                          : "Maximum tier"}
+                      </span>
+                    </div>
+
+                    <div style={{
+                      height: "10px",
+                      borderRadius: "999px",
+                      background: "rgba(255,255,255,0.08)",
+                      overflow: "hidden"
+                    }}>
+                      <div style={{
+                        width: `${progress}%`,
+                        height: "100%",
+                        borderRadius: "999px",
+                        background: "linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899)",
+                        transition: "width 0.4s ease"
+                      }} />
+                    </div>
+
+                    {nextThreshold > score && (
+                      <p style={{
+                        margin: "10px 0 0",
+                        color: "var(--text-muted)",
+                        fontSize: "12px"
+                      }}>
+                        {(nextThreshold - score).toLocaleString()} more Network
+                        points to reach the next tier.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div style={{
+                padding: "20px",
+                borderRadius: "16px",
+                background: "var(--card-bg, #111)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: "18px"
+              }}>
+                <h3 style={{
+                  margin: "0 0 16px",
+                  color: "var(--text-primary)",
+                  fontSize: "17px"
+                }}>
+                  🎁 Your Network Benefits
+                </h3>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "10px"
+                }}>
+                  {[
+                    [
+                      "💰",
+                      `${Number(networkStatus.benefits?.cashbackMultiplier ?? networkStatus.networkBenefits?.cashbackMultiplier ?? 1)}× Cashback`,
+                      "Enhanced wallet cashback"
+                    ],
+                    [
+                      "⭐",
+                      `${Number(networkStatus.benefits?.loyaltyMultiplier ?? networkStatus.networkBenefits?.loyaltyMultiplier ?? 1)}× Loyalty`,
+                      "Earn loyalty points faster"
+                    ],
+                    [
+                      "🔥",
+                      "Exclusive Deals",
+                      networkStatus.benefits?.exclusiveDeals ?? networkStatus.networkBenefits?.exclusiveDeals
+                        ? "Unlocked for your tier"
+                        : "Reach the next tier to unlock"
+                    ],
+                    [
+                      "🛟",
+                      "Priority Support",
+                      networkStatus.benefits?.prioritySupport ?? networkStatus.networkBenefits?.prioritySupport
+                        ? "Priority assistance unlocked"
+                        : "Available at higher tiers"
+                    ]
+                  ].map(([icon, title, description]) => (
+                    <div key={title} style={{
+                      padding: "15px",
+                      borderRadius: "12px",
+                      background: "rgba(255,255,255,0.035)",
+                      border: "1px solid rgba(255,255,255,0.06)"
+                    }}>
+                      <div style={{ fontSize: "20px", marginBottom: "7px" }}>
+                        {icon}
+                      </div>
+
+                      <div style={{
+                        color: "var(--text-primary)",
+                        fontWeight: "800",
+                        fontSize: "14px"
+                      }}>
+                        {title}
+                      </div>
+
+                      <div style={{
+                        color: "var(--text-muted)",
+                        fontSize: "12px",
+                        lineHeight: 1.5,
+                        marginTop: "4px"
+                      }}>
+                        {description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                padding: "20px",
+                borderRadius: "16px",
+                background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(59,130,246,0.08))",
+                border: "1px solid rgba(16,185,129,0.18)"
+              }}>
+                <h3 style={{
+                  margin: "0 0 12px",
+                  color: "var(--text-primary)",
+                  fontSize: "17px"
+                }}>
+                  🚀 Grow Your Network Benefits
+                </h3>
+
+                <div style={{
+                  display: "grid",
+                  gap: "9px",
+                  color: "var(--text-muted)",
+                  fontSize: "13px",
+                  lineHeight: 1.5
+                }}>
+                  <div>🛍️ Shop on TechMart and build your Network Score.</div>
+                  <div>💳 Use your TechMart Wallet and unlock stronger wallet benefits.</div>
+                  <div>⭐ Earn loyalty points and redeem your rewards.</div>
+                  <div>🔄 Complete eligible BNPL plans responsibly.</div>
+                  <div>💰 Grow your savings and maintain your TechMart relationship.</div>
+                  <div>👥 Refer friends and grow your Network activity.</div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {tab === "Orders" && (
         <div>
           <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>My Orders</h2>
