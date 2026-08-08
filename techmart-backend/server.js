@@ -121,6 +121,135 @@ app.options("*", cors());
 =========================== */
 
 
+
+/* ===========================
+   🔗 TECHMART NETWORK ENGINE
+=========================== */
+
+function calculateNetworkTier(score) {
+  if (score >= 10000) return "Elite";
+  if (score >= 5000) return "Premium";
+  if (score >= 2000) return "Plus";
+  return "Member";
+}
+
+function getNetworkBenefits(tier) {
+  switch (tier) {
+    case "Elite":
+      return {
+        cashbackMultiplier: 1.5,
+        loyaltyMultiplier: 2,
+        exclusiveDeals: true,
+        prioritySupport: true
+      };
+
+    case "Premium":
+      return {
+        cashbackMultiplier: 1.3,
+        loyaltyMultiplier: 1.5,
+        exclusiveDeals: true,
+        prioritySupport: true
+      };
+
+    case "Plus":
+      return {
+        cashbackMultiplier: 1.15,
+        loyaltyMultiplier: 1.25,
+        exclusiveDeals: true,
+        prioritySupport: false
+      };
+
+    default:
+      return {
+        cashbackMultiplier: 1,
+        loyaltyMultiplier: 1,
+        exclusiveDeals: false,
+        prioritySupport: false
+      };
+  }
+}
+
+async function updateNetworkScore(userId, points, activity = {}) {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const safePoints = Math.max(0, Number(points) || 0);
+
+  user.networkScore = Math.max(
+    0,
+    (user.networkScore || 0) + safePoints
+  );
+
+  const oldTier = user.networkTier || "Member";
+  const newTier = calculateNetworkTier(user.networkScore);
+
+  user.networkTier = newTier;
+  user.networkBenefits = getNetworkBenefits(newTier);
+  user.networkLastActivity = new Date();
+
+  if (activity.lifetimeSpend) {
+    user.networkLifetimeSpend =
+      (user.networkLifetimeSpend || 0) +
+      Number(activity.lifetimeSpend || 0);
+  }
+
+  if (activity.loyaltyEarned) {
+    user.networkLoyaltyEarned =
+      (user.networkLoyaltyEarned || 0) +
+      Number(activity.loyaltyEarned || 0);
+  }
+
+  if (activity.savingsBalance !== undefined) {
+    user.networkSavingsBalance =
+      Number(activity.savingsBalance || 0);
+  }
+
+  if (activity.bnplCompleted) {
+    user.networkBnplCompleted =
+      (user.networkBnplCompleted || 0) +
+      Number(activity.bnplCompleted || 0);
+  }
+
+  if (activity.referralCount) {
+    user.networkReferralCount =
+      (user.networkReferralCount || 0) +
+      Number(activity.referralCount || 0);
+  }
+
+  await user.save();
+
+  if (safePoints > 0) {
+    await NetworkActivity.create({
+      userId: user._id,
+      type: activity.type || "bonus",
+      points: safePoints,
+      amount: Number(activity.amount || 0),
+      description:
+        activity.description ||
+        `TechMart Network activity +${safePoints} XP`,
+      reference: activity.reference || ""
+    });
+  }
+
+  if (oldTier !== newTier) {
+    await NetworkActivity.create({
+      userId: user._id,
+      type: "tier_upgrade",
+      points: 0,
+      description: `TechMart Network tier changed from ${oldTier} to ${newTier}`
+    });
+
+    console.log(
+      `🔗 Network tier changed: ${user.email} ${oldTier} → ${newTier}`
+    );
+  }
+
+  return user;
+}
+
 /* ===========================
    🤖 AI ROUTES
 =========================== */
@@ -196,6 +325,65 @@ const User = mongoose.model(
     lastLoginIP: { type: String, default: null },
     monthlyBudget: { type: Number, default: 0 },
     loyaltyPoints: { type: Number, default: 0 },
+
+    // ===========================
+    // 🔗 TECHMART NETWORK
+    // ===========================
+    networkTier: {
+      type: String,
+      enum: ["Member", "Plus", "Premium", "Elite"],
+      default: "Member"
+    },
+    networkScore: {
+      type: Number,
+      default: 0
+    },
+    networkJoinedAt: {
+      type: Date,
+      default: Date.now
+    },
+    networkReferralCount: {
+      type: Number,
+      default: 0
+    },
+    networkLifetimeSpend: {
+      type: Number,
+      default: 0
+    },
+    networkLoyaltyEarned: {
+      type: Number,
+      default: 0
+    },
+    networkSavingsBalance: {
+      type: Number,
+      default: 0
+    },
+    networkBnplCompleted: {
+      type: Number,
+      default: 0
+    },
+    networkLastActivity: {
+      type: Date,
+      default: null
+    },
+    networkBenefits: {
+      cashbackMultiplier: {
+        type: Number,
+        default: 1
+      },
+      loyaltyMultiplier: {
+        type: Number,
+        default: 1
+      },
+      exclusiveDeals: {
+        type: Boolean,
+        default: false
+      },
+      prioritySupport: {
+        type: Boolean,
+        default: false
+      }
+    },
     totalPointsEarned: { type: Number, default: 0 },
     budgetAlertSent: { type: Boolean, default: false },
     bvnVerified: { type: Boolean, default: false },
@@ -242,6 +430,56 @@ const BNPLPlan = mongoose.model("BNPLPlan", new mongoose.Schema({
 }));
 
 // 🏦 Savings Vault Schema
+// ===========================
+
+// 🔗 TECHMART NETWORK ACTIVITY
+// ===========================
+const NetworkActivity = mongoose.model(
+  "NetworkActivity",
+  new mongoose.Schema({
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    type: {
+      type: String,
+      enum: [
+        "purchase",
+        "loyalty",
+        "referral",
+        "wallet",
+        "savings",
+        "bnpl",
+        "bonus",
+        "tier_upgrade"
+      ],
+      required: true
+    },
+    points: {
+      type: Number,
+      default: 0
+    },
+    amount: {
+      type: Number,
+      default: 0
+    },
+    description: {
+      type: String,
+      default: ""
+    },
+    reference: {
+      type: String,
+      default: ""
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  })
+);
+
 const SavingsVault = mongoose.model("SavingsVault", new mongoose.Schema({
   userId: { type: String, required: true },
   amount: { type: Number, required: true },
@@ -710,6 +948,160 @@ app.delete("/api/products/:id", adminOnly, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Failed to delete product" });
   }
+});
+
+
+/* ===========================
+   🔗 TECHMART NETWORK API
+=========================== */
+
+// Get current Network status
+app.get("/api/network/status", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select(
+      "name email networkTier networkScore networkJoinedAt networkReferralCount networkLifetimeSpend networkLoyaltyEarned networkSavingsBalance networkBnplCompleted networkLastActivity networkBenefits"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found"
+      });
+    }
+
+    const thresholds = {
+      Member: 0,
+      Plus: 2000,
+      Premium: 5000,
+      Elite: 10000
+    };
+
+    const tiers = ["Member", "Plus", "Premium", "Elite"];
+    const currentIndex = tiers.indexOf(user.networkTier || "Member");
+    const nextTier = tiers[currentIndex + 1] || null;
+    const nextThreshold = nextTier ? thresholds[nextTier] : null;
+
+    const progress = nextThreshold
+      ? Math.min(
+          100,
+          Math.round(
+            ((user.networkScore - thresholds[user.networkTier]) /
+              (nextThreshold - thresholds[user.networkTier])) *
+              100
+          )
+        )
+      : 100;
+
+    res.json({
+      success: true,
+      network: {
+        tier: user.networkTier || "Member",
+        score: user.networkScore || 0,
+        joinedAt: user.networkJoinedAt,
+        nextTier,
+        nextThreshold,
+        progress,
+        referrals: user.networkReferralCount || 0,
+        lifetimeSpend: user.networkLifetimeSpend || 0,
+        loyaltyEarned: user.networkLoyaltyEarned || 0,
+        savingsBalance: user.networkSavingsBalance || 0,
+        bnplCompleted: user.networkBnplCompleted || 0,
+        lastActivity: user.networkLastActivity,
+        benefits: user.networkBenefits || getNetworkBenefits(user.networkTier)
+      }
+    });
+  } catch (err) {
+    console.error("Network status error:", err);
+    res.status(500).json({
+      error: "Failed to load Network status"
+    });
+  }
+});
+
+
+// Network activity history
+app.get("/api/network/activity", auth, async (req, res) => {
+  try {
+    const limit = Math.min(
+      Math.max(Number(req.query.limit) || 20, 1),
+      100
+    );
+
+    const activities = await NetworkActivity.find({
+      userId: req.user.id
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    res.json({
+      success: true,
+      activities
+    });
+  } catch (err) {
+    console.error("Network activity error:", err);
+    res.status(500).json({
+      error: "Failed to load Network activity"
+    });
+  }
+});
+
+
+// Network benefits
+app.get("/api/network/benefits", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select(
+      "networkTier networkBenefits"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      tier: user.networkTier || "Member",
+      benefits:
+        user.networkBenefits ||
+        getNetworkBenefits(user.networkTier || "Member")
+    });
+  } catch (err) {
+    console.error("Network benefits error:", err);
+    res.status(500).json({
+      error: "Failed to load Network benefits"
+    });
+  }
+});
+
+
+// Network leaderboard / public-safe stats
+app.get("/api/network/tiers", auth, async (req, res) => {
+  res.json({
+    success: true,
+    tiers: [
+      {
+        name: "Member",
+        minimumScore: 0,
+        benefits: getNetworkBenefits("Member")
+      },
+      {
+        name: "Plus",
+        minimumScore: 2000,
+        benefits: getNetworkBenefits("Plus")
+      },
+      {
+        name: "Premium",
+        minimumScore: 5000,
+        benefits: getNetworkBenefits("Premium")
+      },
+      {
+        name: "Elite",
+        minimumScore: 10000,
+        benefits: getNetworkBenefits("Elite")
+      }
+    ]
+  });
 });
 
 /* ===========================
