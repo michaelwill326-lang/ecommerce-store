@@ -35,11 +35,19 @@ export default function TechMartPay() {
   const [bvnVerified, setBvnVerified] = useState(false);
   const [insights, setInsights] = useState(null);
   const [vaults, setVaults] = useState([]);
+  const [giftCards, setGiftCards] = useState([]);
+  const [giftCardLoading, setGiftCardLoading] = useState(false);
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [payLinks, setPayLinks] = useState([]);
+  const [payLinkForm, setPayLinkForm] = useState({ amount: "", description: "" });
+  const [payLinkLoading, setPayLinkLoading] = useState(false);
+  const [newLink, setNewLink] = useState(null);
   const [vaultLoading, setVaultLoading] = useState(false);
   const [vaultForm, setVaultForm] = useState({ amount: "", lockDays: 30 });
   const [loyalty, setLoyalty] = useState(null);
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
-  const [redeemLoading, setRedeemLoading] = useState(false);
+
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [budget, setBudgetInput] = useState("");
   const [budgetSaving, setBudgetSaving] = useState(false);
@@ -135,6 +143,55 @@ const [otpTimer, setOtpTimer] = useState(600);
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
+  };
+
+  const purchaseGiftCard = async (amount) => {
+    setGiftCardLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/giftcard/purchase`, { amount }, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      fetchMyGiftCards();
+      fetchDashboard();
+    } catch (err) { setMsg({ text: err.response?.data?.error || "Failed to purchase", type: "error" }); }
+    finally { setGiftCardLoading(false); }
+  };
+
+  const redeemGiftCard = async () => {
+    if (!redeemCode.trim()) return setMsg({ text: "Enter a gift card code", type: "error" });
+    setRedeemLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/giftcard/redeem`, { code: redeemCode }, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      setRedeemCode("");
+      fetchDashboard();
+    } catch (err) { setMsg({ text: err.response?.data?.error || "Failed to redeem", type: "error" }); }
+    finally { setRedeemLoading(false); }
+  };
+
+  const fetchMyGiftCards = async () => {
+    try {
+      const res = await axios.get(`${API}/api/giftcard/mine`, { headers });
+      setGiftCards(res.data || []);
+    } catch {}
+  };
+
+  const createPayLink = async () => {
+    if (!payLinkForm.amount || Number(payLinkForm.amount) < 100) return setMsg({ text: "Minimum ₦100", type: "error" });
+    setPayLinkLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/paylink/create`, payLinkForm, { headers });
+      setNewLink(res.data);
+      setMsg({ text: "Payment link created!", type: "success" });
+      fetchMyPayLinks();
+    } catch (err) { setMsg({ text: err.response?.data?.error || "Failed to create link", type: "error" }); }
+    finally { setPayLinkLoading(false); }
+  };
+
+  const fetchMyPayLinks = async () => {
+    try {
+      const res = await axios.get(`${API}/api/paylink/mine/all`, { headers });
+      setPayLinks(res.data || []);
+    } catch {}
   };
 
   const fetchVaults = async () => {
@@ -588,7 +645,7 @@ const requestPinReset = async () => {
       setMsg({ text: err.response?.data?.error || "Funding failed", type: "error" });
     } finally { setBetLoading(false); }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC", "Insights", "Savings", "Loyalty"];
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC", "Insights", "Savings", "Loyalty", "Gift Cards", "Pay Links"];
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -976,6 +1033,117 @@ const requestPinReset = async () => {
                 <button onClick={fetchLoyalty} style={{ padding: "10px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}>🔄 Refresh</button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* GIFT CARDS TAB */}
+        {tab === "Gift Cards" && (
+          <div>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "4px" }}>🎁 Gift Cards</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Buy & send TechMart gift cards — expires in 6 months</p>
+
+            {/* Buy Gift Card */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Buy a Gift Card</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "16px" }}>
+                {[2000, 5000, 10000, 20000].map(amt => (
+                  <button key={amt} onClick={() => purchaseGiftCard(amt)} disabled={giftCardLoading} style={{ padding: "16px", borderRadius: "10px", border: "1px solid #333", background: "#111", cursor: "pointer", textAlign: "center" }}>
+                    <p style={{ color: "#f97316", fontWeight: "900", fontSize: "18px", margin: "0 0 4px" }}>₦{amt.toLocaleString()}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>TechMart Gift Card</p>
+                  </button>
+                ))}
+              </div>
+              <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>💳 Paid from your wallet balance • Valid for 6 months</p>
+            </div>
+
+            {/* Redeem Gift Card */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Redeem a Gift Card</p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input placeholder="TECH-XXXX-XXXX-XXXX" value={redeemCode} onChange={e => setRedeemCode(e.target.value.toUpperCase())} style={{ ...inp, marginBottom: 0, flex: 1, letterSpacing: "2px" }} />
+                <button onClick={redeemGiftCard} disabled={redeemLoading} style={{ padding: "12px 16px", background: "#22c55e", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px", flexShrink: 0 }}>
+                  {redeemLoading ? "..." : "Redeem"}
+                </button>
+              </div>
+            </div>
+
+            {/* My Gift Cards */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>My Gift Cards</p>
+                <button onClick={fetchMyGiftCards} style={{ padding: "6px 12px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>🔄 Load</button>
+              </div>
+              {giftCards.length === 0 ? <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "16px 0" }}>No gift cards yet</p> :
+                giftCards.map((gc, i) => (
+                  <div key={i} style={{ background: "#111", border: `1px solid ${gc.status === "active" ? "#f97316" : "#333"}`, borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <p style={{ color: "#f97316", fontWeight: "900", fontSize: "16px", margin: 0 }}>₦{gc.amount.toLocaleString()}</p>
+                      <span style={{ background: gc.status === "active" ? "#1a0a00" : "#1a1a1a", color: gc.status === "active" ? "#f97316" : "#888", padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700" }}>{gc.status.toUpperCase()}</span>
+                    </div>
+                    <p style={{ color: "var(--text-primary)", fontFamily: "monospace", fontSize: "14px", fontWeight: "700", margin: "0 0 4px", letterSpacing: "2px" }}>{gc.code}</p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>Expires: {new Date(gc.expiresAt).toLocaleDateString("en-NG")}</p>
+                      {gc.status === "active" && (
+                        <button onClick={() => { navigator.clipboard?.writeText(gc.code); setMsg({ text: "Code copied!", type: "success" }); }} style={{ padding: "4px 10px", background: "#333", border: "none", color: "#fff", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>📋 Copy</button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        )}
+
+        {/* PAY LINKS TAB */}
+        {tab === "Pay Links" && (
+          <div>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "4px" }}>🔗 Payment Links</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Create a link to receive money from anyone</p>
+
+            {/* Create Link */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Create Payment Link</p>
+              <input type="number" placeholder="Amount (₦)" value={payLinkForm.amount} onChange={e => setPayLinkForm({...payLinkForm, amount: e.target.value})} style={inp} />
+              <input placeholder="Description (optional — e.g. For groceries)" value={payLinkForm.description} onChange={e => setPayLinkForm({...payLinkForm, description: e.target.value})} style={inp} />
+              <button onClick={createPayLink} disabled={payLinkLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+                {payLinkLoading ? "Creating..." : "🔗 Create Payment Link"}
+              </button>
+            </div>
+
+            {/* New Link Result */}
+            {newLink && (
+              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>✅ Payment Link Created!</p>
+                <p style={{ color: "var(--text-primary)", fontSize: "12px", fontFamily: "monospace", margin: "0 0 10px", wordBreak: "break-all" }}>{newLink.url}</p>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={() => { navigator.clipboard?.writeText(newLink.url); setMsg({ text: "Link copied!", type: "success" }); }} style={{ flex: 1, padding: "10px", background: "#22c55e", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>📋 Copy Link</button>
+                  <button onClick={() => { window.open(`https://wa.me/?text=Pay me ₦${newLink.amount.toLocaleString()} via TechMart: ${newLink.url}`, "_blank"); }} style={{ flex: 1, padding: "10px", background: "#25d366", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>💬 Share on WhatsApp</button>
+                </div>
+              </div>
+            )}
+
+            {/* My Links */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>My Payment Links</p>
+                <button onClick={fetchMyPayLinks} style={{ padding: "6px 12px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>🔄 Load</button>
+              </div>
+              {payLinks.length === 0 ? <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "16px 0" }}>No payment links yet</p> :
+                payLinks.map((pl, i) => (
+                  <div key={i} style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <p style={{ color: "#f97316", fontWeight: "700", fontSize: "16px", margin: 0 }}>₦{pl.amount.toLocaleString()}</p>
+                      <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "12px", margin: 0 }}>₦{pl.totalCollected.toLocaleString()} collected</p>
+                    </div>
+                    {pl.description && <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 6px" }}>{pl.description}</p>}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{pl.paidCount} payment(s) received</p>
+                      <button onClick={() => { const url = `${window.location.origin}/pay/link/${pl.linkId}`; navigator.clipboard?.writeText(url); setMsg({ text: "Link copied!", type: "success" }); }} style={{ padding: "4px 10px", background: "#333", border: "none", color: "#fff", borderRadius: "6px", cursor: "pointer", fontSize: "11px" }}>📋 Copy</button>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
           </div>
         )}
 
