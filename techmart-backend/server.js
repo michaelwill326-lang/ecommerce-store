@@ -195,6 +195,8 @@ const User = mongoose.model(
     lastLoginAt: { type: Date, default: null },
     lastLoginIP: { type: String, default: null },
     monthlyBudget: { type: Number, default: 0 },
+    loyaltyPoints: { type: Number, default: 0 },
+    totalPointsEarned: { type: Number, default: 0 },
     budgetAlertSent: { type: Boolean, default: false },
     bvnVerified: { type: Boolean, default: false },
     ninVerified: { type: Boolean, default: false },
@@ -236,6 +238,19 @@ const BNPLPlan = mongoose.model("BNPLPlan", new mongoose.Schema({
     paidAt: { type: Date, default: null },
     status: { type: String, enum: ["paid", "pending", "overdue"], default: "pending" }
   }],
+  createdAt: { type: Date, default: Date.now }
+}));
+
+// 🏦 Savings Vault Schema
+const SavingsVault = mongoose.model("SavingsVault", new mongoose.Schema({
+  userId: { type: String, required: true },
+  amount: { type: Number, required: true },
+  lockDays: { type: Number, enum: [7, 30, 90], required: true },
+  interestRate: { type: Number, default: 5 },
+  expectedInterest: { type: Number, required: true },
+  maturityDate: { type: Date, required: true },
+  status: { type: String, enum: ["active", "matured", "withdrawn"], default: "active" },
+  interestCredited: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 }));
 
@@ -1264,6 +1279,129 @@ function checkDailyLimit(user, type, amount) {
     return { ok: true, total, today };
   }
 }
+
+// 🏦 Create Savings Vault
+app.post("/api/pay/vault/lock", auth, async (req, res) => {
+  try {
+    const { amount, lockDays } = req.body;
+    if (!amount || Number(amount) < 1000) return res.status(400).json({ error: "Minimum savings amount is ₦1,000" });
+    if (![7, 30, 90].includes(Number(lockDays))) return res.status(400).json({ error: "Choose 7, 30, or 90 days" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    // Calculate interest (5% monthly, pro-rated)
+    const monthlyRate = 0.05;
+    const dailyRate = monthlyRate / 30;
+    const expectedInterest = Math.floor(Number(amount) * dailyRate * Number(lockDays));
+    const maturityDate = new Date(Date.now() + Number(lockDays) * 24 * 60 * 60 * 1000);
+
+    // Deduct from wallet
+    user.walletBalance -= Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `Locked ₦${Number(amount).toLocaleString()} in Savings Vault for ${lockDays} days`,
+      reference: "VAULT-" + Date.now()
+    });
+    await user.save();
+
+    const vault = await SavingsVault.create({
+      userId: req.user.id,
+      amount: Number(amount),
+      lockDays: Number(lockDays),
+      expectedInterest,
+      maturityDate
+    });
+
+    res.json({ success: true, vault, message: `₦${Number(amount).toLocaleString()} locked for ${lockDays} days. You'll earn ₦${expectedInterest.toLocaleString()} interest!` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create savings vault" });
+  }
+});
+
+// 🏦 Get My Vaults
+app.get("/api/pay/vault", auth, async (req, res) => {
+  try {
+    const vaults = await SavingsVault.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(vaults);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch vaults" });
+  }
+});
+
+// 🏦 Withdraw Matured Vault
+app.post("/api/pay/vault/:vaultId/withdraw", auth, async (req, res) => {
+  try {
+    const vault = await SavingsVault.findById(req.params.vaultId);
+    if (!vault) return res.status(404).json({ error: "Vault not found" });
+    if (vault.userId !== req.user.id) return res.status(403).json({ error: "Not your vault" });
+    if (vault.status !== "active") return res.status(400).json({ error: "Vault already withdrawn" });
+    if (new Date() < new Date(vault.maturityDate)) {
+      const daysLeft = Math.ceil((new Date(vault.maturityDate) - new Date()) / (1000 * 60 * 60 * 24));
+      return res.status(400).json({ error: `Vault matures in ${daysLeft} day(s). Early withdrawal not allowed.` });
+    }
+
+    const user = await User.findById(req.user.id);
+    const total = vault.amount + vault.expectedInterest;
+    user.walletBalance = (user.walletBalance || 0) + total;
+    user.walletTransactions.push({
+      type: "credit",
+      amount: total,
+      description: `Savings Vault matured — ₦${vault.amount.toLocaleString()} + ₦${vault.expectedInterest.toLocaleString()} interest`,
+      reference: "VAULT-OUT-" + Date.now()
+    });
+    await user.save();
+
+    vault.status = "withdrawn";
+    vault.interestCredited = true;
+    await vault.save();
+
+    res.json({ success: true, message: `₦${total.toLocaleString()} credited to your wallet (including ₦${vault.expectedInterest.toLocaleString()} interest)!` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to withdraw vault" });
+  }
+});
+
+// 🎯 Get Loyalty Points
+app.get("/api/pay/loyalty", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("loyaltyPoints totalPointsEarned name");
+    const pointsValue = Math.floor((user.loyaltyPoints || 0) / 100) * 500;
+    res.json({
+      points: user.loyaltyPoints || 0,
+      totalEarned: user.totalPointsEarned || 0,
+      walletValue: pointsValue,
+      nextReward: 100 - ((user.loyaltyPoints || 0) % 100)
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch loyalty points" });
+  }
+});
+
+// 🎯 Redeem Loyalty Points
+app.post("/api/pay/loyalty/redeem", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if ((user.loyaltyPoints || 0) < 100) return res.status(400).json({ error: "You need at least 100 points to redeem (worth ₦500)" });
+
+    const redeemable = Math.floor(user.loyaltyPoints / 100);
+    const creditAmount = redeemable * 500;
+    user.loyaltyPoints = user.loyaltyPoints % 100;
+    user.walletBalance = (user.walletBalance || 0) + creditAmount;
+    user.walletTransactions.push({
+      type: "credit",
+      amount: creditAmount,
+      description: `Loyalty points redeemed — ${redeemable * 100} points = ₦${creditAmount.toLocaleString()}`,
+      reference: "LOYALTY-" + Date.now()
+    });
+    await user.save();
+
+    res.json({ success: true, message: `₦${creditAmount.toLocaleString()} credited to your wallet from loyalty points!`, remaining: user.loyaltyPoints });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to redeem loyalty points" });
+  }
+});
 
 // 💳 Spend Insights
 app.get("/api/pay/insights", auth, async (req, res) => {
@@ -4533,6 +4671,20 @@ app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
     order.status = "Delivered";
     await order.save();
 
+    // 🎯 Award Loyalty Points (1 point per ₦1,000 spent)
+    const pointsEarned = Math.floor((Number(order.amount) || 0) / 1000);
+    if (pointsEarned > 0) {
+      try {
+        const buyerForPoints = await User.findOne({ email: order.email });
+        if (buyerForPoints) {
+          buyerForPoints.loyaltyPoints = (buyerForPoints.loyaltyPoints || 0) + pointsEarned;
+          buyerForPoints.totalPointsEarned = (buyerForPoints.totalPointsEarned || 0) + pointsEarned;
+          await buyerForPoints.save();
+          console.log(`🎯 ${pointsEarned} loyalty points awarded to ${order.email}`);
+        }
+      } catch (lpErr) { console.error("Loyalty points error:", lpErr.message); }
+    }
+
     // 💰 2% Cashback to buyer wallet
     const cashbackAmount = Math.floor((Number(order.amount) || 0) * 0.02);
     let cashbackMsg = "";
@@ -5945,6 +6097,22 @@ cron.schedule("0 9 * * *", async () => {
     }
   } catch (e) {
     console.error("❌ BNPL cron error:", e.message);
+  }
+});
+
+// ── Savings Vault Maturity Cron (runs daily at 8am)
+cron.schedule("0 8 * * *", async () => {
+  try {
+    const now = new Date();
+    const maturedVaults = await SavingsVault.find({ status: "active", maturityDate: { $lte: now }, interestCredited: false });
+    for (const vault of maturedVaults) {
+      vault.status = "matured";
+      await vault.save();
+      console.log(`🏦 Vault matured for user ${vault.userId}: ₦${vault.amount} + ₦${vault.expectedInterest} interest`);
+    }
+    console.log(`🏦 Vault maturity check: ${maturedVaults.length} vault(s) matured`);
+  } catch (e) {
+    console.error("❌ Vault cron error:", e.message);
   }
 });
 
