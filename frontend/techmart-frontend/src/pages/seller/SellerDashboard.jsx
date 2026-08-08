@@ -162,6 +162,8 @@ export default function SellerDashboard() {
   };
 
   const [sellerWallet, setSellerWallet] = useState(null);
+  const [sponsored, setSponsored] = useState([]);
+  const [sponsoredLoading, setSponsoredLoading] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", bankCode: "", accountNumber: "", accountName: "", bankName: "" });
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [banks, setBanks] = useState([]);
@@ -170,7 +172,7 @@ export default function SellerDashboard() {
   if (loading) return <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-primary)" }}>Loading...</div>;
 
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
-  const TABS = ["Overview", "Analytics", "Products", "Storefront", "Wallet", "Payouts", "Disputes", "Messages"];
+  const TABS = ["Overview", "Analytics", "Products", "Storefront", "Wallet", "Payouts", "Disputes", "Messages", "Promote"];
 
   const statCards = [
     { label: "Revenue", value: `N${(analytics?.revenue || 0).toLocaleString()}`, color: "#f97316" },
@@ -682,6 +684,82 @@ export default function SellerDashboard() {
       )}
 
       {/* MESSAGES */}
+      {tab === "Promote" && (
+        <div>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "4px" }}>📢 Promote Products</h2>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Sponsored products appear first in AI search results — ₦2,000/week per product</p>
+
+          {/* How it works */}
+          <div style={{ background: "linear-gradient(135deg, #1a0a00, #2a1000)", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+            <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 10px" }}>How Sponsored Listings Work</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {["🔍 Your product appears at the TOP of AI search results", "📢 Marked with a 'Sponsored' badge for visibility", "⏱ Runs for exactly 7 days from activation", "💰 ₦2,000 deducted from your seller wallet"].map((tip, i) => (
+                <p key={i} style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{tip}</p>
+              ))}
+            </div>
+          </div>
+
+          {/* Sponsor a product */}
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+            <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Select a Product to Sponsor</p>
+            {(data?.products || []).length === 0 ? (
+              <p style={{ color: "var(--text-muted)" }}>No products to sponsor yet</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {(data?.products || []).map((p, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "#111", borderRadius: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {p.images?.[0] && <img src={p.images[0]} alt="" style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover" }} />}
+                      <div>
+                        <p style={{ color: "var(--text-primary)", fontWeight: "600", fontSize: "13px", margin: "0 0 2px" }}>{p.name}</p>
+                        <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>₦{(p.price || 0).toLocaleString()} • {p.stock || 0} in stock</p>
+                      </div>
+                    </div>
+                    <button onClick={async () => {
+                      setSponsoredLoading(true);
+                      try {
+                        const res = await axios.post(`${API}/api/sponsored/create`, { productId: p._id }, { headers });
+                        setMsg(`✅ ${p.name} is now sponsored for 7 days!`);
+                        const sRes = await axios.get(`${API}/api/sponsored/mine`, { headers });
+                        setSponsored(sRes.data || []);
+                      } catch (err) { setMsg(err.response?.data?.error || "Failed to sponsor"); }
+                      finally { setSponsoredLoading(false); }
+                    }} disabled={sponsoredLoading} style={{ padding: "8px 14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px", flexShrink: 0 }}>
+                      📢 Sponsor — ₦2,000
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* My Sponsored Listings */}
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>My Sponsored Listings</p>
+              <button onClick={async () => {
+                const res = await axios.get(`${API}/api/sponsored/mine`, { headers });
+                setSponsored(res.data || []);
+              }} style={{ padding: "6px 12px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>🔄 Load</button>
+            </div>
+            {sponsored.length === 0 ? <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "16px 0" }}>No active sponsored listings</p> :
+              sponsored.map((s, i) => {
+                const daysLeft = Math.ceil((new Date(s.expiresAt) - new Date()) / (1000*60*60*24));
+                return (
+                  <div key={i} style={{ background: "#111", border: `1px solid ${s.status === "active" ? "#f97316" : "#333"}`, borderRadius: "10px", padding: "14px", marginBottom: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px", margin: 0 }}>{s.productName}</p>
+                      <span style={{ background: s.status === "active" ? "#1a0a00" : "#1a1a1a", color: s.status === "active" ? "#f97316" : "#888", padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700" }}>{s.status === "active" ? `${daysLeft}d left` : "EXPIRED"}</span>
+                    </div>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>Expires: {new Date(s.expiresAt).toLocaleDateString("en-NG")}</p>
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+      )}
+
       {tab === "Messages" && (
         <div>
           <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Customer Messages</h2>

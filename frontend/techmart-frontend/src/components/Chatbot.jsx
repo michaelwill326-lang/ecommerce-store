@@ -5,6 +5,9 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 export default function Chatbot() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [aiStatus, setAiStatus] = useState({ isPro: false, remaining: 10, limit: 10, dailyUsage: 0 });
+  const [showProBanner, setShowProBanner] = useState(false);
+  const [upgradingPro, setUpgradingPro] = useState(false);
   const [messages, setMessages] = useState([
     { text: "Hi! I am your TechMart AI Assistant.\n\nI can help you:\n• Shop — \"Find a phone under ₦200k\"\n• Wallet — \"Show my balance\" or \"Split ₦30k between 3 people\"\n• Orders — \"Track my last order\"\n• Actions — \"Buy it now\" or \"Add the cheaper one to cart\"\n• Admin/Seller — \"Show today revenue\" or \"Low stock products\"\n\n🎤 Or just tap the mic and speak!", sender: "bot" }
   ]);
@@ -100,6 +103,32 @@ export default function Chatbot() {
     setMessages(prev => [...prev, { text, sender, data, id: Date.now() }]);
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${API}/api/ai/pro/status`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setAiStatus(d))
+      .catch(() => {});
+  }, []);
+
+  const upgradeAIPro = async () => {
+    const token = localStorage.getItem("token");
+    setUpgradingPro(true);
+    try {
+      const res = await fetch(`${API}/api/ai/pro/upgrade`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) {
+        setAiStatus(prev => ({ ...prev, isPro: true, limit: 999, remaining: 999 }));
+        setShowProBanner(false);
+        addMessage("🎉 AI Pro activated! You now have unlimited AI messages.", "bot");
+      } else {
+        addMessage(data.error || "Failed to upgrade. Please check your wallet balance.", "bot");
+      }
+    } catch { addMessage("Failed to upgrade. Please try again.", "bot"); }
+    finally { setUpgradingPro(false); }
+  };
+
   const sendMessage = async (overrideMsg) => {
     const token = localStorage.getItem("token");
     const message = (overrideMsg || input).trim();
@@ -108,6 +137,20 @@ export default function Chatbot() {
     setInput("");
     setTyping(true);
     if (!token) { setTyping(false); addMessage("Please log in to use the AI Assistant.", "bot"); return; }
+
+    // Track AI usage & check limits
+    try {
+      const usageRes = await fetch(`${API}/api/ai/track-usage`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const usageData = await usageRes.json();
+      if (usageData.limitReached) {
+        setTyping(false);
+        setShowProBanner(true);
+        addMessage(`⚠️ You've used all ${aiStatus.limit} free AI messages today. Upgrade to AI Pro for ₦500/month for unlimited messages! 🚀`, "bot");
+        return;
+      }
+      setAiStatus(prev => ({ ...prev, dailyUsage: usageData.usage, remaining: usageData.remaining }));
+    } catch {}
+
     try {
       const response = await fetch(`${API}/api/ai/assistant`, {
         method: "POST",
