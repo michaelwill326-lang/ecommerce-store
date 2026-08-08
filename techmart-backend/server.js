@@ -194,6 +194,8 @@ const User = mongoose.model(
     loginAttempts: { type: Number, default: 0 },
     lastLoginAt: { type: Date, default: null },
     lastLoginIP: { type: String, default: null },
+    monthlyBudget: { type: Number, default: 0 },
+    budgetAlertSent: { type: Boolean, default: false },
     bvnVerified: { type: Boolean, default: false },
     ninVerified: { type: Boolean, default: false },
     bvnLastAttempt: { type: Date, default: null },
@@ -242,6 +244,10 @@ const Product = mongoose.model(
         default: 0
       },
       stock: { type: Number, default: 0 }
+    }],
+    priceHistory: [{
+      price: Number,
+      recordedAt: { type: Date, default: Date.now }
     }],
     rating: { type: Number, default: 0 },
     reviews: [
@@ -627,6 +633,12 @@ app.put("/api/products/:id", adminOnly, async (req, res) => {
       console.warn("⚠️ Invalid variants JSON");
     }
 
+    // Track price history if price changed
+    if (req.body.price && Number(req.body.price) !== product.price) {
+      product.priceHistory = product.priceHistory || [];
+      product.priceHistory.push({ price: product.price, recordedAt: new Date() });
+      await product.save();
+    }
     const updates = {
       name: req.body.name ?? product.name,
       description: req.body.description ?? product.description,
@@ -1234,6 +1246,95 @@ function checkDailyLimit(user, type, amount) {
     return { ok: true, total, today };
   }
 }
+
+// 💳 Spend Insights
+app.get("/api/pay/insights", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("walletTransactions monthlyBudget name");
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const txs = user.walletTransactions || [];
+    const debits = txs.filter(t => t.type === "debit");
+
+    // This month spending
+    const thisMonthTxs = debits.filter(t => new Date(t.createdAt) >= startOfMonth);
+    const thisMonthTotal = thisMonthTxs.reduce((s, t) => s + t.amount, 0);
+
+    // Last month spending
+    const lastMonthTxs = debits.filter(t => new Date(t.createdAt) >= startOfLastMonth && new Date(t.createdAt) <= endOfLastMonth);
+    const lastMonthTotal = lastMonthTxs.reduce((s, t) => s + t.amount, 0);
+
+    // Category breakdown from descriptions
+    const categories = {};
+    thisMonthTxs.forEach(t => {
+      const desc = (t.description || "").toLowerCase();
+      let cat = "Other";
+      if (desc.includes("order") || desc.includes("escrow")) cat = "Shopping";
+      else if (desc.includes("airtime")) cat = "Airtime";
+      else if (desc.includes("data")) cat = "Data";
+      else if (desc.includes("electricity")) cat = "Electricity";
+      else if (desc.includes("cable") || desc.includes("tv")) cat = "Cable TV";
+      else if (desc.includes("transfer")) cat = "Transfers";
+      else if (desc.includes("withdrawal")) cat = "Withdrawal";
+      categories[cat] = (categories[cat] || 0) + t.amount;
+    });
+
+    // Monthly trend (last 6 months)
+    const monthlyTrend = [];
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const total = debits.filter(t => new Date(t.createdAt) >= start && new Date(t.createdAt) <= end).reduce((s, t) => s + t.amount, 0);
+      monthlyTrend.push({ month: start.toLocaleString("en-NG", { month: "short", year: "numeric" }), total });
+    }
+
+    // Budget progress
+    const budget = user.monthlyBudget || 0;
+    const budgetProgress = budget > 0 ? Math.min((thisMonthTotal / budget) * 100, 100) : 0;
+    const budgetAlert = budget > 0 && thisMonthTotal >= budget * 0.8;
+
+    res.json({
+      thisMonth: thisMonthTotal,
+      lastMonth: lastMonthTotal,
+      change: lastMonthTotal > 0 ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100) : 0,
+      categories,
+      monthlyTrend,
+      budget,
+      budgetProgress: Math.round(budgetProgress),
+      budgetAlert,
+      topCategory: Object.entries(categories).sort((a, b) => b[1] - a[1])[0]?.[0] || "None"
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch insights" });
+  }
+});
+
+// 💳 Set Monthly Budget
+app.post("/api/pay/budget", auth, async (req, res) => {
+  try {
+    const { budget } = req.body;
+    if (!budget || Number(budget) < 0) return res.status(400).json({ error: "Invalid budget amount" });
+    await User.findByIdAndUpdate(req.user.id, { monthlyBudget: Number(budget), budgetAlertSent: false });
+    res.json({ success: true, message: `Monthly budget set to ₦${Number(budget).toLocaleString()}` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to set budget" });
+  }
+});
+
+// 📈 Price History
+app.get("/api/products/:id/price-history", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).select("name price priceHistory");
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    const history = [...(product.priceHistory || []), { price: product.price, recordedAt: new Date() }];
+    res.json({ name: product.name, currentPrice: product.price, history });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch price history" });
+  }
+});
 
 // Public Pay Profile
 app.get("/api/pay/profile/:userId", async (req, res) => {

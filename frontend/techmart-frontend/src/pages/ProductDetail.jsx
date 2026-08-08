@@ -8,6 +8,7 @@ import { useToast } from "../App";
 import { useWishlist } from "../context/WishlistContext";
 import axios from "axios";
 import ReviewSection from "../components/ReviewSection";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import AIReviewSummary from "../components/AIReviewSummary";
 import AIBundle from "../components/AIBundle";
 
@@ -50,6 +51,8 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [recommendations, setRecommendations] = useState([]);
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [showPriceHistory, setShowPriceHistory] = useState(false);
   const [recLoading, setRecLoading] = useState(false);
 
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -66,6 +69,11 @@ export default function ProductDetail() {
       const res = await axios.get(`${API}/api/products/${id}`);
       setProduct(res.data);
       trackView(res.data);
+      // Fetch price history
+      try {
+        const ph = await axios.get(`${API}/api/products/${id}/price-history`);
+        setPriceHistory(ph.data.history || []);
+      } catch {}
       if (res.data.variants && res.data.variants.length > 0) {
         setSelectedVariant(res.data.variants[0]);
       }
@@ -408,7 +416,42 @@ export default function ProductDetail() {
       </div>
 
       <AIReviewSummary productId={product._id} />
-      <ReviewSection product={product} onRefresh={fetchProduct} />
+                {/* PRICE HISTORY */}
+          {priceHistory.length > 1 && (
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>📈 Price History</p>
+                <button onClick={() => setShowPriceHistory(!showPriceHistory)} style={{ padding: "4px 12px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>
+                  {showPriceHistory ? "Hide" : "Show"}
+                </button>
+              </div>
+              {showPriceHistory && (
+                <div>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <LineChart data={priceHistory.map(h => ({ date: new Date(h.recordedAt).toLocaleDateString("en-NG", { month: "short", day: "numeric" }), price: h.price }))}>
+                      <XAxis dataKey="date" tick={{ fill: "#888", fontSize: 10 }} />
+                      <YAxis tick={{ fill: "#888", fontSize: 10 }} tickFormatter={v => `₦${(v/1000).toFixed(0)}k`} />
+                      <Tooltip formatter={v => [`₦${Number(v).toLocaleString()}`, "Price"]} contentStyle={{ background: "#111", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} />
+                      <Line type="monotone" dataKey="price" stroke="#f97316" strokeWidth={2} dot={{ fill: "#f97316", r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {priceHistory.length >= 2 && (() => {
+                    const first = priceHistory[0].price;
+                    const last = priceHistory[priceHistory.length - 1].price;
+                    const diff = last - first;
+                    const pct = Math.round((diff / first) * 100);
+                    return (
+                      <p style={{ color: diff <= 0 ? "#22c55e" : "#dc2626", fontSize: "12px", fontWeight: "700", margin: "8px 0 0", textAlign: "center" }}>
+                        {diff <= 0 ? `✅ Price dropped ${Math.abs(pct)}% — good time to buy!` : `⚠️ Price increased ${pct}% — consider waiting`}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          <ReviewSection product={product} onRefresh={fetchProduct} />
       <AIBundle productId={product._id} onAddBundle={(bundleProducts) => {
         bundleProducts.forEach(p => addToCart(p));
         showToast("Bundle added to cart!", "success");

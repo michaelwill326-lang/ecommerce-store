@@ -33,6 +33,10 @@ export default function TechMartPay() {
   const [bvnInput, setBvnInput] = useState("");
   const [bvnLoading, setBvnLoading] = useState(false);
   const [bvnVerified, setBvnVerified] = useState(false);
+  const [insights, setInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [budget, setBudgetInput] = useState("");
+  const [budgetSaving, setBudgetSaving] = useState(false);
   const [ninVerified, setNinVerified] = useState(false);
   const [ninInput, setNinInput] = useState("");
   const [ninLoading, setNinLoading] = useState(false);
@@ -125,6 +129,26 @@ const [otpTimer, setOtpTimer] = useState(600);
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
+  };
+
+  const fetchInsights = async () => {
+    setInsightsLoading(true);
+    try {
+      const res = await axios.get(`${API}/api/pay/insights`, { headers });
+      setInsights(res.data);
+      setBudgetInput(res.data.budget || "");
+    } catch { setMsg({ text: "Failed to load insights", type: "error" }); }
+    finally { setInsightsLoading(false); }
+  };
+
+  const saveBudget = async () => {
+    setBudgetSaving(true);
+    try {
+      await axios.post(`${API}/api/pay/budget`, { budget }, { headers });
+      setMsg({ text: `Budget set to ₦${Number(budget).toLocaleString()}`, type: "success" });
+      fetchInsights();
+    } catch { setMsg({ text: "Failed to set budget", type: "error" }); }
+    finally { setBudgetSaving(false); }
   };
 
   const verifyBvn = async () => {
@@ -507,7 +531,7 @@ const requestPinReset = async () => {
       setMsg({ text: err.response?.data?.error || "Funding failed", type: "error" });
     } finally { setBetLoading(false); }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC"];
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC", "Insights"];
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -773,6 +797,107 @@ const requestPinReset = async () => {
                 {withdrawLoading ? "Processing..." : `Withdraw ₦${Number(withdrawForm.amount || 0).toLocaleString()}`}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* INSIGHTS TAB */}
+        {tab === "Insights" && (
+          <div>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>💳 Spend Intelligence</h2>
+            {!insights ? (
+              <button onClick={fetchInsights} disabled={insightsLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+                {insightsLoading ? "Loading..." : "📊 Load My Insights"}
+              </button>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+                {/* Budget Alert */}
+                {insights.budgetAlert && (
+                  <div style={{ background: "#1a0a00", border: "1px solid #f97316", borderRadius: "12px", padding: "14px 16px", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "20px" }}>⚠️</span>
+                    <p style={{ color: "#f97316", fontWeight: "700", fontSize: "13px", margin: 0 }}>You have used {insights.budgetProgress}% of your ₦{Number(insights.budget).toLocaleString()} monthly budget!</p>
+                  </div>
+                )}
+
+                {/* This Month vs Last Month */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 6px", textTransform: "uppercase" }}>This Month</p>
+                    <p style={{ color: "#f97316", fontWeight: "900", fontSize: "20px", margin: "0 0 4px" }}>₦{Number(insights.thisMonth).toLocaleString()}</p>
+                    <p style={{ color: insights.change >= 0 ? "#dc2626" : "#22c55e", fontSize: "11px", margin: 0 }}>{insights.change >= 0 ? "▲" : "▼"} {Math.abs(insights.change)}% vs last month</p>
+                  </div>
+                  <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 6px", textTransform: "uppercase" }}>Last Month</p>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "900", fontSize: "20px", margin: "0 0 4px" }}>₦{Number(insights.lastMonth).toLocaleString()}</p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>Top: {insights.topCategory}</p>
+                  </div>
+                </div>
+
+                {/* Budget Progress */}
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>Monthly Budget</p>
+                    <p style={{ color: "#f97316", fontWeight: "700", fontSize: "13px", margin: 0 }}>{insights.budgetProgress}%</p>
+                  </div>
+                  {insights.budget > 0 ? (
+                    <div style={{ background: "#1a1a1a", borderRadius: "6px", height: "8px", marginBottom: "10px" }}>
+                      <div style={{ width: `${insights.budgetProgress}%`, height: "8px", borderRadius: "6px", background: insights.budgetProgress >= 80 ? "#dc2626" : "#22c55e", transition: "width 0.5s ease" }} />
+                    </div>
+                  ) : (
+                    <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 10px" }}>No budget set yet</p>
+                  )}
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input type="number" placeholder="Set monthly budget (₦)" value={budget} onChange={e => setBudgetInput(e.target.value)} style={{ flex: 1, padding: "10px 14px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px" }} />
+                    <button onClick={saveBudget} disabled={budgetSaving} style={{ padding: "10px 16px", background: "#22c55e", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+                      {budgetSaving ? "..." : "Set"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Category Breakdown */}
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Spending by Category</p>
+                  {Object.keys(insights.categories).length === 0 ? (
+                    <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>No spending this month yet</p>
+                  ) : (
+                    Object.entries(insights.categories).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => {
+                      const total = insights.thisMonth || 1;
+                      const pct = Math.round((amt / total) * 100);
+                      return (
+                        <div key={cat} style={{ marginBottom: "10px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                            <p style={{ color: "var(--text-primary)", fontSize: "13px", margin: 0 }}>{cat}</p>
+                            <p style={{ color: "#f97316", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦{amt.toLocaleString()} ({pct}%)</p>
+                          </div>
+                          <div style={{ background: "#1a1a1a", borderRadius: "4px", height: "6px" }}>
+                            <div style={{ width: `${pct}%`, height: "6px", borderRadius: "4px", background: "linear-gradient(135deg, #f97316, #dc2626)" }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Monthly Trend */}
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>6-Month Trend</p>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: "8px", height: "80px" }}>
+                    {insights.monthlyTrend.map((m, i) => {
+                      const max = Math.max(...insights.monthlyTrend.map(x => x.total), 1);
+                      const h = Math.max((m.total / max) * 70, 4);
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                          <div style={{ width: "100%", height: `${h}px`, background: i === 5 ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", borderRadius: "4px 4px 0 0" }} />
+                          <p style={{ color: "var(--text-muted)", fontSize: "9px", margin: 0, textAlign: "center" }}>{m.month.split(" ")[0]}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button onClick={fetchInsights} style={{ padding: "10px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}>🔄 Refresh</button>
+              </div>
+            )}
           </div>
         )}
 
