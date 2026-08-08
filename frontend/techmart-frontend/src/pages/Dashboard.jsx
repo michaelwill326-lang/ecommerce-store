@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext } from "react";
+import usePullToRefresh from "../hooks/usePullToRefresh";
 import { ProductGridSkeleton } from "../components/Skeleton";
 import { Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const { addToCart } = useContext(CartContext);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { pulling, pullDistance, threshold } = usePullToRefresh(fetchProducts);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -72,6 +74,11 @@ export default function Dashboard() {
 
   return (
     <div style={styles.page}>
+      {pullDistance > 0 && (
+        <div style={{ textAlign: "center", padding: "10px", color: pulling ? "#f97316" : "var(--text-muted)", fontSize: "13px", fontWeight: "700" }}>
+          {pulling ? "🔄 Release to refresh" : "⬇️ Pull to refresh"}
+        </div>
+      )}
 
       {/* HERO */}
       <div style={styles.hero}>

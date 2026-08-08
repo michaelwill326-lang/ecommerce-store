@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import usePullToRefresh from "../hooks/usePullToRefresh";
 import { useToast } from "../App";
 import { OrderCardSkeleton } from "../components/Skeleton";
 import { io } from "socket.io-client";
@@ -79,6 +80,11 @@ export default function Tracking() {
 
   return (
     <div style={styles.page}>
+      {pullDistance > 0 && (
+        <div style={{ textAlign: "center", padding: "10px", color: pulling ? "#f97316" : "var(--text-muted)", fontSize: "13px", fontWeight: "700" }}>
+          {pulling ? "🔄 Release to refresh" : "⬇️ Pull to refresh"}
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={styles.header}>
