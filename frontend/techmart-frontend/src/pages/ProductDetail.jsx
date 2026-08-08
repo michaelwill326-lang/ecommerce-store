@@ -25,6 +25,21 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
+  const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const diff = touchStart - touchEnd;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) setSelectedImage(i => Math.min(i + 1, images.length - 1));
+      else setSelectedImage(i => Math.max(i - 1, 0));
+    }
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -137,13 +152,33 @@ export default function ProductDetail() {
         <div style={styles.imageCol}>
 
           {/* MAIN IMAGE */}
-          <div style={styles.mainImgWrap}>
+          <div style={styles.mainImgWrap}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Prev arrow */}
+            {images.length > 1 && selectedImage > 0 && (
+              <button onClick={() => setSelectedImage(i => i - 1)} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", zIndex: 10, background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+            )}
+            {/* Next arrow */}
+            {images.length > 1 && selectedImage < images.length - 1 && (
+              <button onClick={() => setSelectedImage(i => i + 1)} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", zIndex: 10, background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+            )}
             <img
               src={images[selectedImage]}
               alt={product.name}
               onError={(e) => { e.target.src = FALLBACK_IMG; }}
-              style={styles.mainImg}
+              style={{ ...styles.mainImg, transition: "opacity 0.2s ease" }}
             />
+            {/* Dot indicators */}
+            {images.length > 1 && (
+              <div style={{ position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "6px", zIndex: 10 }}>
+                {images.map((_, i) => (
+                  <div key={i} onClick={() => setSelectedImage(i)} style={{ width: selectedImage === i ? "20px" : "6px", height: "6px", borderRadius: "3px", background: selectedImage === i ? "#f97316" : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.3s ease" }} />
+                ))}
+              </div>
+            )}
             {product.variants && product.variants.length > 1 && (
               <div style={{ marginBottom: "16px" }}>
                 <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 10px" }}>Select Variant</p>
