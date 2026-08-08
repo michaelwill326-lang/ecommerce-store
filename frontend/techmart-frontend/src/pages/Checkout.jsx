@@ -25,6 +25,9 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
+  const [bnplEligible, setBnplEligible] = useState(false);
+  const [bnplInstallments, setBnplInstallments] = useState(2);
+  const [bnplChecked, setBnplChecked] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [podLoading, setPodLoading] = useState(false);
   const [podEligible, setPodEligible] = useState(false);
@@ -49,6 +52,10 @@ export default function Checkout() {
     if (token) {
       axios.get(`${API}/api/pay/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setWalletBalance(res.data.balance || 0))
+      // Check BNPL eligibility
+      axios.get(`${API}/api/bnpl/eligibility`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => { setBnplEligible(res.data.eligible); setBnplChecked(true); })
+        .catch(() => setBnplChecked(true))
         .catch(() => {});
       axios.get(`${API}/api/orders/pod-eligibility`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => { setPodEligible(res.data.eligible); setPodEligibilityChecked(true); })
@@ -123,6 +130,28 @@ export default function Checkout() {
     } catch (err) {
       setError(err.response?.data?.error || "Failed to place order.");
     } finally { setPodLoading(false); }
+  };
+
+  const handleBNPLCheckout = async () => {
+    if (!address.trim()) return showToast("Please enter your delivery address", "warning");
+    if (!phone.trim()) return showToast("Please enter your phone number", "warning");
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      // First create the order via escrow
+      const orderRes = await axios.post(`${API}/api/orders/checkout-escrow`,
+        { cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: 0, deliveryFee, deliveryZone },
+        { headers }
+      );
+      const orderId = orderRes.data.order._id;
+      // Then create BNPL plan
+      const bnplRes = await axios.post(`${API}/api/bnpl/create`, { orderId, installments: bnplInstallments }, { headers });
+      clearCart();
+      navigate(`/tracking?ref=${orderRes.data.order.reference}&bnpl=true&installments=${bnplInstallments}`);
+    } catch (err) {
+      showToast(err.response?.data?.error || "BNPL checkout failed", "error");
+    } finally { setLoading(false); }
   };
 
   const handleEscrowCheckout = async () => {
@@ -369,6 +398,29 @@ export default function Checkout() {
                   <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>Funds held safely until you confirm delivery</p>
                 </div>
               )}
+              {/* BNPL Option */}
+              {bnplChecked && finalTotal >= 5000 && (
+                <div onClick={() => bnplEligible && setPaymentMethod("bnpl")} style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "bnpl" ? "#3b82f6" : "#333"}`, background: paymentMethod === "bnpl" ? "#0a0a1a" : "#111", cursor: bnplEligible ? "pointer" : "not-allowed", textAlign: "center", opacity: !bnplEligible ? 0.5 : 1 }}>
+                  <p style={{ margin: "0 0 2px", fontSize: "18px" }}>🔄</p>
+                  <p style={{ color: paymentMethod === "bnpl" ? "#3b82f6" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Buy Now Pay Later</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{bnplEligible ? "Split into 2 or 3 payments" : "Complete 3 orders to unlock"}</p>
+                </div>
+              )}
+              {paymentMethod === "bnpl" && bnplEligible && (
+                <div style={{ marginTop: "10px", background: "#0a0a1a", border: "1px solid #3b82f6", borderRadius: "10px", padding: "14px" }}>
+                  <p style={{ color: "#3b82f6", fontWeight: "700", fontSize: "13px", margin: "0 0 10px" }}>Choose installments:</p>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    {[2, 3].map(n => (
+                      <div key={n} onClick={() => setBnplInstallments(n)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `2px solid ${bnplInstallments === n ? "#3b82f6" : "#333"}`, background: bnplInstallments === n ? "#111a2a" : "#111", cursor: "pointer", textAlign: "center" }}>
+                        <p style={{ color: bnplInstallments === n ? "#3b82f6" : "#888", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>{n} Payments</p>
+                        <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>₦{Math.ceil(finalTotal / n).toLocaleString()} each</p>
+                        <p style={{ color: "var(--text-muted)", fontSize: "10px", margin: 0 }}>{n === 2 ? "Now + 30 days" : "Now + 30 + 60 days"}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ color: "#3b82f6", fontSize: "11px", margin: "10px 0 0", textAlign: "center" }}>First payment of ₦{Math.ceil(finalTotal / bnplInstallments).toLocaleString()} due now from wallet</p>
+                </div>
+              )}
             </div>
             {/* WALLET */}
             {walletBalance > 0 && (
@@ -414,6 +466,16 @@ export default function Checkout() {
                 </div>
                 <button onClick={handleEscrowCheckout} disabled={loading} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #22c55e, #16a34a)", opacity: loading ? 0.7 : 1 }}>
                   {loading ? "Processing..." : `🔐 Pay ₦${finalTotal.toLocaleString()} with Escrow →`}
+                </button>
+              </div>
+            )}
+            {paymentMethod === "bnpl" && bnplEligible && (
+              <div>
+                <div style={{ background: "#0a0a1a", border: "1px solid #3b82f6", borderRadius: "10px", padding: "12px", marginBottom: "12px" }}>
+                  <p style={{ color: "#3b82f6", fontSize: "13px", margin: 0 }}>🔄 First payment of ₦{Math.ceil(finalTotal / bnplInstallments).toLocaleString()} will be deducted from your wallet now. Remaining {bnplInstallments - 1} payment(s) auto-deducted every 30 days.</p>
+                </div>
+                <button onClick={handleBNPLCheckout} disabled={loading} style={{ ...styles.payBtn, background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", opacity: loading ? 0.7 : 1 }}>
+                  {loading ? "Processing..." : `🔄 Pay ₦${Math.ceil(finalTotal / bnplInstallments).toLocaleString()} Now (${bnplInstallments}x installments) →`}
                 </button>
               </div>
             )}

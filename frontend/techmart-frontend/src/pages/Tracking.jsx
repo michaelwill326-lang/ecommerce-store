@@ -20,6 +20,9 @@ export default function Tracking() {
   const [reference, setReference] = useState("");
   const [order, setOrder] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
+  const [bnplPlans, setBnplPlans] = useState([]);
+  const [bnplLoading, setBnplLoading] = useState(false);
+  const [showBnpl, setShowBnpl] = useState(false);
   const [loading, setLoading] = useState(false);
   const [myOrdersLoading, setMyOrdersLoading] = useState(false);
   const [error, setError] = useState("");
@@ -373,6 +376,48 @@ export default function Tracking() {
       {/* MY ORDERS */}
       {tab === "my" && (
         <div style={styles.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h2 style={{ ...styles.cardTitle, margin: 0 }}>📋 My Orders</h2>
+            <button onClick={() => { setShowBnpl(!showBnpl); if (!showBnpl && bnplPlans.length === 0) fetchBnplPlans(); }} style={{ padding: "8px 14px", background: showBnpl ? "linear-gradient(135deg, #3b82f6, #1d4ed8)" : "#1a1a1a", border: "1px solid #3b82f6", color: showBnpl ? "#fff" : "#3b82f6", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px" }}>
+              🔄 BNPL Plans
+            </button>
+          </div>
+
+          {/* BNPL PLANS */}
+          {showBnpl && (
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ color: "#3b82f6", fontSize: "14px", marginBottom: "12px" }}>My Buy Now Pay Later Plans</h3>
+              {bnplLoading ? (
+                <p style={{ color: "var(--text-muted)" }}>Loading...</p>
+              ) : bnplPlans.length === 0 ? (
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "10px", padding: "20px", textAlign: "center" }}>
+                  <p style={{ fontSize: "32px", margin: "0 0 8px" }}>🔄</p>
+                  <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>No BNPL plans yet</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Complete 3 orders to unlock Buy Now Pay Later</p>
+                </div>
+              ) : bnplPlans.map((plan, i) => (
+                <div key={i} style={{ background: "var(--bg-card)", border: `1px solid ${plan.status === "active" ? "#3b82f6" : plan.status === "completed" ? "#22c55e" : "#dc2626"}`, borderRadius: "12px", padding: "16px", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{plan.totalAmount.toLocaleString()} — {plan.installments}x Plan</p>
+                    <span style={{ background: plan.status === "active" ? "#1a1a3a" : plan.status === "completed" ? "#0a2a1a" : "#2a0a0a", color: plan.status === "active" ? "#3b82f6" : plan.status === "completed" ? "#22c55e" : "#dc2626", padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700" }}>{plan.status.toUpperCase()}</span>
+                  </div>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 10px" }}>{plan.paidInstallments}/{plan.installments} installments paid</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {plan.payments.map((p, j) => (
+                      <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#111", borderRadius: "6px" }}>
+                        <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Payment {j + 1} — {new Date(p.dueDate).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "12px", margin: 0 }}>₦{p.amount.toLocaleString()}</p>
+                          <span style={{ background: p.status === "paid" ? "#0a2a1a" : p.status === "overdue" ? "#2a0a0a" : "#1a1a1a", color: p.status === "paid" ? "#22c55e" : p.status === "overdue" ? "#dc2626" : "#888", padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: "700" }}>{p.status.toUpperCase()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <h2 style={styles.cardTitle}>📋 My Orders</h2>
 
           {!user && (

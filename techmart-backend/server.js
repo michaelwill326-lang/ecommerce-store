@@ -221,6 +221,24 @@ const BehaviorEvent = mongoose.model("BehaviorEvent", new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }));
 
+// 💳 BNPL Schema
+const BNPLPlan = mongoose.model("BNPLPlan", new mongoose.Schema({
+  userId: { type: String, required: true },
+  orderId: { type: String, required: true },
+  totalAmount: { type: Number, required: true },
+  installments: { type: Number, enum: [2, 3], required: true },
+  installmentAmount: { type: Number, required: true },
+  paidInstallments: { type: Number, default: 1 },
+  status: { type: String, enum: ["active", "completed", "defaulted"], default: "active" },
+  payments: [{
+    amount: Number,
+    dueDate: Date,
+    paidAt: { type: Date, default: null },
+    status: { type: String, enum: ["paid", "pending", "overdue"], default: "pending" }
+  }],
+  createdAt: { type: Date, default: Date.now }
+}));
+
 const Product = mongoose.model(
   "Product",
   new mongoose.Schema({
@@ -1333,6 +1351,89 @@ app.get("/api/products/:id/price-history", async (req, res) => {
     res.json({ name: product.name, currentPrice: product.price, history });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch price history" });
+  }
+});
+
+// 💳 Check BNPL Eligibility
+app.get("/api/bnpl/eligibility", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("email name");
+    const completedOrders = await Order.countDocuments({ email: user.email, status: "Delivered" });
+    const activePlans = await BNPLPlan.countDocuments({ userId: req.user.id, status: "active" });
+    const eligible = completedOrders >= 3;
+    res.json({
+      eligible,
+      completedOrders,
+      activePlans,
+      reason: !eligible ? `You need ${3 - completedOrders} more completed order(s) to unlock Buy Now Pay Later` : null
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to check eligibility" });
+  }
+});
+
+// 💳 Create BNPL Plan
+app.post("/api/bnpl/create", auth, async (req, res) => {
+  try {
+    const { orderId, installments } = req.body;
+    if (![2, 3].includes(Number(installments))) return res.status(400).json({ error: "Choose 2 or 3 installments" });
+
+    const user = await User.findById(req.user.id);
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.email !== user.email) return res.status(403).json({ error: "Not your order" });
+    if (order.amount < 5000) return res.status(400).json({ error: "Minimum order amount for BNPL is ₦5,000" });
+
+    // Check eligibility
+    const completedOrders = await Order.countDocuments({ email: user.email, status: "Delivered" });
+    if (completedOrders < 3) return res.status(403).json({ error: "You need at least 3 completed orders to use BNPL" });
+
+    const totalAmount = Number(order.amount);
+    const installmentAmount = Math.ceil(totalAmount / Number(installments));
+    const now = new Date();
+
+    // First installment is paid now, rest are scheduled
+    const payments = [];
+    for (let i = 0; i < Number(installments); i++) {
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + (i * 30));
+      payments.push({
+        amount: installmentAmount,
+        dueDate,
+        paidAt: i === 0 ? now : null,
+        status: i === 0 ? "paid" : "pending"
+      });
+    }
+
+    // Deduct first installment from wallet
+    if ((user.walletBalance || 0) < installmentAmount) {
+      return res.status(400).json({ error: `Insufficient wallet balance. First installment is ₦${installmentAmount.toLocaleString()}` });
+    }
+    user.walletBalance -= installmentAmount;
+    user.walletTransactions.push({
+      type: "debit",
+      amount: installmentAmount,
+      description: `BNPL 1st installment for order #${order.trackingNumber || orderId}`,
+      reference: "BNPL-" + Date.now()
+    });
+    await user.save();
+
+    const plan = await BNPLPlan.create({ userId: req.user.id, orderId, totalAmount, installments: Number(installments), installmentAmount, paidInstallments: 1, payments });
+
+    res.json({ success: true, plan, message: `BNPL plan created! First installment of ₦${installmentAmount.toLocaleString()} paid. Remaining ${Number(installments) - 1} payment(s) will be auto-deducted.` });
+  } catch (err) {
+    console.error("BNPL create error:", err.message);
+    res.status(500).json({ error: "Failed to create BNPL plan" });
+  }
+});
+
+// 💳 Get My BNPL Plans
+app.get("/api/bnpl/plans", auth, async (req, res) => {
+  try {
+    const plans = await BNPLPlan.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(plans);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch BNPL plans" });
   }
 });
 
@@ -5798,6 +5899,54 @@ app.get("/api/admin/termii/debug", adminOnly, async (req, res) => {
   }
 });
 
+
+// ── BNPL Auto-Deduction Cron (runs daily at 9am)
+cron.schedule("0 9 * * *", async () => {
+  try {
+    const today = new Date();
+    const plans = await BNPLPlan.find({ status: "active" });
+    for (const plan of plans) {
+      for (let i = 0; i < plan.payments.length; i++) {
+        const payment = plan.payments[i];
+        if (payment.status !== "pending") continue;
+        if (new Date(payment.dueDate) > today) continue;
+
+        // Due — try to auto-deduct
+        const user = await User.findById(plan.userId);
+        if (!user) continue;
+
+        if ((user.walletBalance || 0) >= payment.amount) {
+          user.walletBalance -= payment.amount;
+          user.walletTransactions.push({
+            type: "debit",
+            amount: payment.amount,
+            description: `BNPL installment ${i + 1}/${plan.installments} auto-deducted`,
+            reference: "BNPL-AUTO-" + Date.now()
+          });
+          await user.save();
+          plan.payments[i].paidAt = today;
+          plan.payments[i].status = "paid";
+          plan.paidInstallments += 1;
+          if (plan.paidInstallments >= plan.installments) plan.status = "completed";
+          await plan.save();
+          console.log(`💳 BNPL auto-deducted ₦${payment.amount} from ${user.email}`);
+
+          // Send email reminder
+          try {
+            const { sendOTPEmail } = await import("./utils/email.js");
+            await sendOTPEmail(user.email, user.name, `Your BNPL installment of ₦${payment.amount.toLocaleString()} has been auto-deducted. ${plan.paidInstallments}/${plan.installments} paid.`);
+          } catch {}
+        } else {
+          plan.payments[i].status = "overdue";
+          await plan.save();
+          console.warn(`⚠️ BNPL overdue for ${plan.userId} — insufficient wallet balance`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("❌ BNPL cron error:", e.message);
+  }
+});
 
 // ── Abandoned Cart Recovery Cron (runs every 15 mins) ──
 cron.schedule("*/15 * * * *", async () => {
