@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import EmptyState from "../components/EmptyState";
 import { TransactionSkeleton, SkeletonBlock } from "../components/Skeleton";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -672,7 +673,7 @@ const requestPinReset = async () => {
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
               <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 12px" }}>Recent Transactions</p>
               {(dashboard?.recentTransactions || []).length === 0 ? (
-                <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No transactions yet</p>
+                <EmptyState icon="💳" title="No transactions yet" subtitle="Fund your wallet to get started" action="Add Money" onAction={() => setTab('Add Money')} />
               ) : (
                 dashboard.recentTransactions.map((tx, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border-light)" }}>
@@ -1050,7 +1051,7 @@ const requestPinReset = async () => {
             <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Transaction History</h2>
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
               {(dashboard?.recentTransactions || []).length === 0 ? (
-                <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No transactions yet</p>
+                <EmptyState icon="💳" title="No transactions yet" subtitle="Fund your wallet to get started" action="Add Money" onAction={() => setTab('Add Money')} />
               ) : (
                 dashboard.recentTransactions.map((tx, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--border-light)" }}>

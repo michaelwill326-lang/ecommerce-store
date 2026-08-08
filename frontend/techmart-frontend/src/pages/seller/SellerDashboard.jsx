@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import EmptyState from "../../components/EmptyState";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import AIDescriptionGenerator from "../../components/AIDescriptionGenerator";
@@ -382,7 +383,7 @@ export default function SellerDashboard() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {(data?.products || []).length === 0 ? (
-              <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px" }}>No products yet.</p>
+              <EmptyState icon="📦" title="No products yet" subtitle="Add your first product to start selling on TechMart" action="+ Add Product" onAction={() => setShowAddProduct(true)} />
             ) : (data?.products || []).map(p => (
               <div key={p._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", display: "flex", gap: "16px", alignItems: "center" }}>
                 <img src={p.images?.[0] || "https://placehold.co/60x60?text=No+Image"} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }} />
@@ -529,7 +530,7 @@ export default function SellerDashboard() {
             <button onClick={requestPayout} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Request Payout</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {payouts.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No payout requests yet.</p> : payouts.map(p => (
+            {payouts.length === 0 ? <EmptyState icon="💸" title="No payout requests" subtitle="Request a payout from your seller wallet" /> : payouts.map(p => (
               <div key={p._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
@@ -572,7 +573,7 @@ export default function SellerDashboard() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {disputes.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No disputes yet.</p> : disputes.map(d => (
+              {disputes.length === 0 ? <EmptyState icon="🤝" title="No disputes" subtitle="Any buyer disputes will appear here" /> : disputes.map(d => (
                 <div key={d._id} onClick={() => setSelectedDispute(d)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{d.subject}</p>
@@ -612,7 +613,7 @@ export default function SellerDashboard() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {messages.length === 0 ? <p style={{ color: "var(--text-muted)" }}>No messages yet.</p> : messages.map(t => (
+              {messages.length === 0 ? <EmptyState icon="💬" title="No messages yet" subtitle="Messages from buyers will appear here" /> : messages.map(t => (
                 <div key={t._id} onClick={() => setSelectedThread(t)} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", cursor: "pointer" }}>
                   <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>{t.productName}</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 2px" }}>{t.customerName} — {t.messages.length} message(s)</p>

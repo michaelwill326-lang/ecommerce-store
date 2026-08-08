@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import EmptyState from "../components/EmptyState";
 import { useWishlist } from "../context/WishlistContext";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
