@@ -13,6 +13,8 @@ export default function SellerDashboard() {
   const [tab, setTab] = useState("Overview");
   const [data, setData] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [enhanced, setEnhanced] = useState(null);
+  const [enhancedLoading, setEnhancedLoading] = useState(false);
   const [payouts, setPayouts] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -79,6 +81,15 @@ export default function SellerDashboard() {
   const addVariant = () => setVariants(prev => [...prev, { name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
   const removeVariant = (i) => setVariants(prev => prev.filter((_, j) => j !== i));
   const updateVariant = (i, field, value) => setVariants(prev => prev.map((v, j) => j === i ? { ...v, [field]: value } : v));
+
+  const fetchEnhanced = async () => {
+    setEnhancedLoading(true);
+    try {
+      const res = await axios.get(`${API}/api/seller/analytics/enhanced`, { headers });
+      setEnhanced(res.data);
+    } catch { setMsg("Failed to load enhanced analytics"); }
+    finally { setEnhancedLoading(false); }
+  };
 
   const addProduct = async () => {
     setMsg("");
@@ -241,15 +252,20 @@ export default function SellerDashboard() {
       {/* ANALYTICS */}
       {tab === "Analytics" && (
         <div>
-          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>📊 Seller Analytics</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h2 style={{ color: "var(--text-primary)", margin: 0 }}>📊 Seller Analytics</h2>
+            <button onClick={fetchEnhanced} disabled={enhancedLoading} style={{ padding: "8px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px" }}>
+              {enhancedLoading ? "Loading..." : "🔄 Load Full Analytics"}
+            </button>
+          </div>
 
           {/* KPI CARDS */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "16px" }}>
             {[
-              { label: "Total Revenue", value: `N${(analytics?.totalRevenue || 0).toLocaleString()}`, color: "#f97316" },
-              { label: "Total Orders", value: analytics?.totalOrders || 0, color: "#3b82f6" },
-              { label: "Delivered", value: analytics?.delivered || 0, color: "#22c55e" },
-              { label: "Conversion Rate", value: `${analytics?.conversionRate || 0}%`, color: "#a855f7" },
+              { label: "Total Revenue", value: `₦${(enhanced?.totalRevenue || analytics?.revenue || 0).toLocaleString()}`, color: "#f97316" },
+              { label: "Total Orders", value: enhanced?.totalOrders || analytics?.totalOrders || 0, color: "#3b82f6" },
+              { label: "Avg Order Value", value: `₦${(enhanced?.avgOrderValue || 0).toLocaleString()}`, color: "#22c55e" },
+              { label: "Repeat Buyers", value: `${enhanced?.repeatRate || 0}%`, color: "#a855f7" },
             ].map((k, i) => (
               <div key={i} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
                 <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px" }}>{k.label}</p>
@@ -258,20 +274,115 @@ export default function SellerDashboard() {
             ))}
           </div>
 
+          {enhanced && (<>
+            {/* Revenue Forecast */}
+            <div style={{ background: "linear-gradient(135deg, #1a0a00, #2a1000)", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ color: "#f97316", fontWeight: "700", fontSize: "13px", margin: "0 0 4px" }}>📈 Revenue Forecast (Next 7 days)</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Based on your last 4 weeks trend</p>
+              </div>
+              <p style={{ color: "#f97316", fontWeight: "900", fontSize: "24px", margin: 0 }}>₦{enhanced.forecastNextWeek.toLocaleString()}</p>
+            </div>
+
+            {/* Low Stock Alerts */}
+            {enhanced.lowStock?.length > 0 && (
+              <div style={{ background: "#1a0a00", border: "1px solid #dc2626", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <p style={{ color: "#dc2626", fontWeight: "700", fontSize: "13px", margin: "0 0 10px" }}>⚠️ Low Stock Alert ({enhanced.lowStock.length} products)</p>
+                {enhanced.lowStock.map((p, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #2a1010" }}>
+                    <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</span>
+                    <span style={{ color: p.stock === 0 ? "#dc2626" : "#f59e0b", fontWeight: "700", fontSize: "13px" }}>{p.stock === 0 ? "Out of stock" : `${p.stock} left`}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Conversion Funnel */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>🔽 Conversion Funnel</p>
+              {[
+                { label: "👁 Product Views", value: enhanced.funnel?.views || 0, color: "#3b82f6" },
+                { label: "�� Add to Cart", value: enhanced.funnel?.carts || 0, color: "#f97316" },
+                { label: "✅ Purchases", value: enhanced.funnel?.purchases || 0, color: "#22c55e" },
+              ].map((s, i) => {
+                const max = enhanced.funnel?.views || 1;
+                const pct = Math.round((s.value / max) * 100);
+                return (
+                  <div key={i} style={{ marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>{s.label}</span>
+                      <span style={{ color: s.color, fontWeight: "700", fontSize: "12px" }}>{s.value.toLocaleString()} ({pct}%)</span>
+                    </div>
+                    <div style={{ background: "#1a1a1a", borderRadius: "4px", height: "6px" }}>
+                      <div style={{ width: `${pct}%`, height: "6px", borderRadius: "4px", background: s.color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Weekly Revenue Chart */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>📅 Weekly Revenue (Last 7 Weeks)</p>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "6px", height: "80px" }}>
+                {(enhanced.weeklyRevenue || []).map((w, i) => {
+                  const max = Math.max(...enhanced.weeklyRevenue.map(x => x.revenue), 1);
+                  const h = Math.max((w.revenue / max) * 70, 4);
+                  return (
+                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                      <div style={{ width: "100%", height: `${h}px`, background: i === 6 ? "linear-gradient(135deg, #f97316, #dc2626)" : "#333", borderRadius: "4px 4px 0 0" }} />
+                      <p style={{ color: "var(--text-muted)", fontSize: "9px", margin: 0 }}>{w.week}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Peak Hours */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>⏰ Peak Order Hours</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Most orders at {enhanced.peakHour}:00</p>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "2px", height: "60px" }}>
+                {(enhanced.peakHours || []).map((h, i) => {
+                  const max = Math.max(...enhanced.peakHours.map(x => x.orders), 1);
+                  const height = Math.max((h.orders / max) * 50, 2);
+                  return (
+                    <div key={i} style={{ flex: 1, height: `${height}px`, background: i === enhanced.peakHour ? "#f97316" : "#333", borderRadius: "2px 2px 0 0", title: `${h.hour}: ${h.orders} orders` }} />
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>12am</span>
+                <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>12pm</span>
+                <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>11pm</span>
+              </div>
+            </div>
+
+            {/* Pending Escrow */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>🔐 Pending Escrow</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Funds held until buyers confirm delivery</p>
+              </div>
+              <p style={{ color: "#f59e0b", fontWeight: "900", fontSize: "20px", margin: 0 }}>₦{(enhanced.pendingEscrow || 0).toLocaleString()}</p>
+            </div>
+          </>)}
+
           {/* TOP PRODUCTS */}
-          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
             <h3 style={{ color: "var(--text-primary)", fontSize: "14px", marginBottom: "12px" }}>🏆 Top Products by Revenue</h3>
-            {(analytics?.topProducts || []).length === 0 ? (
+            {((enhanced?.topProducts || analytics?.topProducts || []).length === 0) ? (
               <p style={{ color: "var(--text-muted)" }}>No sales yet.</p>
             ) : (
-              analytics.topProducts.map((p, i) => {
-                const maxRev = analytics.topProducts[0]?.revenue || 1;
+              (enhanced?.topProducts || analytics?.topProducts || []).map((p, i) => {
+                const list = enhanced?.topProducts || analytics?.topProducts || [];
+                const maxRev = list[0]?.revenue || 1;
                 const pct = Math.round((p.revenue / maxRev) * 100);
                 return (
                   <div key={i} style={{ marginBottom: "12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                       <span style={{ color: "var(--text-primary)", fontSize: "13px" }}>{p.name}</span>
-                      <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>N{p.revenue.toLocaleString()}</span>
+                      <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>₦{p.revenue.toLocaleString()}</span>
                     </div>
                     <div style={{ background: "#333", borderRadius: "4px", height: "6px" }}>
                       <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "4px", height: "6px", width: `${pct}%` }} />
@@ -280,23 +391,6 @@ export default function SellerDashboard() {
                   </div>
                 );
               })
-            )}
-          </div>
-
-          {/* MONTHLY REVENUE */}
-          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
-            <h3 style={{ color: "var(--text-primary)", fontSize: "14px", marginBottom: "12px" }}>📅 Monthly Revenue</h3>
-            {Object.keys(analytics?.monthly || {}).length === 0 ? (
-              <p style={{ color: "var(--text-muted)" }}>No revenue data yet.</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "300px", overflowY: "auto" }}>
-                {Object.entries(analytics?.monthly || {}).reverse().map(([month, rev], i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border-light)" }}>
-                    <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>{month}</span>
-                    <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>N{rev.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         </div>

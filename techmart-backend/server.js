@@ -2838,6 +2838,88 @@ app.get("/api/pay/dashboard", auth, async (req, res) => {
 =========================== */
 
 // --- SELLER ANALYTICS ---
+// 📊 Enhanced Seller Analytics
+app.get("/api/seller/analytics/enhanced", sellerAuth, async (req, res) => {
+  try {
+    const products = await Product.find({ vendorId: req.seller.id });
+    const productIds = products.map(p => p._id.toString());
+    const allOrders = await Order.find({ "items.vendorId": req.seller.id });
+    const paidOrders = allOrders.filter(o => ["Paid", "Shipped", "Delivered"].includes(o.status));
+
+    // Revenue calculations
+    const totalRevenue = paidOrders.reduce((sum, o) => {
+      return sum + o.items.filter(i => i.vendorId === req.seller.id).reduce((s, i) => s + (i.price * (i.quantity || 1)), 0);
+    }, 0);
+
+    // Weekly revenue (last 7 weeks)
+    const weeklyRevenue = [];
+    for (let i = 6; i >= 0; i--) {
+      const start = new Date(Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+      const end = new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekOrders = paidOrders.filter(o => new Date(o.createdAt) >= start && new Date(o.createdAt) < end);
+      const weekRev = weekOrders.reduce((sum, o) => sum + o.items.filter(i => i.vendorId === req.seller.id).reduce((s, i) => s + (i.price * (i.quantity || 1)), 0), 0);
+      weeklyRevenue.push({ week: `W${7 - i}`, revenue: weekRev, orders: weekOrders.length });
+    }
+
+    // Peak order hours
+    const hourCounts = Array(24).fill(0);
+    paidOrders.forEach(o => { hourCounts[new Date(o.createdAt).getHours()]++; });
+    const peakHours = hourCounts.map((count, hour) => ({ hour: `${hour}:00`, orders: count }));
+    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+
+    // Buyer repeat rate
+    const buyerEmails = paidOrders.map(o => o.email);
+    const uniqueBuyers = new Set(buyerEmails).size;
+    const repeatBuyers = buyerEmails.filter((e, i) => buyerEmails.indexOf(e) !== i).length;
+    const repeatRate = uniqueBuyers > 0 ? Math.round((repeatBuyers / uniqueBuyers) * 100) : 0;
+
+    // Average order value
+    const avgOrderValue = paidOrders.length > 0 ? Math.round(totalRevenue / paidOrders.length) : 0;
+
+    // Revenue forecast (linear trend of last 4 weeks)
+    const last4Weeks = weeklyRevenue.slice(-4).map(w => w.revenue);
+    const avgWeekly = last4Weeks.reduce((s, v) => s + v, 0) / 4;
+    const trend = last4Weeks.length > 1 ? (last4Weeks[last4Weeks.length - 1] - last4Weeks[0]) / last4Weeks.length : 0;
+    const forecastNextWeek = Math.max(0, Math.round(avgWeekly + trend));
+
+    // Top products with views from behavior data
+    const productSales = {};
+    paidOrders.forEach(o => {
+      o.items.filter(i => i.vendorId === req.seller.id).forEach(i => {
+        const id = i.productId || i._id;
+        if (!productSales[id]) productSales[id] = { name: i.name, units: 0, revenue: 0 };
+        productSales[id].units += (i.quantity || 1);
+        productSales[id].revenue += (i.price * (i.quantity || 1));
+      });
+    });
+    const topProducts = Object.values(productSales).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+
+    // Low stock alerts
+    const lowStock = products.filter(p => (p.stock || 0) <= 5).map(p => ({ name: p.name, stock: p.stock, id: p._id }));
+
+    // Pending escrow
+    const escrowOrders = allOrders.filter(o => o.escrowStatus === "holding" && o.items.some(i => i.vendorId === req.seller.id));
+    const pendingEscrow = escrowOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+
+    // Conversion funnel from behavior data
+    const productViews = await BehaviorEvent.countDocuments({ productId: { $in: productIds }, type: "view" });
+    const productCarts = await BehaviorEvent.countDocuments({ productId: { $in: productIds }, type: "add_to_cart" });
+    const productPurchases = paidOrders.length;
+
+    res.json({
+      totalRevenue, avgOrderValue, totalOrders: paidOrders.length,
+      uniqueBuyers, repeatRate, forecastNextWeek,
+      weeklyRevenue, peakHours, peakHour,
+      topProducts, lowStock, pendingEscrow,
+      funnel: { views: productViews, carts: productCarts, purchases: productPurchases },
+      sellerWallet: (await Seller.findById(req.seller.id).select("walletBalance"))?.walletBalance || 0
+    });
+  } catch (err) {
+    console.error("Enhanced analytics error:", err.message);
+    res.status(500).json({ error: "Failed to fetch enhanced analytics" });
+  }
+});
+
 app.get("/api/seller/analytics", sellerAuth, async (req, res) => {
   try {
     const products = await Product.find({ vendorId: req.seller.id });
@@ -6506,6 +6588,41 @@ cron.schedule("0 9 * * *", async () => {
     }
   } catch (e) {
     console.error("❌ BNPL cron error:", e.message);
+  }
+});
+
+// ── Auto Seller Payout Cron (every Friday at 10am)
+cron.schedule("0 10 * * 5", async () => {
+  try {
+    console.log("💸 Running auto seller payout...");
+    const sellers = await Seller.find({ walletBalance: { $gte: 1000 }, bankCode: { $ne: null }, accountNumber: { $ne: null } });
+    for (const seller of sellers) {
+      try {
+        const amount = seller.walletBalance;
+        const reference = "AUTO-PAY-" + Date.now();
+        // Create Paystack transfer recipient
+        const recipientRes = await axios.post(
+          "https://api.paystack.co/transferrecipient",
+          { type: "nuban", name: seller.accountName || seller.name, account_number: seller.accountNumber, bank_code: seller.bankCode, currency: "NGN" },
+          { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+        );
+        const recipientCode = recipientRes.data.data.recipient_code;
+        await axios.post(
+          "https://api.paystack.co/transfer",
+          { source: "balance", amount: amount * 100, recipient: recipientCode, reason: `TechMart weekly payout for ${seller.name}`, reference },
+          { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+        );
+        seller.walletBalance = 0;
+        seller.walletTransactions = seller.walletTransactions || [];
+        seller.walletTransactions.push({ type: "debit", amount, description: `Auto weekly payout — ${reference}`, reference });
+        await seller.save();
+        console.log(`✅ Auto payout ₦${amount} to ${seller.name}`);
+      } catch (e) {
+        console.error(`❌ Auto payout failed for ${seller.name}:`, e.message);
+      }
+    }
+  } catch (e) {
+    console.error("❌ Auto payout cron error:", e.message);
   }
 });
 
