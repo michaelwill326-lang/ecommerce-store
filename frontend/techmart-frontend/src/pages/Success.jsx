@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import confetti from "canvas-confetti";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
@@ -15,6 +16,28 @@ export default function Success() {
   useEffect(() => {
     // Clear cart on successful payment
     clearCart();
+
+    // 🎉 Confetti celebration
+    const duration = 3000;
+    const end = Date.now() + duration;
+    const frame = () => {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ["#f97316", "#dc2626", "#22c55e", "#3b82f6", "#ffffff"]
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ["#f97316", "#dc2626", "#22c55e", "#3b82f6", "#ffffff"]
+      });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    };
+    frame();
 
     // Auto redirect countdown
     const timer = setInterval(() => {
