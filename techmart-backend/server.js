@@ -1289,6 +1289,30 @@ app.post("/api/behavior/track", async (req, res) => {
 });
 
 // 🧠 Get Demand Heatmap (trending products)
+// Public trending endpoint for homepage
+app.get("/api/behavior/heatmap/public", async (req, res) => {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const trending = await BehaviorEvent.aggregate([
+      { $match: { createdAt: { $gte: since }, productId: { $ne: null }, type: { $in: ["view", "add_to_cart", "purchase"] } } },
+      { $group: {
+        _id: "$productId",
+        productName: { $first: "$productName" },
+        score: { $sum: { $switch: { branches: [
+          { case: { $eq: ["$type", "purchase"] }, then: 10 },
+          { case: { $eq: ["$type", "add_to_cart"] }, then: 3 },
+          { case: { $eq: ["$type", "view"] }, then: 1 }
+        ], default: 0 } } }
+      }},
+      { $sort: { score: -1 } },
+      { $limit: 10 }
+    ]);
+    res.json({ trending });
+  } catch (err) {
+    res.status(500).json({ trending: [] });
+  }
+});
+
 app.get("/api/behavior/heatmap", adminOnly, async (req, res) => {
   try {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // last 7 days

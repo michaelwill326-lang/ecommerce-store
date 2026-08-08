@@ -14,6 +14,7 @@ const CATEGORIES = ["All", "Phones", "Laptops", "Accessories", "Audio", "Gaming"
 export default function Dashboard() {
   const { addToCart } = useContext(CartContext);
   const [products, setProducts] = useState([]);
+  const [trendingData, setTrendingData] = useState([]);
   const [loading, setLoading] = useState(true);
   const { pulling, pullDistance, threshold } = usePullToRefresh(fetchProducts);
   const [error, setError] = useState("");
@@ -32,8 +33,12 @@ export default function Dashboard() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${API}/api/products`);
-      setProducts(data);
+      const [{ data }, trendRes] = await Promise.allSettled([
+        axios.get(`${API}/api/products`),
+        fetch(`${API}/api/behavior/heatmap/public`).then(r => r.json()).catch(() => ({ trending: [] }))
+      ]);
+      if (data) setProducts(data.value || data);
+      if (trendRes.status === "fulfilled") setTrendingData(trendRes.value?.trending || []);
       setError("");
     } catch (err) {
       console.error(err);
@@ -69,9 +74,15 @@ export default function Dashboard() {
       return 0;
     });
 
-  const trending = [...products]
-    .sort((a, b) => (b.reviews?.length || 0) - (a.reviews?.length || 0))
-    .slice(0, 6);
+  // Power trending with behavioral data if available, fallback to reviews
+  const trending = trendingData.length > 0
+    ? trendingData
+        .map(t => products.find(p => p._id === t._id))
+        .filter(Boolean)
+        .slice(0, 6)
+    : [...products]
+        .sort((a, b) => (b.reviews?.length || 0) - (a.reviews?.length || 0))
+        .slice(0, 6);
 
   return (
     <div style={styles.page}>
