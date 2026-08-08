@@ -126,6 +126,16 @@ app.options("*", cors());
    🔗 TECHMART NETWORK ENGINE
 =========================== */
 
+function generateGiftCardCode() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const seg = () => Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `TECH-${seg()}-${seg()}-${seg()}`;
+}
+
+function generateLinkId() {
+  return Array.from({length: 12}, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("");
+}
+
 function calculateNetworkTier(score) {
   if (score >= 10000) return "Elite";
   if (score >= 5000) return "Premium";
@@ -489,6 +499,32 @@ const SavingsVault = mongoose.model("SavingsVault", new mongoose.Schema({
   maturityDate: { type: Date, required: true },
   status: { type: String, enum: ["active", "matured", "withdrawn"], default: "active" },
   interestCredited: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+}));
+
+// 🎁 Gift Card Schema
+const GiftCard = mongoose.model("GiftCard", new mongoose.Schema({
+  code: { type: String, required: true, unique: true },
+  amount: { type: Number, required: true },
+  purchasedBy: { type: String, required: true },
+  redeemedBy: { type: String, default: null },
+  status: { type: String, enum: ["active", "redeemed", "expired"], default: "active" },
+  expiresAt: { type: Date, required: true },
+  redeemedAt: { type: Date, default: null },
+  createdAt: { type: Date, default: Date.now }
+}));
+
+// 🔗 Payment Link Schema
+const PaymentLink = mongoose.model("PaymentLink", new mongoose.Schema({
+  linkId: { type: String, required: true, unique: true },
+  userId: { type: String, required: true },
+  userName: { type: String, required: true },
+  userEmail: { type: String, required: true },
+  amount: { type: Number, required: true },
+  description: { type: String, default: "" },
+  paidCount: { type: Number, default: 0 },
+  totalCollected: { type: Number, default: 0 },
+  active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 }));
 
@@ -1970,6 +2006,180 @@ app.get("/api/bnpl/plans", auth, async (req, res) => {
     res.json(plans);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch BNPL plans" });
+  }
+});
+
+// 🎁 Purchase Gift Card
+app.post("/api/giftcard/purchase", auth, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const validAmounts = [2000, 5000, 10000, 20000];
+    if (!validAmounts.includes(Number(amount))) return res.status(400).json({ error: "Invalid gift card amount. Choose ₦2,000, ₦5,000, ₦10,000 or ₦20,000" });
+
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    // Deduct from wallet
+    user.walletBalance -= Number(amount);
+    user.walletTransactions.push({
+      type: "debit",
+      amount: Number(amount),
+      description: `Gift card purchase — ₦${Number(amount).toLocaleString()}`,
+      reference: "GC-" + Date.now()
+    });
+    await user.save();
+
+    // Generate unique code
+    let code;
+    let exists = true;
+    while (exists) {
+      code = generateGiftCardCode();
+      exists = await GiftCard.findOne({ code });
+    }
+
+    const expiresAt = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000); // 6 months
+    const giftCard = await GiftCard.create({ code, amount: Number(amount), purchasedBy: req.user.id, expiresAt });
+
+    res.json({ success: true, code, amount: Number(amount), expiresAt, message: `Gift card created! Share code ${code} with someone special 🎁` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to purchase gift card" });
+  }
+});
+
+// 🎁 Redeem Gift Card
+app.post("/api/giftcard/redeem", auth, async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: "Enter a gift card code" });
+
+    const giftCard = await GiftCard.findOne({ code: code.toUpperCase().trim() });
+    if (!giftCard) return res.status(404).json({ error: "Invalid gift card code" });
+    if (giftCard.status === "redeemed") return res.status(400).json({ error: "This gift card has already been redeemed" });
+    if (giftCard.status === "expired" || new Date() > giftCard.expiresAt) {
+      giftCard.status = "expired";
+      await giftCard.save();
+      return res.status(400).json({ error: "This gift card has expired" });
+    }
+    if (String(giftCard.purchasedBy) === String(req.user.id)) {
+  return res.status(400).json({ error: "You cannot redeem your own gift card" });
+}
+
+    const user = await User.findById(req.user.id);
+    user.walletBalance = (user.walletBalance || 0) + giftCard.amount;
+    user.walletTransactions.push({
+      type: "credit",
+      amount: giftCard.amount,
+      description: `Gift card redeemed — ${code}`,
+      reference: "GC-REDEEM-" + Date.now()
+    });
+    await user.save();
+
+    giftCard.status = "redeemed";
+    giftCard.redeemedBy = req.user.id;
+    giftCard.redeemedAt = new Date();
+    await giftCard.save();
+
+    res.json({ success: true, amount: giftCard.amount, message: `🎁 ₦${giftCard.amount.toLocaleString()} credited to your wallet!` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to redeem gift card" });
+  }
+});
+
+// 🎁 My Gift Cards
+app.get("/api/giftcard/mine", auth, async (req, res) => {
+  try {
+    const cards = await GiftCard.find({ purchasedBy: req.user.id }).sort({ createdAt: -1 });
+    res.json(cards);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch gift cards" });
+  }
+});
+
+// 🔗 Create Payment Link
+app.post("/api/paylink/create", auth, async (req, res) => {
+  try {
+    const { amount, description } = req.body;
+    if (!amount || Number(amount) < 100) return res.status(400).json({ error: "Minimum payment link amount is ₦100" });
+
+    const user = await User.findById(req.user.id);
+    let linkId;
+    let exists = true;
+    while (exists) {
+      linkId = generateLinkId();
+      exists = await PaymentLink.findOne({ linkId });
+    }
+
+    const link = await PaymentLink.create({
+      linkId, userId: req.user.id, userName: user.name, userEmail: user.email,
+      amount: Number(amount), description: description || ""
+    });
+
+    const url = `${process.env.FRONTEND_URL || "https://techmart-frontend.onrender.com"}/pay/link/${linkId}`;
+    res.json({ success: true, linkId, url, amount: Number(amount), message: "Payment link created! Share it to receive money." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create payment link" });
+  }
+});
+
+// 🔗 Get Payment Link Details (public)
+app.get("/api/paylink/:linkId", async (req, res) => {
+  try {
+    const link = await PaymentLink.findOne({ linkId: req.params.linkId, active: true });
+    if (!link) return res.status(404).json({ error: "Payment link not found or inactive" });
+    res.json({ name: link.userName, amount: link.amount, description: link.description, linkId: link.linkId });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch payment link" });
+  }
+});
+
+// 🔗 Pay via Payment Link (wallet)
+app.post("/api/paylink/:linkId/pay", auth, async (req, res) => {
+  try {
+    const link = await PaymentLink.findOne({ linkId: req.params.linkId, active: true });
+    if (!link) return res.status(404).json({ error: "Payment link not found" });
+
+    const payer = await User.findById(req.user.id);
+    if (payer.email === link.userEmail) return res.status(400).json({ error: "You cannot pay your own payment link" });
+    if ((payer.walletBalance || 0) < link.amount) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    // Deduct from payer
+    payer.walletBalance -= link.amount;
+    payer.walletTransactions.push({
+      type: "debit", amount: link.amount,
+      description: `Payment to ${link.userName} via payment link`,
+      reference: "PL-" + Date.now()
+    });
+    await payer.save();
+
+    // Credit to link owner
+    const owner = await User.findById(link.userId);
+    if (owner) {
+      owner.walletBalance = (owner.walletBalance || 0) + link.amount;
+      owner.walletTransactions.push({
+        type: "credit", amount: link.amount,
+        description: `Payment received from ${payer.name} via payment link`,
+        reference: "PL-IN-" + Date.now()
+      });
+      await owner.save();
+    }
+
+    link.paidCount += 1;
+    link.totalCollected += link.amount;
+    await link.save();
+
+    res.json({ success: true, message: `₦${link.amount.toLocaleString()} sent to ${link.userName}!` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to process payment" });
+  }
+});
+
+// 🔗 My Payment Links
+app.get("/api/paylink/mine/all", auth, async (req, res) => {
+  try {
+    const links = await PaymentLink.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(links);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch payment links" });
   }
 });
 
@@ -5249,47 +5459,6 @@ app.post("/api/orders/:orderId/cancel", auth, async (req, res) => {
   }
 });
 
-// Seller analytics
-app.get("/api/seller/analytics", auth, async (req, res) => {
-  try {
-    const orders = await Order.find({
-      "items.vendorId": req.user.id,
-      status: { $ne: "Cancelled" }
-    });
-
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalOrders = orders.length;
-    const delivered = orders.filter(o => o.status === "Delivered").length;
-    const conversionRate = totalOrders > 0 ? Math.round((delivered / totalOrders) * 100) : 0;
-
-    // Top products
-    const productMap = {};
-    orders.forEach(o => {
-      (o.items || []).forEach(item => {
-        if (item.vendorId === req.user.id) {
-          if (!productMap[item.name]) productMap[item.name] = { name: item.name, units: 0, revenue: 0 };
-          productMap[item.name].units += item.quantity || 1;
-          productMap[item.name].revenue += (item.price || 0) * (item.quantity || 1);
-        }
-      });
-    });
-    const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
-
-    // Monthly revenue (last 6 months)
-    const monthly = {};
-    orders.forEach(o => {
-      const month = new Date(o.createdAt).toLocaleString("default", { month: "short", year: "numeric" });
-      monthly[month] = (monthly[month] || 0) + (o.amount || 0);
-    });
-
-    res.json({ success: true, totalRevenue, totalOrders, delivered, conversionRate, topProducts, monthly });
-  } catch (err) {
-    console.error("Seller analytics error:", err.message);
-    res.status(500).json({ error: "Failed to fetch analytics" });
-  }
-});
-
-
 /* ===========================
    🛡️ TRUST & SAFETY
 =========================== */
@@ -6623,6 +6792,19 @@ cron.schedule("0 10 * * 5", async () => {
     }
   } catch (e) {
     console.error("❌ Auto payout cron error:", e.message);
+  }
+});
+
+// ── Gift Card Expiry Cron (runs daily at midnight)
+cron.schedule("0 0 * * *", async () => {
+  try {
+    const expired = await GiftCard.updateMany(
+      { status: "active", expiresAt: { $lte: new Date() } },
+      { $set: { status: "expired" } }
+    );
+    if (expired.modifiedCount > 0) console.log(`🎁 ${expired.modifiedCount} gift card(s) expired`);
+  } catch (e) {
+    console.error("❌ Gift card expiry cron error:", e.message);
   }
 });
 
