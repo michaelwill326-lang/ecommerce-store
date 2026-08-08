@@ -1706,6 +1706,8 @@ app.post("/api/pay/vault/lock", auth, async (req, res) => {
       maturityDate
     });
 
+    // Update network score for saving
+    try { await updateNetworkScore(req.user.id, 50, { savingsBalance: Number(amount) }); } catch {}
     res.json({ success: true, vault, message: `₦${Number(amount).toLocaleString()} locked for ${lockDays} days. You'll earn ₦${expectedInterest.toLocaleString()} interest!` });
   } catch (err) {
     res.status(500).json({ error: "Failed to create savings vault" });
@@ -1789,6 +1791,8 @@ app.post("/api/pay/loyalty/redeem", auth, async (req, res) => {
     });
     await user.save();
 
+    // Update network score for loyalty redemption
+    try { await updateNetworkScore(req.user.id, 25, { loyaltyEarned: creditAmount }); } catch {}
     res.json({ success: true, message: `₦${creditAmount.toLocaleString()} credited to your wallet from loyalty points!`, remaining: user.loyaltyPoints });
   } catch (err) {
     res.status(500).json({ error: "Failed to redeem loyalty points" });
@@ -1950,6 +1954,8 @@ app.post("/api/bnpl/create", auth, async (req, res) => {
 
     const plan = await BNPLPlan.create({ userId: req.user.id, orderId, totalAmount, installments: Number(installments), installmentAmount, paidInstallments: 1, payments });
 
+    // Update network score for BNPL usage
+    try { await updateNetworkScore(req.user.id, 100, { bnplCompleted: 1 }); } catch {}
     res.json({ success: true, plan, message: `BNPL plan created! First installment of ₦${installmentAmount.toLocaleString()} paid. Remaining ${Number(installments) - 1} payment(s) will be auto-deducted.` });
   } catch (err) {
     console.error("BNPL create error:", err.message);
@@ -5062,6 +5068,17 @@ app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
     order.buyerConfirmed = true;
     order.status = "Delivered";
     await order.save();
+
+    // 🌐 Update Network Score on purchase
+    try {
+      const orderAmount = Number(order.amount) || 0;
+      const networkPoints = Math.floor(orderAmount / 100); // 1 point per ₦100
+      await updateNetworkScore(
+        (await User.findOne({ email: order.email }))?._id,
+        networkPoints,
+        { lifetimeSpend: orderAmount }
+      );
+    } catch (nsErr) { console.error("Network score error:", nsErr.message); }
 
     // 🎯 Award Loyalty Points (1 point per ₦1,000 spent)
     const pointsEarned = Math.floor((Number(order.amount) || 0) / 1000);
