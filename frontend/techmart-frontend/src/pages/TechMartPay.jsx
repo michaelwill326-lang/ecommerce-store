@@ -34,6 +34,12 @@ export default function TechMartPay() {
   const [bvnLoading, setBvnLoading] = useState(false);
   const [bvnVerified, setBvnVerified] = useState(false);
   const [insights, setInsights] = useState(null);
+  const [vaults, setVaults] = useState([]);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultForm, setVaultForm] = useState({ amount: "", lockDays: 30 });
+  const [loyalty, setLoyalty] = useState(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [redeemLoading, setRedeemLoading] = useState(false);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [budget, setBudgetInput] = useState("");
   const [budgetSaving, setBudgetSaving] = useState(false);
@@ -129,6 +135,57 @@ const [otpTimer, setOtpTimer] = useState(600);
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
+  };
+
+  const fetchVaults = async () => {
+    setVaultLoading(true);
+    try {
+      const res = await axios.get(`${API}/api/pay/vault`, { headers });
+      setVaults(res.data || []);
+    } catch { setMsg({ text: "Failed to load vaults", type: "error" }); }
+    finally { setVaultLoading(false); }
+  };
+
+  const lockVault = async () => {
+    if (!vaultForm.amount || Number(vaultForm.amount) < 1000) return setMsg({ text: "Minimum savings is ₦1,000", type: "error" });
+    setVaultLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/pay/vault/lock`, vaultForm, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      setVaultForm({ amount: "", lockDays: 30 });
+      fetchVaults();
+      fetchDashboard();
+    } catch (err) { setMsg({ text: err.response?.data?.error || "Failed to lock vault", type: "error" }); }
+    finally { setVaultLoading(false); }
+  };
+
+  const withdrawVault = async (vaultId) => {
+    try {
+      const res = await axios.post(`${API}/api/pay/vault/${vaultId}/withdraw`, {}, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      fetchVaults();
+      fetchDashboard();
+    } catch (err) { setMsg({ text: err.response?.data?.error || "Cannot withdraw yet", type: "error" }); }
+  };
+
+  const fetchLoyalty = async () => {
+    setLoyaltyLoading(true);
+    try {
+      const res = await axios.get(`${API}/api/pay/loyalty`, { headers });
+      setLoyalty(res.data);
+    } catch { setMsg({ text: "Failed to load loyalty points", type: "error" }); }
+    finally { setLoyaltyLoading(false); }
+  };
+
+  const redeemPoints = async () => {
+    setRedeemLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/pay/loyalty/redeem`, {}, { headers });
+      setMsg({ text: res.data.message, type: "success" });
+      fetchLoyalty();
+      fetchDashboard();
+    } catch (err) { setMsg({ text: err.response?.data?.error || "Failed to redeem", type: "error" }); }
+    finally { setRedeemLoading(false); }
   };
 
   const fetchInsights = async () => {
@@ -531,7 +588,7 @@ const requestPinReset = async () => {
       setMsg({ text: err.response?.data?.error || "Funding failed", type: "error" });
     } finally { setBetLoading(false); }
   };
-  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC", "Insights"];
+  const TABS = ["Dashboard", "Add Money", "Send Money", "Withdraw", "Airtime", "Data", "Electricity", "Cable TV", "Betting", "History", "KYC", "Insights", "Savings", "Loyalty"];
   const inp = { width: "100%", padding: "12px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", color: "var(--text-primary)", fontSize: "14px", outline: "none", boxSizing: "border-box", marginBottom: "12px" };
 
   if (loading) return (
@@ -797,6 +854,128 @@ const requestPinReset = async () => {
                 {withdrawLoading ? "Processing..." : `Withdraw ₦${Number(withdrawForm.amount || 0).toLocaleString()}`}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* SAVINGS VAULT TAB */}
+        {tab === "Savings" && (
+          <div>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "4px" }}>🏦 Savings Vault</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Lock funds and earn 5% monthly interest</p>
+
+            {/* Lock Form */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+              <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Lock New Savings</p>
+              <input type="number" placeholder="Amount to lock (min ₦1,000)" value={vaultForm.amount} onChange={e => setVaultForm({...vaultForm, amount: e.target.value})} style={inp} />
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 10px" }}>Choose lock period:</p>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                {[{days: 7, label: "7 Days"}, {days: 30, label: "30 Days"}, {days: 90, label: "90 Days"}].map(({days, label}) => {
+                  const interest = vaultForm.amount ? Math.floor(Number(vaultForm.amount) * 0.05/30 * days) : 0;
+                  return (
+                    <div key={days} onClick={() => setVaultForm({...vaultForm, lockDays: days})} style={{ flex: 1, padding: "10px 6px", borderRadius: "8px", border: `2px solid ${vaultForm.lockDays === days ? "#f97316" : "#333"}`, background: vaultForm.lockDays === days ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
+                      <p style={{ color: vaultForm.lockDays === days ? "#f97316" : "#888", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>{label}</p>
+                      {interest > 0 && <p style={{ color: "#22c55e", fontSize: "10px", margin: 0 }}>+₦{interest.toLocaleString()}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+              {vaultForm.amount && Number(vaultForm.amount) >= 1000 && (
+                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px", marginBottom: "12px" }}>
+                  <p style={{ color: "#22c55e", fontSize: "13px", margin: 0, fontWeight: "700" }}>
+                    You'll earn ₦{Math.floor(Number(vaultForm.amount) * 0.05/30 * vaultForm.lockDays).toLocaleString()} interest — Total: ₦{(Number(vaultForm.amount) + Math.floor(Number(vaultForm.amount) * 0.05/30 * vaultForm.lockDays)).toLocaleString()}
+                  </p>
+                </div>
+              )}
+              <button onClick={lockVault} disabled={vaultLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px" }}>
+                {vaultLoading ? "Processing..." : "🔒 Lock Savings"}
+              </button>
+            </div>
+
+            {/* My Vaults */}
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>My Vaults</p>
+                <button onClick={fetchVaults} style={{ padding: "6px 12px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}>🔄 Refresh</button>
+              </div>
+              {vaultLoading ? <p style={{ color: "var(--text-muted)" }}>Loading...</p> :
+               vaults.length === 0 ? <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>No savings vaults yet</p> :
+               vaults.map((v, i) => {
+                 const matured = new Date() >= new Date(v.maturityDate);
+                 const daysLeft = Math.ceil((new Date(v.maturityDate) - new Date()) / (1000*60*60*24));
+                 return (
+                   <div key={i} style={{ background: "#111", border: `1px solid ${v.status === "withdrawn" ? "#333" : matured ? "#22c55e" : "#f97316"}`, borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
+                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                       <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{v.amount.toLocaleString()}</p>
+                       <span style={{ background: v.status === "withdrawn" ? "#1a1a1a" : matured ? "#0a2a1a" : "#1a0a00", color: v.status === "withdrawn" ? "#888" : matured ? "#22c55e" : "#f97316", padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700" }}>
+                         {v.status === "withdrawn" ? "WITHDRAWN" : matured ? "MATURED ✅" : `${daysLeft}d left`}
+                       </span>
+                     </div>
+                     <p style={{ color: "#22c55e", fontSize: "12px", margin: "0 0 4px" }}>+₦{v.expectedInterest.toLocaleString()} interest • {v.lockDays} days</p>
+                     <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 8px" }}>Matures: {new Date(v.maturityDate).toLocaleDateString("en-NG")}</p>
+                     {(matured || v.status === "matured") && v.status !== "withdrawn" && (
+                       <button onClick={() => withdrawVault(v._id)} style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+                         💰 Withdraw ₦{(v.amount + v.expectedInterest).toLocaleString()}
+                       </button>
+                     )}
+                   </div>
+                 );
+               })
+              }
+            </div>
+          </div>
+        )}
+
+        {/* LOYALTY TAB */}
+        {tab === "Loyalty" && (
+          <div>
+            <h2 style={{ color: "var(--text-primary)", marginBottom: "4px" }}>🎯 Loyalty Points</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Earn 1 point per ₦1,000 spent • 100 points = ₦500</p>
+
+            {!loyalty ? (
+              <button onClick={fetchLoyalty} disabled={loyaltyLoading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
+                {loyaltyLoading ? "Loading..." : "🎯 Load My Points"}
+              </button>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Points Card */}
+                <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "16px", padding: "24px", textAlign: "center" }}>
+                  <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "12px", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "1px" }}>Your Points</p>
+                  <p style={{ color: "#fff", fontSize: "48px", fontWeight: "900", margin: "0 0 4px" }}>{loyalty.points}</p>
+                  <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", margin: "0 0 16px" }}>Worth ₦{loyalty.walletValue.toLocaleString()}</p>
+                  {loyalty.points >= 100 && (
+                    <button onClick={redeemPoints} disabled={redeemLoading} style={{ padding: "12px 24px", background: "#fff", color: "#f97316", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "800", fontSize: "14px" }}>
+                      {redeemLoading ? "Redeeming..." : `🎁 Redeem ${Math.floor(loyalty.points/100)*100} pts for ₦${Math.floor(loyalty.points/100)*500}`}
+                    </button>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px", textTransform: "uppercase" }}>Total Earned</p>
+                    <p style={{ color: "#f97316", fontWeight: "800", fontSize: "20px", margin: 0 }}>{loyalty.totalEarned}</p>
+                  </div>
+                  <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px", textTransform: "uppercase" }}>Next Reward</p>
+                    <p style={{ color: "#22c55e", fontWeight: "800", fontSize: "20px", margin: 0 }}>{loyalty.nextReward} pts</p>
+                  </div>
+                </div>
+
+                {/* Progress to next reward */}
+                <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px", margin: 0 }}>Progress to next ₦500 reward</p>
+                    <p style={{ color: "#f97316", fontSize: "13px", margin: 0 }}>{loyalty.points % 100}/100</p>
+                  </div>
+                  <div style={{ background: "#1a1a1a", borderRadius: "6px", height: "8px" }}>
+                    <div style={{ width: `${(loyalty.points % 100)}%`, height: "8px", borderRadius: "6px", background: "linear-gradient(135deg, #f97316, #dc2626)", transition: "width 0.5s ease" }} />
+                  </div>
+                  <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "8px 0 0" }}>Spend ₦{loyalty.nextReward * 1000} more to earn your next ₦500 reward</p>
+                </div>
+
+                <button onClick={fetchLoyalty} style={{ padding: "10px", background: "#1a1a1a", border: "1px solid #333", color: "var(--text-muted)", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}>🔄 Refresh</button>
+              </div>
+            )}
           </div>
         )}
 
