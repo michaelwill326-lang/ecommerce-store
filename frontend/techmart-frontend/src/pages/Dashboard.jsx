@@ -19,6 +19,11 @@ export default function Dashboard() {
   const { pulling, pullDistance, threshold } = usePullToRefresh(fetchProducts);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [condition, setCondition] = useState("All");
+  const [minRating, setMinRating] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
   const [category, setCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [addedId, setAddedId] = useState(null);
@@ -61,10 +66,12 @@ export default function Dashboard() {
       const matchSearch =
         p.name?.toLowerCase().includes(search.toLowerCase()) ||
         p.description?.toLowerCase().includes(search.toLowerCase());
-      const matchCategory =
-        category === "All" ||
-        p.category?.toLowerCase() === category.toLowerCase();
-      return matchSearch && matchCategory;
+      const matchCategory = category === "All" || p.category?.toLowerCase() === category.toLowerCase();
+      const matchMinPrice = !minPrice || (p.price || 0) >= Number(minPrice);
+      const matchMaxPrice = !maxPrice || (p.price || 0) <= Number(maxPrice);
+      const matchCondition = condition === "All" || (p.condition || "New") === condition;
+      const matchRating = !minRating || (p.rating || 0) >= minRating;
+      return matchSearch && matchCategory && matchMinPrice && matchMaxPrice && matchCondition && matchRating;
     })
     .sort((a, b) => {
       if (sortBy === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
@@ -216,6 +223,40 @@ export default function Dashboard() {
                 {cat}
               </button>
             ))}
+          </div>
+
+          {/* ADVANCED FILTERS */}
+          <div style={{ marginBottom: "12px" }}>
+            <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "8px 16px", background: showFilters ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a", border: `1px solid ${showFilters ? "transparent" : "#333"}`, color: showFilters ? "#fff" : "#888", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }}>
+              🎛️ Filters {(minPrice || maxPrice || condition !== "All" || minRating > 0) ? "•" : ""}
+            </button>
+            {showFilters && (
+              <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginTop: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                  <input type="number" placeholder="Min price (₦)" value={minPrice} onChange={e => setMinPrice(e.target.value)} style={{ padding: "10px 12px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px" }} />
+                  <input type="number" placeholder="Max price (₦)" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} style={{ padding: "10px 12px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px" }} />
+                </div>
+                <div style={{ marginBottom: "12px" }}>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 6px" }}>Condition</p>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    {["All", "New", "Used", "Refurbished"].map(c => (
+                      <button key={c} onClick={() => setCondition(c)} style={{ padding: "6px 14px", borderRadius: "20px", border: `1px solid ${condition === c ? "#f97316" : "#333"}`, background: condition === c ? "#1a0a00" : "#111", color: condition === c ? "#f97316" : "#888", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>{c}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: "12px" }}>
+                  <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 6px" }}>Min Rating</p>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    {[0, 1, 2, 3, 4].map(r => (
+                      <button key={r} onClick={() => setMinRating(r)} style={{ padding: "6px 12px", borderRadius: "20px", border: `1px solid ${minRating === r ? "#f59e0b" : "#333"}`, background: minRating === r ? "#1a1500" : "#111", color: minRating === r ? "#f59e0b" : "#888", cursor: "pointer", fontSize: "12px" }}>
+                        {r === 0 ? "Any" : "⭐".repeat(r) + "+"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={() => { setMinPrice(""); setMaxPrice(""); setCondition("All"); setMinRating(0); }} style={{ padding: "8px 16px", background: "#333", border: "none", color: "#888", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}>Clear Filters</button>
+              </div>
+            )}
           </div>
 
           {loading && <ProductGridSkeleton count={8} />}

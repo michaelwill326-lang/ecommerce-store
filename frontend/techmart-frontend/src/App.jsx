@@ -16,6 +16,7 @@ import Navbar from "./components/Navbar";
 import ErrorBoundary from "./components/ErrorBoundary"; 
 import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
+import BottomNav from "./components/BottomNav";
 import LiveNotification from "./components/LiveNotification";
 
 // Eagerly loaded (above the fold)
@@ -182,6 +183,7 @@ export default function App() {
 
       {/* 🤖 GLOBAL AI CHATBOT SYSTEM */}
       <Chatbot />
+      <BottomNav />
       <LiveNotification />
     {/* 💬 WHATSAPP FLOATING BUTTON */}
     <a href="https://wa.me/2349032657217" target="_blank" rel="noopener noreferrer" title="Chat with us on WhatsApp" style={{position:"fixed",bottom:"24px",left:"24px",width:"52px",height:"52px",borderRadius:"50%",background:"#25D366",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(37,211,102,0.5)",zIndex:9997,textDecoration:"none"}}>
