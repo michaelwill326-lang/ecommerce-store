@@ -123,6 +123,24 @@ export default function ProductDetail() {
     setTimeout(() => { setAdded(false); setCartLoading(false); }, 1500);
   };
 
+  const handleCompare = () => {
+    try {
+      const items = JSON.parse(localStorage.getItem("compareItems") || "[]");
+      const exists = items.find(i => i._id === product._id);
+      if (exists) {
+        const updated = items.filter(i => i._id !== product._id);
+        localStorage.setItem("compareItems", JSON.stringify(updated));
+      } else if (items.length >= 3) {
+        alert("You can compare up to 3 products at a time");
+        return;
+      } else {
+        items.push(product);
+        localStorage.setItem("compareItems", JSON.stringify(items));
+      }
+      window.dispatchEvent(new Event("compareUpdated"));
+    } catch {}
+  };
+
   const handleWishlist = () => {
     if (wishlisted) {
       removeFromWishlist(id);
@@ -225,6 +243,29 @@ export default function ProductDetail() {
               }}
             >
               {wishlisted ? "❤️" : "🤍"}
+            </button>
+            {/* Compare Button */}
+            <button
+              onClick={handleCompare}
+              style={{ position: "absolute", top: "50px", right: "10px", background: "rgba(0,0,0,0.6)", border: "1px solid #333", borderRadius: "50%", width: "36px", height: "36px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}
+              title="Add to Compare"
+            >
+              ⚖️
+            </button>
+            {/* Share Button */}
+            <button
+              onClick={() => {
+                const url = window.location.href;
+                const text = `Check out ${product.name} on TechMart for ₦${product.price?.toLocaleString()}! ${url}`;
+                if (navigator.share) {
+                  navigator.share({ title: product.name, text, url });
+                } else {
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                }
+              }}
+              style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.6)", border: "1px solid #333", borderRadius: "50%", width: "36px", height: "36px", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              📤
             </button>
           </div>
 

@@ -2316,6 +2316,30 @@ app.get("/api/paylink/mine/all", auth, async (req, res) => {
   }
 });
 
+// 🔥 Daily Deal — one random product with 20% discount per day
+app.get("/api/daily-deal", async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    // Use date as seed to pick consistent product for the day
+    const products = await Product.find({ stock: { $gt: 0 } }).select("name price images category rating stock");
+    if (!products.length) return res.json(null);
+
+    // Seed based on date so same product shows all day
+    const seed = today.split("-").reduce((a, b) => a + Number(b), 0);
+    const index = seed % products.length;
+    const product = products[index];
+
+    const discount = 20; // 20% off
+    const dealPrice = Math.round(product.price * (1 - discount / 100));
+    const expiresAt = new Date();
+    expiresAt.setHours(23, 59, 59, 999);
+
+    res.json({ product, discount, dealPrice, originalPrice: product.price, expiresAt, today });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch daily deal" });
+  }
+});
+
 // Public Pay Profile
 app.get("/api/pay/profile/:userId", async (req, res) => {
   try {

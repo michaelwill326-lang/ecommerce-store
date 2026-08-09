@@ -15,6 +15,8 @@ export default function Dashboard() {
   const { addToCart } = useContext(CartContext);
   const [products, setProducts] = useState([]);
   const [trendingData, setTrendingData] = useState([]);
+  const [dailyDeal, setDailyDeal] = useState(null);
+  const [dealTimeLeft, setDealTimeLeft] = useState("");
   const [loading, setLoading] = useState(true);
   const { pulling, pullDistance, threshold } = usePullToRefresh(fetchProducts);
   const [error, setError] = useState("");
@@ -32,18 +34,37 @@ export default function Dashboard() {
   const recent = (() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } })();
 
   useEffect(() => {
+    if (!dailyDeal) return;
+    const tick = () => {
+      const now = new Date();
+      const end = new Date(dailyDeal.expiresAt);
+      const diff = end - now;
+      if (diff <= 0) { setDealTimeLeft("Expired"); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setDealTimeLeft(`${h}h ${m}m ${s}s`);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [dailyDeal]);
+
+  useEffect(() => {
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const [productsRes, trendRes] = await Promise.allSettled([
+      const [productsRes, trendRes, dealRes] = await Promise.allSettled([
         axios.get(`${API}/api/products`),
-        fetch(`${API}/api/behavior/heatmap/public`).then(r => r.json()).catch(() => ({ trending: [] }))
+        fetch(`${API}/api/behavior/heatmap/public`).then(r => r.json()).catch(() => ({ trending: [] })),
+        fetch(`${API}/api/daily-deal`).then(r => r.json()).catch(() => null)
       ]);
       if (productsRes.status === "fulfilled") setProducts(productsRes.value?.data || []);
       if (trendRes.status === "fulfilled") setTrendingData(trendRes.value?.trending || []);
+      if (dealRes.status === "fulfilled" && dealRes.value) setDailyDeal(dealRes.value);
       setError("");
     } catch (err) {
       console.error(err);
@@ -141,6 +162,33 @@ export default function Dashboard() {
       <div style={styles.container}>
 
         {/* 🔥 TRENDING */}
+        {/* DAILY DEAL */}
+        {dailyDeal && !search && category === "All" && (
+          <div style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <h2 style={styles.sectionTitle}>⚡ Deal of the Day</h2>
+              <div style={{ background: "#1a0a00", border: "1px solid #dc2626", borderRadius: "8px", padding: "4px 10px" }}>
+                <p style={{ color: "#dc2626", fontWeight: "800", fontSize: "13px", margin: 0 }}>⏱ {dealTimeLeft}</p>
+              </div>
+            </div>
+            <div onClick={() => navigate(`/product/${dailyDeal.product._id}`)} style={{ background: "linear-gradient(135deg, #1a0a00, #2a0a0a)", border: "2px solid #dc2626", borderRadius: "16px", padding: "16px", cursor: "pointer", display: "flex", gap: "16px", alignItems: "center" }}>
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <img src={dailyDeal.product.images?.[0] || "https://placehold.co/120x120?text=Deal"} alt={dailyDeal.product.name} style={{ width: "100px", height: "100px", borderRadius: "10px", objectFit: "cover" }} onError={e => e.target.src = "https://placehold.co/120x120?text=Deal"} />
+                <div style={{ position: "absolute", top: "-8px", left: "-8px", background: "#dc2626", color: "#fff", fontSize: "11px", fontWeight: "900", padding: "3px 8px", borderRadius: "6px" }}>{dailyDeal.discount}% OFF</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ color: "#fff", fontWeight: "700", fontSize: "15px", margin: "0 0 4px" }}>{dailyDeal.product.name}</p>
+                <p style={{ color: "#888", fontSize: "12px", margin: "0 0 8px" }}>{dailyDeal.product.category}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <p style={{ color: "#dc2626", fontWeight: "900", fontSize: "18px", margin: 0 }}>₦{dailyDeal.dealPrice.toLocaleString()}</p>
+                  <p style={{ color: "#555", fontWeight: "600", fontSize: "13px", margin: 0, textDecoration: "line-through" }}>₦{dailyDeal.originalPrice.toLocaleString()}</p>
+                </div>
+                <p style={{ color: "#22c55e", fontSize: "11px", margin: "4px 0 0", fontWeight: "600" }}>You save ₦{(dailyDeal.originalPrice - dailyDeal.dealPrice).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {trending.length > 0 && !search && category === "All" && (
           <section style={styles.section}>
             <div style={styles.sectionHeader}>

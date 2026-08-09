@@ -17,6 +17,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
 import BottomNav from "./components/BottomNav";
+import CompareBar from "./components/CompareBar";
 import LiveNotification from "./components/LiveNotification";
 
 // Eagerly loaded (above the fold)
@@ -170,6 +171,7 @@ export default function App() {
           <Route path="/pay" element={<TechMartPay />} />
           <Route path="/pay/user/:userId" element={<PayProfile />} />
           <Route path="/pay/link/:linkId" element={<PayLink />} />
+          <Route path="/compare" element={<Compare />} />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />
@@ -184,6 +186,7 @@ export default function App() {
       {/* 🤖 GLOBAL AI CHATBOT SYSTEM */}
       <Chatbot />
       <BottomNav />
+      <CompareBar />
       <LiveNotification />
     {/* 💬 WHATSAPP FLOATING BUTTON */}
     <a href="https://wa.me/2349032657217" target="_blank" rel="noopener noreferrer" title="Chat with us on WhatsApp" style={{position:"fixed",bottom:"24px",left:"24px",width:"52px",height:"52px",borderRadius:"50%",background:"#25D366",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(37,211,102,0.5)",zIndex:9997,textDecoration:"none"}}>
