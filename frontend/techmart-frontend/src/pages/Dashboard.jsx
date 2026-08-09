@@ -162,7 +162,151 @@ export default function Dashboard() {
   <div style={styles.container}>
 
         {/* 🔥 TRENDING */}
-        {/* DAILY DEAL */}
+        {/* 💳 TECHMART PAY CENTERPIECE */}
+    <div
+      style={{
+        margin: "24px auto",
+        padding: "0 16px",
+        maxWidth: "1200px",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: "20px",
+          padding: "28px",
+          background:
+            "linear-gradient(135deg, #07140d 0%, #0b1f14 45%, #111827 100%)",
+          border: "1px solid rgba(34,197,94,0.35)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            width: "220px",
+            height: "220px",
+            borderRadius: "50%",
+            background: "rgba(34,197,94,0.10)",
+            filter: "blur(10px)",
+            top: "-90px",
+            right: "-50px",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "24px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: "1 1 520px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "6px 11px",
+                borderRadius: "999px",
+                background: "rgba(34,197,94,0.12)",
+                border: "1px solid rgba(34,197,94,0.28)",
+                color: "#4ade80",
+                fontSize: "11px",
+                fontWeight: "800",
+                letterSpacing: "0.5px",
+                marginBottom: "12px",
+              }}
+            >
+              💳 TECHMART PAY
+            </div>
+
+            <h2
+              style={{
+                margin: "0 0 9px",
+                color: "#fff",
+                fontSize: "clamp(22px, 4vw, 32px)",
+                fontWeight: "900",
+                lineHeight: 1.15,
+              }}
+            >
+              Your Money. Your Wallet. Your TechMart.
+            </h2>
+
+            <p
+              style={{
+                margin: 0,
+                color: "rgba(255,255,255,0.72)",
+                fontSize: "14px",
+                lineHeight: 1.6,
+                maxWidth: "700px",
+              }}
+            >
+              Send money, fund your wallet, pay bills, buy airtime and data,
+              create payment links, save with Vault and manage your TechMart
+              finances — all in one place.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginTop: "15px",
+              }}
+            >
+              {["Wallet", "Send Money", "Bills", "Vault", "Pay Links"].map(
+                (feature) => (
+                  <span
+                    key={feature}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      color: "rgba(255,255,255,0.75)",
+                      fontSize: "10px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {feature}
+                  </span>
+                )
+              )}
+            </div>
+          </div>
+
+          <Link
+            to="/pay"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              minWidth: "190px",
+              padding: "13px 20px",
+              borderRadius: "12px",
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              textDecoration: "none",
+              fontWeight: "800",
+              fontSize: "14px",
+              boxShadow: "0 8px 24px rgba(34,197,94,0.25)",
+            }}
+          >
+            💳 Open TechMart Pay →
+          </Link>
+        </div>
+      </div>
+    </div>
+
+    {/* DAILY DEAL */}
         {dailyDeal && !search && category === "All" && (
           <div style={{ marginBottom: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
