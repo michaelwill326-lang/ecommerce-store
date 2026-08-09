@@ -9,6 +9,7 @@ const FALLBACK = "https://placehold.co/300x200?text=No+Image";
 export default function AISearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [sponsored, setSponsored] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const navigate = useNavigate();
@@ -18,8 +19,14 @@ export default function AISearch() {
     setLoading(true);
     setSearched(true);
     try {
-      const res = await axios.post(`${API}/api/ai/search`, { query });
-      setResults(res.data.results || []);
+      const [searchRes, sponsoredRes] = await Promise.allSettled([
+        axios.post(`${API}/api/ai/search`, { query }),
+        axios.get(`${API}/api/sponsored/active`)
+      ]);
+      const searchResults = searchRes.status === "fulfilled" ? (searchRes.value.data.results || []) : [];
+      const sponsoredProducts = sponsoredRes.status === "fulfilled" ? (sponsoredRes.value.data || []) : [];
+      setSponsored(sponsoredProducts);
+      setResults(searchResults);
     } catch { setResults([]); }
     finally { setLoading(false); }
   };
@@ -71,6 +78,24 @@ export default function AISearch() {
         {searched && !loading && (
           <div>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "16px" }}>{results.length} result{results.length !== 1 ? "s" : ""} for "{query}"</p>
+            {/* Sponsored Products */}
+            {sponsored.length > 0 && (
+              <div style={{ marginBottom: "20px" }}>
+                <p style={{ color: "#f97316", fontWeight: "700", fontSize: "12px", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "1px" }}>📢 Sponsored</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "12px" }}>
+                  {sponsored.map((p, i) => (
+                    <div key={i} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid #f97316", borderRadius: "12px", overflow: "hidden", cursor: "pointer", position: "relative" }}>
+                      <div style={{ position: "absolute", top: "6px", left: "6px", background: "#f97316", color: "#fff", fontSize: "9px", fontWeight: "700", padding: "2px 6px", borderRadius: "4px" }}>SPONSORED</div>
+                      <img src={p.images?.[0] || FALLBACK} alt={p.name} style={{ width: "100%", height: "130px", objectFit: "cover" }} onError={e => e.target.src = FALLBACK} />
+                      <div style={{ padding: "10px" }}>
+                        <p style={{ color: "var(--text-primary)", fontSize: "12px", fontWeight: "600", margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                        <p style={{ color: "#f97316", fontSize: "13px", fontWeight: "700", margin: 0 }}>₦{(p.price || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {results.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", background: "var(--bg-card)", borderRadius: "12px" }}>
                 <p style={{ fontSize: "40px", margin: "0 0 12px" }}>🤔</p>
