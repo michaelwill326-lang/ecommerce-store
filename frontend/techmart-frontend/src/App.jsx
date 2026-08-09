@@ -18,6 +18,7 @@ import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
 import BottomNav from "./components/BottomNav";
 import CompareBar from "./components/CompareBar";
+import Compare from "./pages/Compare";
 import LiveNotification from "./components/LiveNotification";
 
 // Eagerly loaded (above the fold)
