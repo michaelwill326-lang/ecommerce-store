@@ -334,6 +334,10 @@ const User = mongoose.model(
     lastLoginAt: { type: Date, default: null },
     lastLoginIP: { type: String, default: null },
     monthlyBudget: { type: Number, default: 0 },
+    aiPro: { type: Boolean, default: false },
+    aiProExpiry: { type: Date, default: null },
+    aiDailyUsage: { type: Number, default: 0 },
+    aiUsageDate: { type: String, default: null },
     loyaltyPoints: { type: Number, default: 0 },
 
     // ===========================
@@ -525,6 +529,19 @@ const PaymentLink = mongoose.model("PaymentLink", new mongoose.Schema({
   paidCount: { type: Number, default: 0 },
   totalCollected: { type: Number, default: 0 },
   active: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+}));
+
+// 📢 Sponsored Listing Schema
+const SponsoredListing = mongoose.model("SponsoredListing", new mongoose.Schema({
+  sellerId: { type: String, required: true },
+  productId: { type: String, required: true },
+  productName: { type: String, required: true },
+  amount: { type: Number, default: 2000 },
+  status: { type: String, enum: ["active", "expired"], default: "active" },
+  expiresAt: { type: Date, required: true },
+  impressions: { type: Number, default: 0 },
+  clicks: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 }));
 
@@ -2006,6 +2023,122 @@ app.get("/api/bnpl/plans", auth, async (req, res) => {
     res.json(plans);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch BNPL plans" });
+  }
+});
+
+// 🤖 AI Pro — Check Status
+app.get("/api/ai/pro/status", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("aiPro aiProExpiry aiDailyUsage aiUsageDate name");
+    const today = new Date().toISOString().slice(0, 10);
+    const isProActive = user.aiPro && user.aiProExpiry && new Date(user.aiProExpiry) > new Date();
+    const dailyUsage = user.aiUsageDate === today ? (user.aiDailyUsage || 0) : 0;
+    const limit = isProActive ? 999 : 10;
+    res.json({ isPro: isProActive, expiresAt: user.aiProExpiry, dailyUsage, limit, remaining: Math.max(0, limit - dailyUsage) });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch AI status" });
+  }
+});
+
+// 🤖 AI Pro — Upgrade (₦500/month from wallet)
+app.post("/api/ai/pro/upgrade", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if ((user.walletBalance || 0) < 500) return res.status(400).json({ error: "Insufficient wallet balance. AI Pro costs ₦500/month." });
+
+    user.walletBalance -= 500;
+    user.walletTransactions.push({
+      type: "debit", amount: 500,
+      description: "TechMart AI Pro subscription — 1 month",
+      reference: "AIPRO-" + Date.now()
+    });
+
+    const now = new Date();
+    const currentExpiry = user.aiProExpiry && new Date(user.aiProExpiry) > now ? new Date(user.aiProExpiry) : now;
+    user.aiPro = true;
+    user.aiProExpiry = new Date(currentExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+    await user.save();
+
+    res.json({ success: true, expiresAt: user.aiProExpiry, message: `🤖 AI Pro activated until ${user.aiProExpiry.toLocaleDateString("en-NG")}!` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to upgrade to AI Pro" });
+  }
+});
+
+// 🤖 Track AI Usage
+app.post("/api/ai/track-usage", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("aiPro aiProExpiry aiDailyUsage aiUsageDate");
+    const today = new Date().toISOString().slice(0, 10);
+    const isProActive = user.aiPro && user.aiProExpiry && new Date(user.aiProExpiry) > new Date();
+    const dailyUsage = user.aiUsageDate === today ? (user.aiDailyUsage || 0) : 0;
+    const limit = isProActive ? 999 : 10;
+
+    if (dailyUsage >= limit) return res.status(429).json({ error: isProActive ? "Daily limit reached" : "Daily limit reached. Upgrade to AI Pro for unlimited messages!", limitReached: true, isPro: isProActive });
+
+    await User.findByIdAndUpdate(req.user.id, {
+      aiDailyUsage: user.aiUsageDate === today ? (user.aiDailyUsage || 0) + 1 : 1,
+      aiUsageDate: today
+    });
+
+    res.json({ success: true, usage: dailyUsage + 1, limit, remaining: limit - dailyUsage - 1 });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to track usage" });
+  }
+});
+
+// 📢 Sponsored Listings — Create
+app.post("/api/sponsored/create", sellerAuth, async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (product.vendorId !== req.seller.id) return res.status(403).json({ error: "Not your product" });
+
+    const seller = await Seller.findById(req.seller.id);
+    if ((seller.walletBalance || 0) < 2000) return res.status(400).json({ error: "Insufficient seller wallet balance. Sponsoring costs ₦2,000/week." });
+
+    // Check if already sponsored
+    const existing = await SponsoredListing.findOne({ productId, status: "active" });
+    if (existing) return res.status(400).json({ error: "This product is already sponsored" });
+
+    seller.walletBalance -= 2000;
+    seller.walletTransactions = seller.walletTransactions || [];
+    seller.walletTransactions.push({
+      type: "debit", amount: 2000,
+      description: `Sponsored listing — ${product.name}`,
+      reference: "SPON-" + Date.now()
+    });
+    await seller.save();
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const listing = await SponsoredListing.create({ sellerId: req.seller.id, productId, productName: product.name, expiresAt });
+
+    res.json({ success: true, listing, message: `✅ ${product.name} is now sponsored for 7 days!` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create sponsored listing" });
+  }
+});
+
+// 📢 Get Active Sponsored Products (for AI search)
+app.get("/api/sponsored/active", async (req, res) => {
+  try {
+    const sponsored = await SponsoredListing.find({ status: "active", expiresAt: { $gt: new Date() } }).select("productId impressions clicks");
+    const productIds = sponsored.map(s => s.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+    res.json(products.map(p => ({ ...p.toObject(), isSponsored: true })));
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch sponsored listings" });
+  }
+});
+
+// 📢 My Sponsored Listings (seller)
+app.get("/api/sponsored/mine", sellerAuth, async (req, res) => {
+  try {
+    const listings = await SponsoredListing.find({ sellerId: req.seller.id }).sort({ createdAt: -1 });
+    res.json(listings);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch sponsored listings" });
   }
 });
 
@@ -6792,6 +6925,113 @@ cron.schedule("0 10 * * 5", async () => {
     }
   } catch (e) {
     console.error("❌ Auto payout cron error:", e.message);
+  }
+});
+
+// ── Sponsored Listing Expiry Cron (runs daily at midnight)
+cron.schedule("0 0 * * *", async () => {
+  try {
+    const expired = await SponsoredListing.updateMany(
+      { status: "active", expiresAt: { $lte: new Date() } },
+      { $set: { status: "expired" } }
+    );
+    if (expired.modifiedCount > 0) console.log(`📢 ${expired.modifiedCount} sponsored listing(s) expired`);
+  } catch (e) {
+    console.error("❌ Sponsored listing cron error:", e.message);
+  }
+});
+
+// ── AI Pro Expiry Cron (runs daily at 1am)
+cron.schedule("0 1 * * *", async () => {
+  try {
+    const expired = await User.updateMany(
+      { aiPro: true, aiProExpiry: { $lte: new Date() } },
+      { $set: { aiPro: false } }
+    );
+    if (expired.modifiedCount > 0) console.log(`🤖 ${expired.modifiedCount} AI Pro subscription(s) expired`);
+  } catch (e) {
+    console.error("❌ AI Pro expiry cron error:", e.message);
+  }
+});
+
+// ── AI Seller Coach Cron (every Friday at 6pm)
+cron.schedule("0 18 * * 5", async () => {
+  try {
+    console.log("🤖 Running AI Seller Coach...");
+    const sellers = await Seller.find({ email: { $exists: true } }).select("name email _id");
+    for (const seller of sellers) {
+      try {
+        const orders = await Order.find({ "items.vendorId": seller._id.toString(), status: { $in: ["Paid", "Shipped", "Delivered"] } });
+        const products = await Product.find({ vendorId: seller._id.toString() }).select("name stock price");
+        const totalRevenue = orders.reduce((s, o) => s + (o.amount || 0), 0);
+        const lowStock = products.filter(p => (p.stock || 0) <= 5);
+        const thisWeek = orders.filter(o => new Date(o.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+
+        const prompt = `You are TechMart AI Seller Coach. Analyze this seller's data and give 3 specific, actionable tips to improve their sales this week. Be direct and practical.
+
+Seller: ${seller.name}
+Total Revenue: ₦${totalRevenue.toLocaleString()}
+Orders This Week: ${thisWeek.length}
+Total Products: ${products.length}
+Low Stock Products: ${lowStock.map(p => p.name).join(", ") || "None"}
+Total Orders: ${orders.length}
+
+Give exactly 3 tips numbered 1, 2, 3. Each tip should be 1-2 sentences. Focus on what will make the most difference this week.`;
+
+        const groq = (await import("groq")).default;
+        const groqClient = new groq({ apiKey: process.env.GROQ_API_KEY });
+        const completion = await groqClient.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 300
+        });
+        const tips = completion.choices[0]?.message?.content || "Keep listing quality products and responding to buyers quickly!";
+
+        const { sendAbandonedCartEmail } = await import("./utils/email.js");
+        // Reuse email infrastructure with custom HTML
+        const html = `
+          <div style="background:#0a0a0a;padding:32px;font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border-radius:12px;">
+            <h1 style="color:#f97316;font-size:22px;margin:0 0 4px;">TechMart</h1>
+            <p style="color:#888;font-size:12px;margin:0 0 20px;">AI Seller Coach — Weekly Insights</p>
+            <h2 style="color:#ffffff;font-size:18px;margin:0 0 16px;">Hi ${seller.name}, here's your weekly AI coaching 🤖</h2>
+            <div style="background:#111;border-radius:10px;padding:20px;margin-bottom:20px;">
+              <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:120px;background:#1a0a00;border:1px solid #f97316;border-radius:8px;padding:12px;text-align:center;">
+                  <p style="color:#888;font-size:11px;margin:0 0 4px;">WEEKLY ORDERS</p>
+                  <p style="color:#f97316;font-size:22px;font-weight:900;margin:0;">${thisWeek.length}</p>
+                </div>
+                <div style="flex:1;min-width:120px;background:#0a1a0a;border:1px solid #22c55e;border-radius:8px;padding:12px;text-align:center;">
+                  <p style="color:#888;font-size:11px;margin:0 0 4px;">TOTAL REVENUE</p>
+                  <p style="color:#22c55e;font-size:22px;font-weight:900;margin:0;">₦${totalRevenue.toLocaleString()}</p>
+                </div>
+                <div style="flex:1;min-width:120px;background:#1a1a0a;border:1px solid #f59e0b;border-radius:8px;padding:12px;text-align:center;">
+                  <p style="color:#888;font-size:11px;margin:0 0 4px;">LOW STOCK</p>
+                  <p style="color:#f59e0b;font-size:22px;font-weight:900;margin:0;">${lowStock.length}</p>
+                </div>
+              </div>
+            </div>
+            <h3 style="color:#f97316;font-size:16px;margin:0 0 12px;">🎯 Your 3 AI Tips for This Week</h3>
+            <div style="background:#111;border-radius:10px;padding:20px;margin-bottom:20px;color:#ccc;font-size:14px;line-height:1.8;white-space:pre-line;">${tips}</div>
+            ${lowStock.length > 0 ? `<div style="background:#1a0a00;border:1px solid #dc2626;border-radius:10px;padding:16px;margin-bottom:20px;"><p style="color:#dc2626;font-weight:700;margin:0 0 8px;">⚠️ Restock Alert</p><p style="color:#888;font-size:13px;margin:0;">${lowStock.map(p => `${p.name} (${p.stock} left)`).join(", ")}</p></div>` : ""}
+            <a href="${process.env.FRONTEND_URL || "https://techmart-frontend.onrender.com"}/seller/dashboard" style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">📊 View My Dashboard →</a>
+            <p style="color:#333;font-size:11px;text-align:center;margin:16px 0 0;">TechMart AI Seller Coach — Powered by Groq AI</p>
+          </div>`;
+
+        const { default: BrevoModule } = await import("@getbrevo/brevo");
+        const brevoClient = new BrevoModule.BrevoClient({ apiKey: process.env.BREVO_API_KEY?.trim() });
+        await brevoClient.transactionalEmails.sendTransacEmail({
+          sender: { email: "michaelwill326@gmail.com", name: "TechMart AI Coach" },
+          to: [{ email: seller.email, name: seller.name }],
+          subject: `🤖 Your Weekly AI Coaching is Ready, ${seller.name.split(" ")[0]}!`,
+          htmlContent: html
+        });
+        console.log(`🤖 AI Coach email sent to ${seller.email}`);
+      } catch (sellerErr) {
+        console.error(`❌ AI Coach failed for ${seller.email}:`, sellerErr.message);
+      }
+    }
+  } catch (e) {
+    console.error("❌ AI Seller Coach cron error:", e.message);
   }
 });
 

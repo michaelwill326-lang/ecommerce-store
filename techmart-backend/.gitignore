@@ -25,3 +25,5 @@ dist/
 build/
 *.backup
 *.before-*
+
+server.js.backup-before-monetization-fixes
