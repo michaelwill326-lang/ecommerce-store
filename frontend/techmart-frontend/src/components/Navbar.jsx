@@ -65,6 +65,11 @@ export default function Navbar() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("deviceToken");
+    localStorage.removeItem("cart");
+    localStorage.removeItem("wishlist");
+    localStorage.removeItem("lastCartItems");
+    window.dispatchEvent(new Event("techmart-auth-change"));
+    localStorage.removeItem("deviceToken");
     window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
     navigate("/login");
     setMenuOpen(false);

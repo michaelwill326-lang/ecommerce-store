@@ -506,6 +506,11 @@ export default function Dashboard() {
                 onClick={() => {
                   localStorage.removeItem("token");
                   localStorage.removeItem("user");
+                  localStorage.removeItem("deviceToken");
+                  localStorage.removeItem("cart");
+                  localStorage.removeItem("wishlist");
+                  localStorage.removeItem("lastCartItems");
+                  window.dispatchEvent(new Event("techmart-auth-change"));
                   window.location.href = "/login";
                 }}
                 style={{ ...styles.footerLink, cursor: "pointer" }}

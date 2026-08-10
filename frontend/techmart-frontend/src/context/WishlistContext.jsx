@@ -3,36 +3,81 @@ import { createContext, useContext, useState, useEffect } from "react";
 const WishlistContext = createContext();
 
 export function WishlistProvider({ children }) {
+  const isLoggedIn = () => !!localStorage.getItem("token");
+
   const [wishlist, setWishlist] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("wishlist")) || []; } catch { return []; }
+    if (!isLoggedIn()) return [];
+
+    try {
+      return JSON.parse(localStorage.getItem("wishlist")) || [];
+    } catch {
+      return [];
+    }
   });
 
+  // Keep wishlist in localStorage only while logged in.
   useEffect(() => {
-    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+    if (isLoggedIn()) {
+      localStorage.setItem("wishlist", JSON.stringify(wishlist));
+    } else {
+      localStorage.removeItem("wishlist");
+    }
   }, [wishlist]);
 
+  // React immediately to login/logout events in this tab and other tabs.
+  useEffect(() => {
+    const handleAuthChange = (e) => {
+      if (e.key === "token" || e.type === "techmart-auth-change") {
+        if (!localStorage.getItem("token")) {
+          setWishlist([]);
+          localStorage.removeItem("wishlist");
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener("techmart-auth-change", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener("techmart-auth-change", handleAuthChange);
+    };
+  }, []);
+
   const addToWishlist = (product) => {
-    if (!wishlist.find(p => p._id === product._id)) {
-      setWishlist([...wishlist, product]);
-    }
+    if (!isLoggedIn()) return;
+
+    setWishlist((prev) => {
+      if (prev.find((p) => p._id === product._id)) {
+        return prev;
+      }
+
+      return [...prev, product];
+    });
   };
 
   const removeFromWishlist = (id) => {
-    setWishlist(wishlist.filter(p => p._id !== id));
+    setWishlist((prev) => prev.filter((p) => p._id !== id));
   };
 
-  const clearWishlist = () => setWishlist([]);
+  const clearWishlist = () => {
+    setWishlist([]);
+    localStorage.removeItem("wishlist");
+  };
 
-  const isInWishlist = (id) => wishlist.some(p => p._id === id);
+  const isInWishlist = (id) =>
+    isLoggedIn() && wishlist.some((p) => p._id === id);
 
   return (
-    <WishlistContext.Provider value={{
-      wishlist,
-      addToWishlist,
-      removeFromWishlist,
-      clearWishlist,
-      isInWishlist,
-    }}>
+    <WishlistContext.Provider
+      value={{
+        wishlist: isLoggedIn() ? wishlist : [],
+        addToWishlist,
+        removeFromWishlist,
+        clearWishlist,
+        isInWishlist,
+      }}
+    >
       {children}
     </WishlistContext.Provider>
   );

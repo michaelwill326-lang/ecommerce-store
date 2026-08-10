@@ -47,10 +47,12 @@ export function CartProvider({ children }) {
     const handleStorage = (e) => {
       if (e.key === "token") {
         if (!e.newValue) {
-          // Logged out — keep cart locally
-          return;
+          // Logged out — remove the previous user's cart immediately.
+          setCart([]);
+          localStorage.removeItem("cart");
+          localStorage.removeItem("lastCartItems");
         } else {
-          // Logged in — load from server
+          // Logged in — load that user's cart from the server.
           loadCartFromServer();
         }
       }
