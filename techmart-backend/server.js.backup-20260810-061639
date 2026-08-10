@@ -548,15 +548,6 @@ const SponsoredListing = mongoose.model("SponsoredListing", new mongoose.Schema(
   createdAt: { type: Date, default: Date.now }
 }));
 
-// 🔄 Webhook Event Log (prevents duplicate processing)
-const WebhookEvent = mongoose.model("WebhookEvent", new mongoose.Schema({
-  reference: { type: String, required: true, unique: true },
-  event: { type: String, required: true },
-  status: { type: String, enum: ["processed", "failed", "ignored"], default: "processed" },
-  metadata: { type: Object, default: {} },
-  processedAt: { type: Date, default: Date.now }
-}));
-
 // 🚨 Product Report Schema
 const ProductReport = mongoose.model("ProductReport", new mongoose.Schema({
   productId: { type: String, required: true },
@@ -632,11 +623,6 @@ const Order = mongoose.model(
     depositPaid: { type: Number, default: 0 },
     depositReference: { type: String, default: "" },
     podPaymentReference: { type: String, default: "" },
-
-// Order confirmation email tracking
-confirmationEmailSent: { type: Boolean, default: false },
-confirmationEmailSentAt: { type: Date, default: null },
-confirmationEmailError: { type: String, default: "" },
     originalAmount: Number,
     couponCode: String,
     escrow: { type: Boolean, default: false },
@@ -4908,9 +4894,10 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
         }
 
         if (!user) {
-          console.error("❌ Wallet webhook: user not found", { reference, email });
-          // Update webhook event status
-          await WebhookEvent.findOneAndUpdate({ reference }, { status: "failed", metadata: { reason: "user_not_found", email } });
+          console.error(
+            "❌ Wallet webhook: user not found",
+            { reference, email }
+          );
           return res.status(200).json({ status: "ignored" });
         }
 
@@ -4973,140 +4960,51 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     }
 
     // Handle POD deposit payment
-if (paymentData.metadata?.isPodDeposit) {
-  try {
-    const meta = paymentData.metadata;
-    const cart = JSON.parse(meta.cart || "[]");
+    if (paymentData.metadata?.isPodDeposit) {
+      try {
+        const meta = paymentData.metadata;
+        const cart = JSON.parse(meta.cart || "[]");
+        const reference = "POD-" + Date.now();
+        const amount = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
 
-    // Paystack references are unique.
-    // Use the deposit reference as our idempotency key.
-    const depositReference = paymentData.reference;
-    const reference = "POD-" + depositReference;
-
-    // Prevent duplicate orders when Paystack retries the webhook.
-    const existingOrder = await Order.findOne({ depositReference });
-
-    if (existingOrder) {
-      console.log(
-        `ℹ️ POD deposit already processed: ${depositReference}`
-      );
-
-      return res.status(200).json({
-        status: "duplicate",
-        orderId: existingOrder._id
-      });
-    }
-
-    const amount = cart.reduce(
-      (sum, item) =>
-        sum +
-        (Number(item.price) || 0) *
-        (Number(item.quantity) || 1),
-      0
-    );
-
-    const deliveryFee = Number(meta.deliveryFee || 0);
-
-    const order = await Order.create({
-      email: paymentData.customer?.email || "",
-      items: cart,
-      amount: amount + deliveryFee,
-      originalAmount: amount + deliveryFee,
-      deliveryFee,
-      deliveryZone: meta.deliveryZone || "",
-      depositPaid: deliveryFee,
-      depositReference,
-      reference,
-      status: "Pay on Delivery",
-      deliveryAddress: meta.deliveryAddress || "",
-      phone: meta.phone || "",
-      paymentMethod: "Pay on Delivery",
-      couponCode: meta.couponCode || null,
-      confirmationEmailSent: false,
-      confirmationEmailSentAt: null,
-      confirmationEmailError: ""
-    });
-
-    console.log(
-      `✅ POD order created: ${order.reference}`
-    );
-
-    // Customer confirmation email
-    try {
-      await sendOrderConfirmation(order);
-
-      await Order.findByIdAndUpdate(order._id, {
-        confirmationEmailSent: true,
-        confirmationEmailSentAt: new Date(),
-        confirmationEmailError: ""
-      });
-
-      console.log(
-        `📧 POD confirmation email sent to ${order.email}`
-      );
-    } catch (e) {
-      await Order.findByIdAndUpdate(order._id, {
-        confirmationEmailSent: false,
-        confirmationEmailError: e.message
-      });
-
-      console.error(
-        `❌ POD confirmation email failed for ${order.email}:`,
-        e.message
-      );
-    }
-
-    // Admin notification
-    try {
-      await sendAdminOrderNotification(order);
-    } catch (e) {
-      console.error(
-        "❌ POD admin notification failed:",
-        e.message
-      );
-    }
-
-    // Cashback
-    const buyer = await User.findOne({
-      email: paymentData.customer?.email
-    });
-
-    if (buyer) {
-      const cashback = Math.round(
-        (CASHBACK_PERCENT / 100) * order.amount
-      );
-
-      if (cashback > 0) {
-        buyer.walletBalance =
-          (buyer.walletBalance || 0) + cashback;
-
-        buyer.walletTransactions.push({
-          type: "credit",
-          amount: cashback,
-          description: `Cashback on POD order ${reference}`,
-          reference
+        // Create the full POD order
+        const order = await Order.create({
+          email: paymentData.customer.email,
+          items: cart,
+          amount: amount + Number(meta.deliveryFee || 0),
+          originalAmount: amount + Number(meta.deliveryFee || 0),
+          deliveryFee: Number(meta.deliveryFee || 0),
+          deliveryZone: meta.deliveryZone || "",
+          depositPaid: Number(meta.deliveryFee || 0),
+          depositReference: paymentData.reference,
+          reference,
+          status: "Pay on Delivery",
+          deliveryAddress: meta.deliveryAddress,
+          phone: meta.phone,
+          paymentMethod: "Pay on Delivery",
+          couponCode: meta.couponCode || null,
         });
 
-        await buyer.save();
+        try { await sendOrderConfirmation(order); } catch(e) {}
+        try { await sendAdminOrderNotification(order); } catch(e) {}
 
-        console.log(
-          `💰 POD cashback credited: ${buyer.email} +₦${cashback}`
-        );
+        // Cashback
+        const buyer = await User.findOne({ email: paymentData.customer.email });
+        if (buyer) {
+          const cashback = Math.round((CASHBACK_PERCENT / 100) * order.amount);
+          if (cashback > 0) {
+            buyer.walletBalance = (buyer.walletBalance || 0) + cashback;
+            buyer.walletTransactions.push({ type: "credit", amount: cashback, description: `Cashback on POD order ${reference}`, reference });
+            await buyer.save();
+          }
+        }
+      } catch(e) {
+        console.error("POD deposit webhook error:", e.message);
       }
+      return res.status(200).json({ status: "success" });
     }
-  } catch (e) {
-    console.error(
-      "❌ POD deposit webhook error:",
-      e.message
-    );
-  }
 
-  return res.status(200).json({
-    status: "success"
-  });
-}
-
-if (paymentData.status !== "success") {
+    if (paymentData.status !== "success") {
       console.log(`⚠️ Payment not successful for ${reference}: ${paymentData.status}`);
       return res.status(200).send("Payment not verified");
     }
@@ -7384,16 +7282,6 @@ app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req
 
 
 
-
-// 🔍 View Webhook Logs (Admin)
-app.get("/api/admin/webhook-logs", adminOnly, async (req, res) => {
-  try {
-    const logs = await WebhookEvent.find().sort({ processedAt: -1 }).limit(50);
-    res.json(logs);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch webhook logs" });
-  }
-});
 
 /* ===========================
    🔄 PAYSTACK RECONCILIATION (admin)

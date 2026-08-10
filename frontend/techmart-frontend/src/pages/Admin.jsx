@@ -11,7 +11,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow", "Intelligence"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow", "Intelligence", "Webhooks"];
 
 export default function Admin() {
   const showToast = useToast();
@@ -41,6 +41,8 @@ export default function Admin() {
   const [walletAction, setWalletAction] = useState({ userId: "", type: "credit", amount: "", description: "" });
   const [flashSales, setFlashSales] = useState([]);
   const [heatmap, setHeatmap] = useState(null);
+  const [webhookLogs, setWebhookLogs] = useState([]);
+  const [webhookLoading, setWebhookLoading] = useState(false);
   const [intelLoading, setIntelLoading] = useState(false);
   const [payouts, setPayouts] = useState([]);
   const [disputes, setDisputes] = useState([]);
@@ -1074,6 +1076,63 @@ ${url}`, "success");
           </div>
         </div>
       )}
+      {tab === "Webhooks" && (
+        <div>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>🔄 Paystack Webhook Logs</h2>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+            <button onClick={async () => {
+              setWebhookLoading(true);
+              try {
+                const res = await axios.get(`${API}/api/admin/webhook-logs`, { headers });
+                setWebhookLogs(res.data || []);
+              } catch { showToast("Failed to load webhook logs", "error"); }
+              finally { setWebhookLoading(false); }
+            }} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
+              {webhookLoading ? "Loading..." : "🔄 Load Webhook Logs"}
+            </button>
+            <button onClick={async () => {
+              try {
+                const res = await axios.post(`${API}/api/admin/reconcile-wallets`, {}, { headers });
+                showToast(`Reconciled ${res.data.fixed} transaction(s)`, "success");
+              } catch { showToast("Reconciliation failed", "error"); }
+            }} style={{ padding: "10px 20px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>
+              🛠️ Run Reconciliation
+            </button>
+          </div>
+          {webhookLogs.length > 0 && (
+            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#1a1a1a" }}>
+                    {["Reference", "Event", "Status", "Time"].map(h => (
+                      <th key={h} style={{ padding: "12px 16px", color: "var(--text-muted)", fontSize: "12px", fontWeight: "700", textAlign: "left" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {webhookLogs.map((log, i) => (
+                    <tr key={i} style={{ borderTop: "1px solid #2a2a2a" }}>
+                      <td style={{ padding: "10px 16px", color: "var(--text-primary)", fontSize: "12px", fontFamily: "monospace" }}>{log.reference}</td>
+                      <td style={{ padding: "10px 16px", color: "#3b82f6", fontSize: "12px" }}>{log.event}</td>
+                      <td style={{ padding: "10px 16px" }}>
+                        <span style={{ background: log.status === "processed" ? "#0a2a1a" : log.status === "failed" ? "#2a0a0a" : "#1a1a1a", color: log.status === "processed" ? "#22c55e" : log.status === "failed" ? "#dc2626" : "#888", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "700" }}>{log.status.toUpperCase()}</span>
+                      </td>
+                      <td style={{ padding: "10px 16px", color: "var(--text-muted)", fontSize: "12px" }}>{new Date(log.processedAt).toLocaleString("en-NG")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {webhookLogs.length === 0 && !webhookLoading && (
+            <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+              <p style={{ fontSize: "32px", margin: "0 0 12px" }}>🔄</p>
+              <p>Click "Load Webhook Logs" to see recent Paystack webhook events</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === "Intelligence" && (
         <div>
           <h2 style={{ color: "var(--text-primary)", marginBottom: "20px" }}>🧠 Behavioral Intelligence</h2>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechMart — Nigeria's Trusted Tech Marketplace</title>
+    <meta name="description" content="Shop the latest phones, laptops, accessories and more. Pay with TechMart Pay, track orders, and enjoy secure escrow payments." />
+    <meta name="theme-color" content="#f97316" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TechMart" />
+    <link rel="apple-touch-icon" href="/techmart.png" />
+    <meta property="og:title" content="TechMart — Nigeria's Trusted Tech Marketplace" />
+    <meta property="og:description" content="Shop phones, laptops, accessories and more. Secure payments with TechMart Pay." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://techmart-frontend.onrender.com" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
