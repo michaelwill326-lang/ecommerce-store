@@ -13,6 +13,7 @@ export default function Footer() {
 
         {/* Links */}
         <div style={{ display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap", marginBottom: "20px" }}>
+          <Link to="/buyer-protection" style={linkStyle}>🛡️ Buyer Protection</Link>
           <Link to="/policy" style={linkStyle}>Privacy Policy</Link>
           <Link to="/policy" style={linkStyle}>Refund Policy</Link>
           <Link to="/seller/apply" style={linkStyle}>Sell on TechMart</Link>

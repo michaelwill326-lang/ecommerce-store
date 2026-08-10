@@ -30,6 +30,21 @@ export default function ProductDetail() {
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
+  const submitReport = async () => {
+    if (!reportForm.reason) return;
+    const token = localStorage.getItem("token");
+    if (!token) { if (showToast) showToast("Please login to report a product", "error"); return; }
+    setReportLoading(true);
+    try {
+      await axios.post(`${API}/api/products/${id}/report`, reportForm, { headers: { Authorization: `Bearer ${token}` } });
+      if (showToast) showToast("Report submitted. Thank you!", "success");
+      setShowReport(false);
+      setReportForm({ reason: "", details: "" });
+    } catch (err) {
+      if (showToast) showToast(err.response?.data?.error || "Failed to submit report", "error");
+    } finally { setReportLoading(false); }
+  };
+
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
   const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
   const handleTouchEnd = () => {
@@ -52,6 +67,10 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [recommendations, setRecommendations] = useState([]);
   const [priceHistory, setPriceHistory] = useState([]);
+  const [showReport, setShowReport] = useState(false);
+  const [reportForm, setReportForm] = useState({ reason: "", details: "" });
+  const [reportLoading, setReportLoading] = useState(false);
+  const [sellerResponseTime, setSellerResponseTime] = useState(null);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
   const [recLoading, setRecLoading] = useState(false);
 
@@ -69,6 +88,12 @@ export default function ProductDetail() {
       const res = await axios.get(`${API}/api/products/${id}`);
       setProduct(res.data);
       trackView(res.data);
+      // Fetch seller response time
+      if (res.data.vendorId) {
+        axios.get(`${API}/api/seller/${res.data.vendorId}/response-time`)
+          .then(r => setSellerResponseTime(r.data))
+          .catch(() => {});
+      }
       // Fetch price history
       try {
         const ph = await axios.get(`${API}/api/products/${id}/price-history`);
@@ -226,6 +251,14 @@ export default function ProductDetail() {
                     {selectedVariant.stock > 0 ? `✅ ${selectedVariant.stock} in stock` : "❌ Out of stock"}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Seller Response Time */}
+            {sellerResponseTime?.responseLabel && (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                <span style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "6px", padding: "4px 10px", color: "#22c55e", fontSize: "11px", fontWeight: "700" }}>⏱ {sellerResponseTime.responseLabel}</span>
+                {sellerResponseTime.verified && <span style={{ background: "#0a0a2a", border: "1px solid #3b82f6", borderRadius: "6px", padding: "4px 10px", color: "#3b82f6", fontSize: "11px", fontWeight: "700" }}>✅ Verified Seller</span>}
               </div>
             )}
 
@@ -457,7 +490,33 @@ export default function ProductDetail() {
       </div>
 
       <AIReviewSummary productId={product._id} />
-                {/* PRICE HISTORY */}
+                {/* REPORT PRODUCT */}
+          <div style={{ marginBottom: "12px", textAlign: "right" }}>
+            <button onClick={() => setShowReport(!showReport)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "12px", textDecoration: "underline" }}>🚨 Report this product</button>
+          </div>
+          {showReport && (
+            <div style={{ background: "var(--bg-card)", border: "1px solid #dc2626", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+              <p style={{ color: "#dc2626", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>🚨 Report Product</p>
+              <select value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} style={{ width: "100%", padding: "10px 12px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px", marginBottom: "10px" }}>
+                <option value="">Select a reason...</option>
+                <option value="fake">Fake/Counterfeit product</option>
+                <option value="counterfeit">Replica/Knockoff</option>
+                <option value="wrong_description">Wrong description/photos</option>
+                <option value="scam">Suspected scam</option>
+                <option value="inappropriate">Inappropriate content</option>
+                <option value="other">Other</option>
+              </select>
+              <textarea value={reportForm.details} onChange={e => setReportForm({...reportForm, details: e.target.value})} placeholder="Additional details (optional)" style={{ width: "100%", padding: "10px 12px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px", marginBottom: "10px", height: "80px", resize: "none", boxSizing: "border-box" }} />
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={submitReport} disabled={reportLoading || !reportForm.reason} style={{ flex: 1, padding: "10px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px", opacity: !reportForm.reason ? 0.6 : 1 }}>
+                  {reportLoading ? "Submitting..." : "Submit Report"}
+                </button>
+                <button onClick={() => setShowReport(false)} style={{ padding: "10px 16px", background: "#333", color: "#888", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* PRICE HISTORY */}
           {priceHistory.length > 1 && (
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>

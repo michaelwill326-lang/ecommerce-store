@@ -2207,15 +2207,25 @@ app.get("/api/seller/:sellerId/response-time", async (req, res) => {
     if (!seller) return res.status(404).json({ error: "Seller not found" });
 
     let responseLabel = "New seller";
-    if (seller.avgResponseTime !== null) {
-      const hrs = seller.avgResponseTime;
-      if (hrs < 1) responseLabel = "Usually replies in < 1 hour";
-      else if (hrs < 4) responseLabel = `Usually replies in ${Math.round(hrs)} hours`;
-      else if (hrs < 24) responseLabel = `Usually replies in ${Math.round(hrs)} hours`;
-      else responseLabel = `Usually replies in ${Math.round(hrs / 24)} day(s)`;
+    const hrs = Number(seller.avgResponseTime);
+
+    if (Number.isFinite(hrs) && hrs >= 0) {
+      if (hrs < 1) {
+        responseLabel = "Usually replies in < 1 hour";
+      } else if (hrs < 24) {
+        responseLabel = `Usually replies in ${Math.round(hrs)} hours`;
+      } else {
+        responseLabel = `Usually replies in ${Math.round(hrs / 24)} day(s)`;
+      }
     }
 
-    res.json({ sellerId: req.params.sellerId, name: seller.name, avgResponseTime: seller.avgResponseTime, responseLabel, verified: seller.verified });
+    res.json({
+      sellerId: req.params.sellerId,
+      name: seller.name,
+      avgResponseTime: Number.isFinite(hrs) ? hrs : null,
+      responseLabel,
+      verified: seller.verified
+    });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch response time" });
   }

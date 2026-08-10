@@ -37,6 +37,7 @@ const Verify = lazy(() => import("./pages/Verify"));
 const Success = lazy(() => import("./pages/Success"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Policy = lazy(() => import("./pages/Policy"));
+const BuyerProtection = lazy(() => import("./pages/BuyerProtection"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const SellerApply = lazy(() => import("./pages/seller/SellerApply"));
 const Account = lazy(() => import("./pages/Account"));
@@ -165,6 +166,7 @@ export default function App() {
           <Route path="/success" element={<Success />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/policy" element={<Policy />} />
+          <Route path="/buyer-protection" element={<BuyerProtection />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/seller/apply" element={<SellerApply />} />
           <Route path="/account" element={<Account />} />
