@@ -299,7 +299,10 @@ const User = mongoose.model(
     referralCredits: { type: Number, default: 0 },
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
-    walletBalance: { type: Number, default: 0 },
+    avgResponseTime: { type: Number, default: null },
+    lastMessageAt: { type: Date, default: null },
+    lastResponseAt: { type: Date, default: null },
+        walletBalance: { type: Number, default: 0 },
     walletTransactions: [{
       type: { type: String, enum: ["credit", "debit"] },
       amount: Number,
@@ -542,6 +545,18 @@ const SponsoredListing = mongoose.model("SponsoredListing", new mongoose.Schema(
   expiresAt: { type: Date, required: true },
   impressions: { type: Number, default: 0 },
   clicks: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+}));
+
+// 🚨 Product Report Schema
+const ProductReport = mongoose.model("ProductReport", new mongoose.Schema({
+  productId: { type: String, required: true },
+  productName: { type: String, required: true },
+  reportedBy: { type: String, required: true },
+  reporterEmail: { type: String, required: true },
+  reason: { type: String, enum: ["fake", "counterfeit", "wrong_description", "inappropriate", "scam", "other"], required: true },
+  details: { type: String, default: "" },
+  status: { type: String, enum: ["pending", "reviewed", "resolved"], default: "pending" },
   createdAt: { type: Date, default: Date.now }
 }));
 
@@ -2141,6 +2156,86 @@ app.get("/api/sponsored/mine", sellerAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch sponsored listings" });
   }
 });
+
+// 🚨 Report a Product
+app.post("/api/products/:id/report", auth, async (req, res) => {
+  try {
+    const { reason, details } = req.body;
+    if (!reason) return res.status(400).json({ error: "Please select a reason" });
+    const product = await Product.findById(req.params.id).select("name");
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    const user = await User.findById(req.user.id).select("email");
+
+    await ProductReport.create({
+      productId: req.params.id,
+      productName: product.name,
+      reportedBy: req.user.id,
+      reporterEmail: user.email,
+      reason, details: details || ""
+    });
+
+    res.json({ success: true, message: "Report submitted. Our team will review it within 24 hours." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to submit report" });
+  }
+});
+
+// 🚨 Get Product Reports (Admin)
+app.get("/api/admin/reports", adminOnly, async (req, res) => {
+  try {
+    const reports = await ProductReport.find().sort({ createdAt: -1 }).limit(100);
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch reports" });
+  }
+});
+
+// 🚨 Update Report Status (Admin)
+app.put("/api/admin/reports/:id", adminOnly, async (req, res) => {
+  try {
+    const report = await ProductReport.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update report" });
+  }
+});
+
+// ⏱ Get Seller Response Time
+app.get("/api/seller/:sellerId/response-time", async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.params.sellerId).select("name avgResponseTime verified");
+    if (!seller) return res.status(404).json({ error: "Seller not found" });
+
+    let responseLabel = "New seller";
+    if (seller.avgResponseTime !== null) {
+      const hrs = seller.avgResponseTime;
+      if (hrs < 1) responseLabel = "Usually replies in < 1 hour";
+      else if (hrs < 4) responseLabel = `Usually replies in ${Math.round(hrs)} hours`;
+      else if (hrs < 24) responseLabel = `Usually replies in ${Math.round(hrs)} hours`;
+      else responseLabel = `Usually replies in ${Math.round(hrs / 24)} day(s)`;
+    }
+
+    res.json({ sellerId: req.params.sellerId, name: seller.name, avgResponseTime: seller.avgResponseTime, responseLabel, verified: seller.verified });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch response time" });
+  }
+});
+
+// ⏱ Update Seller Response Time (called when seller replies to message)
+async function updateSellerResponseTime(sellerId) {
+  try {
+    const seller = await Seller.findById(sellerId);
+    if (!seller || !seller.lastMessageAt) return;
+    const now = new Date();
+    const responseHours = (now - new Date(seller.lastMessageAt)) / (1000 * 60 * 60);
+    const current = seller.avgResponseTime;
+    seller.avgResponseTime = current ? (current * 0.7 + responseHours * 0.3) : responseHours;
+    seller.lastResponseAt = now;
+    await seller.save();
+  } catch (e) {
+    console.error("Response time update error:", e.message);
+  }
+}
 
 // 🎁 Purchase Gift Card
 app.post("/api/giftcard/purchase", auth, async (req, res) => {
