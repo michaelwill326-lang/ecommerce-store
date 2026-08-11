@@ -80,6 +80,9 @@ export default function ProductDetail() {
 
   useEffect(() => {
     fetchProduct();
+    return () => {
+      document.title = "TechMart — Nigeria's Trusted Tech Marketplace";
+    };
   }, [id]);
 
   const fetchProduct = async () => {
@@ -103,6 +106,14 @@ export default function ProductDetail() {
         setSelectedVariant(res.data.variants[0]);
       }
       setError("");
+      // Update page title and meta for SEO
+      document.title = `${res.data.name} — ₦${res.data.price?.toLocaleString()} | TechMart`;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.content = res.data.description?.slice(0, 160) || `Buy ${res.data.name} on TechMart`;
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.content = `${res.data.name} — ₦${res.data.price?.toLocaleString()} | TechMart`;
+      const ogImage = document.querySelector('meta[property="og:image"]');
+      if (ogImage && res.data.images?.[0]) ogImage.content = res.data.images[0];
       fetchRecommendations(res.data);
 
       // SAVE TO RECENTLY VIEWED
@@ -288,12 +299,13 @@ export default function ProductDetail() {
             {/* Share Button */}
             <button
               onClick={() => {
-                const url = window.location.href;
-                const text = `Check out ${product.name} on TechMart for ₦${product.price?.toLocaleString()}! ${url}`;
+                const seoUrl = `${API}/api/seo/product/${product._id}`;
+                const shareUrl = window.location.href;
+                const shareText = `Check out ${product.name} on TechMart for ₦${product.price?.toLocaleString()}! ${shareUrl}`;
                 if (navigator.share) {
-                  navigator.share({ title: product.name, text, url });
+                  navigator.share({ title: product.name, text: shareText, url: shareUrl });
                 } else {
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                  window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank");
                 }
               }}
               style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.6)", border: "1px solid #333", borderRadius: "50%", width: "36px", height: "36px", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}

@@ -615,6 +615,99 @@ const Product = mongoose.model(
   })
 );
 
+// ============================================================
+// 🔎 SEO — robots.txt + dynamic sitemap.xml
+// ============================================================
+
+app.get("/robots.txt", (req, res) => {
+  const frontendUrl = (
+    process.env.FRONTEND_URL ||
+    "https://techmart-frontend.onrender.com"
+  ).replace(/\/$/, "");
+
+  res.type("text/plain").send(
+`User-agent: *
+Allow: /
+
+Sitemap: ${frontendUrl}/sitemap.xml`
+  );
+});
+
+app.get("/sitemap.xml", async (req, res) => {
+  try {
+    const frontendUrl = (
+      process.env.FRONTEND_URL ||
+      "https://techmart-frontend.onrender.com"
+    ).replace(/\/$/, "");
+
+    const products = await Product.find(
+      {},
+      {
+        _id: 1,
+        createdAt: 1
+      }
+    ).lean();
+
+    const urls = [];
+
+    // Homepage
+    urls.push(`
+  <url>
+    <loc>${frontendUrl}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>`);
+
+    // Product pages
+    for (const product of products) {
+      if (!product._id) continue;
+
+      const lastmod = product.createdAt
+        ? `<lastmod>${new Date(product.createdAt).toISOString()}</lastmod>`
+        : "";
+
+      urls.push(`
+  <url>
+    <loc>${frontendUrl}/product/${product._id}</loc>
+    ${lastmod}
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+    }
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join("")}
+</urlset>`;
+
+    res
+      .status(200)
+      .type("application/xml")
+      .send(sitemap);
+
+  } catch (error) {
+    console.error("❌ Sitemap generation failed:", error);
+
+    const frontendUrl = (
+      process.env.FRONTEND_URL ||
+      "https://techmart-frontend.onrender.com"
+    ).replace(/\/$/, "");
+
+    res
+      .status(500)
+      .type("application/xml")
+      .send(
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${frontendUrl}/</loc>
+  </url>
+</urlset>`
+      );
+  }
+});
+
+
 const Order = mongoose.model(
   "Order",
   new mongoose.Schema({
