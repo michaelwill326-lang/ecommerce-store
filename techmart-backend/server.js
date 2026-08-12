@@ -2552,6 +2552,77 @@ app.get("/api/daily-deal", async (req, res) => {
   }
 });
 
+// 🔍 SEO — Product meta tags for WhatsApp/Twitter sharing
+app.get("/api/seo/product/:id", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).select("name description price images category rating");
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const image = product.images?.[0] || "https://techmart-frontend.onrender.com/techmart.png";
+    const title = `${product.name} — ₦${product.price?.toLocaleString()} | TechMart`;
+    const description = product.description
+      ? product.description.slice(0, 160)
+      : `Buy ${product.name} on TechMart for ₦${product.price?.toLocaleString()}. Secure payment, buyer protection & fast delivery.`;
+    const url = `${process.env.FRONTEND_URL || "https://techmart-frontend.onrender.com"}/product/${product._id}`;
+
+    // Return HTML with proper OG tags for crawlers
+    res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>${title}</title>
+  <meta name="description" content="${description}" />
+  <meta property="og:title" content="${title}" />
+  <meta property="og:description" content="${description}" />
+  <meta property="og:image" content="${image}" />
+  <meta property="og:image:width" content="800" />
+  <meta property="og:image:height" content="800" />
+  <meta property="og:url" content="${url}" />
+  <meta property="og:type" content="product" />
+  <meta property="og:site_name" content="TechMart" />
+  <meta property="product:price:amount" content="${product.price}" />
+  <meta property="product:price:currency" content="NGN" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${title}" />
+  <meta name="twitter:description" content="${description}" />
+  <meta name="twitter:image" content="${image}" />
+  <script>window.location.href = "${url}";</script>
+</head>
+<body>
+  <p>Redirecting to <a href="${url}">${title}</a>...</p>
+</body>
+</html>`);
+  } catch (err) {
+    res.status(500).send("Error generating SEO page");
+  }
+});
+
+// 🔍 SEO — Homepage meta
+app.get("/api/seo/home", async (req, res) => {
+  try {
+    const productCount = await Product.countDocuments();
+    const frontendUrl = process.env.FRONTEND_URL || "https://techmart-frontend.onrender.com";
+    res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>TechMart — Nigeria's Trusted Tech Marketplace</title>
+  <meta name="description" content="Shop ${productCount}+ phones, laptops, accessories on TechMart. Secure payments, buyer protection, TechMart Pay & fast delivery across Nigeria." />
+  <meta property="og:title" content="TechMart — Nigeria's Trusted Tech Marketplace" />
+  <meta property="og:description" content="Shop ${productCount}+ tech products. Secure escrow payments, 7-day returns, buyer protection." />
+  <meta property="og:image" content="${frontendUrl}/techmart.png" />
+  <meta property="og:url" content="${frontendUrl}" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script>window.location.href = "${frontendUrl}";</script>
+</head>
+<body><p>Redirecting to <a href="${frontendUrl}">TechMart</a>...</p></body>
+</html>`);
+  } catch (err) {
+    res.status(500).send("Error");
+  }
+});
+
 // Public Pay Profile
 app.get("/api/pay/profile/:userId", async (req, res) => {
   try {
