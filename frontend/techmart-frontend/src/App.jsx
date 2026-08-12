@@ -45,6 +45,7 @@ const AISearch = lazy(() => import("./pages/AISearch"));
 const TechMartPay = lazy(() => import("./pages/TechMartPay"));
 const PayProfile = lazy(() => import("./pages/PayProfile"));
 const PayLink = lazy(() => import("./pages/PayLink"));
+const Referral = lazy(() => import("./pages/Referral"));
 const SellerLogin = lazy(() => import("./pages/seller/SellerLogin"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 
@@ -175,6 +176,7 @@ export default function App() {
           <Route path="/pay/user/:userId" element={<PayProfile />} />
           <Route path="/pay/link/:linkId" element={<PayLink />} />
           <Route path="/compare" element={<Compare />} />
+          <Route path="/referral" element={<Referral />} />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />

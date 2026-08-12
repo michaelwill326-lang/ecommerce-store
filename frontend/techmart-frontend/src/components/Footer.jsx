@@ -16,6 +16,7 @@ export default function Footer() {
           <Link to="/buyer-protection" style={linkStyle}>🛡️ Buyer Protection</Link>
           <Link to="/policy" style={linkStyle}>Privacy Policy</Link>
           <Link to="/policy" style={linkStyle}>Refund Policy</Link>
+          <Link to="/referral" style={linkStyle}>🎁 Refer & Earn ₦500</Link>
           <Link to="/seller/apply" style={linkStyle}>Sell on TechMart</Link>
           <a href="https://wa.me/2349032657217" target="_blank" rel="noopener noreferrer" style={linkStyle}>💬 WhatsApp Support</a>
         </div>

@@ -7,7 +7,8 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 export default function Signup() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
-  const [referralCode, setReferralCode] = useState("");
+  const [searchParams] = useSearchParams();
+  const [referralCode, setReferralCode] = useState(searchParams.get("ref") || "");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(""); // 📱 Track phone number state
   const [password, setPassword] = useState("");

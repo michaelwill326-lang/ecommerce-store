@@ -2623,6 +2623,29 @@ app.get("/api/seo/home", async (req, res) => {
   }
 });
 
+// 🎯 Referral Dashboard
+app.get("/api/referral/stats", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("name referralCode referralCount referralCredits walletBalance");
+    const frontendUrl = process.env.FRONTEND_URL || "https://techmart-frontend.onrender.com";
+    const referralLink = `${frontendUrl}/signup?ref=${user.referralCode}`;
+
+    // Get referred users
+    const referredUsers = await User.find({ referredBy: user.referralCode }).select("name createdAt").sort({ createdAt: -1 }).limit(20);
+
+    res.json({
+      referralCode: user.referralCode,
+      referralLink,
+      referralCount: user.referralCount || 0,
+      referralCredits: user.referralCredits || 0,
+      totalEarned: (user.referralCount || 0) * 500,
+      referredUsers: referredUsers.map(u => ({ name: u.name, joinedAt: u.createdAt }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch referral stats" });
+  }
+});
+
 // Public Pay Profile
 app.get("/api/pay/profile/:userId", async (req, res) => {
   try {

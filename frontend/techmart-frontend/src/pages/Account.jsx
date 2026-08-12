@@ -555,6 +555,7 @@ export default function Account() {
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <div style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "10px 14px", fontFamily: "monospace", fontWeight: "700", fontSize: "16px", color: "var(--text-primary)", letterSpacing: "2px" }}>{user.referralCode}</div>
                 <button onClick={() => { navigator.clipboard?.writeText(user.referralCode); showToast("Referral code copied!", "success"); }} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Copy</button>
+                <button onClick={() => navigate("/referral")} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>🎁 Referral Dashboard</button>
               </div>
             </div>
           )}
