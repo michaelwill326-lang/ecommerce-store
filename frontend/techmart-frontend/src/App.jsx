@@ -50,6 +50,7 @@ const SellerLogin = lazy(() => import("./pages/seller/SellerLogin"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 
 function ToastProvider({ children }) {
+  useInactivityLogout(20);
   const [toasts, setToasts] = useState([]);
   const showToast = (msg, type = "success") => {
     const id = Date.now();
@@ -72,6 +73,35 @@ function ToastProvider({ children }) {
 }
 
 
+
+// 20-minute inactivity auto-logout
+function useInactivityLogout(minutes = 20) {
+  useEffect(() => {
+    const ms = minutes * 60 * 1000;
+    let timer;
+
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login?reason=inactive";
+        }
+      }, ms);
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    events.forEach(e => window.addEventListener(e, reset, { passive: true }));
+    reset(); // start timer
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach(e => window.removeEventListener(e, reset));
+    };
+  }, [minutes]);
+}
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
