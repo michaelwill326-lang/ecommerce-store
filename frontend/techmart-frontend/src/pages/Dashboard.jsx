@@ -507,9 +507,7 @@ export default function Dashboard() {
                   localStorage.removeItem("token");
                   localStorage.removeItem("user");
                   localStorage.removeItem("deviceToken");
-                  localStorage.removeItem("cart");
-                  localStorage.removeItem("wishlist");
-                  localStorage.removeItem("lastCartItems");
+                  localStorage.removeItem("techmart_last_activity");
                   window.dispatchEvent(new Event("techmart-auth-change"));
                   window.location.href = "/login";
                 }}

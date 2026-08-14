@@ -4,7 +4,11 @@ export const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const isLoggedIn = () => !!localStorage.getItem("token");
+
+  // Never expose a saved cart to a logged-out visitor.
+  // A customer's cart is available only while authenticated.
   const [cart, setCart] = useState(() => {
+    if (!localStorage.getItem("token")) return [];
     const saved = localStorage.getItem("cart");
     return saved ? JSON.parse(saved) : [];
   });
@@ -38,6 +42,9 @@ export function CartProvider({ children }) {
       const data = await res.json();
       if (data.items && data.items.length > 0) {
         setCart(data.items);
+      } else {
+        const saved = localStorage.getItem("cart");
+        setCart(saved ? JSON.parse(saved) : []);
       }
     } catch {}
   }, []);
@@ -47,10 +54,10 @@ export function CartProvider({ children }) {
     const handleStorage = (e) => {
       if (e.key === "token") {
         if (!e.newValue) {
-          // Logged out — remove the previous user's cart immediately.
+          // Logged out — immediately clear the visible and browser cart.
+          // The authenticated customer's persistent cart remains on the server.
           setCart([]);
-          localStorage.removeItem("cart");
-          localStorage.removeItem("lastCartItems");
+          localStorage.setItem("cart", "[]");
         } else {
           // Logged in — load that user's cart from the server.
           loadCartFromServer();
@@ -58,9 +65,15 @@ export function CartProvider({ children }) {
       }
     };
     window.addEventListener("storage", handleStorage);
-    // Load on mount if logged in
+    window.addEventListener("techmart-auth-change", handleStorage);
+
+    // Load on mount only if logged in.
     if (isLoggedIn()) loadCartFromServer();
-    return () => window.removeEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("techmart-auth-change", handleStorage);
+    };
   }, [loadCartFromServer]);
 
   // Sync to server on cart change (debounced)
@@ -71,6 +84,9 @@ export function CartProvider({ children }) {
   }, [cart, syncCartToServer]);
 
   const addToCart = (product) => {
+    // Cart operations require an authenticated customer.
+    if (!isLoggedIn()) return false;
+
     setCart((prev) => {
       const existing = prev.find((item) => item._id === product._id);
       if (existing) {
@@ -80,6 +96,8 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
+
+    return true;
   };
 
   const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item._id !== id));

@@ -146,6 +146,13 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (cartLoading) return;
+
+    if (!localStorage.getItem("token")) {
+      if (showToast) showToast("Please login to add items to your cart", "error");
+      navigate("/login");
+      return;
+    }
+
     setCartLoading(true);
     const itemToAdd = selectedVariant
       ? { ...product, price: selectedVariant.price, selectedVariant, name: `${product.name} — ${selectedVariant.name || selectedVariant.color || selectedVariant.storage || ""}`.trim().replace(/— $/, "") }

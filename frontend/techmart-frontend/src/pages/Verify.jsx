@@ -22,6 +22,7 @@ export default function Verify() {
       const data = await res.json();
       if (data.token) {
         localStorage.setItem("token", data.token);
+        localStorage.setItem("techmart_last_activity", String(Date.now()));
         localStorage.setItem("user", JSON.stringify(data.user));
         if (data.deviceToken) localStorage.setItem("deviceToken", data.deviceToken);
         window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: data.token }));

@@ -45,6 +45,7 @@ export default function Login() {
         // No 2FA — login directly
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
+        localStorage.setItem("techmart_last_activity", String(Date.now()));
         window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: response.data.token }));
         navigate("/");
       }
@@ -66,6 +67,7 @@ export default function Login() {
       localStorage.removeItem("_tempUser");
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("techmart_last_activity", String(Date.now()));
       if (res.data.deviceToken) localStorage.setItem("deviceToken", res.data.deviceToken);
       window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: res.data.token }));
       navigate("/");

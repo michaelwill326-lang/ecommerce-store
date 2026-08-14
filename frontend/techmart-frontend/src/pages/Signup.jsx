@@ -52,6 +52,7 @@ export default function Signup() {
       });
 
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("techmart_last_activity", String(Date.now()));
       localStorage.setItem("user", JSON.stringify(response.data.user));
 
       navigate("/");

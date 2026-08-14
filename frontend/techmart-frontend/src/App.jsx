@@ -74,35 +74,134 @@ function ToastProvider({ children }) {
 
 
 
-// 20-minute inactivity auto-logout
+// Persistent 20-minute inactivity auto-logout
 function useInactivityLogout(minutes = 20) {
   useEffect(() => {
-    const ms = minutes * 60 * 1000;
-    let timer;
+    const INACTIVITY_MS = minutes * 60 * 1000;
+    const LAST_ACTIVITY_KEY = "techmart_last_activity";
 
-    const reset = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const token = localStorage.getItem("token");
-        if (token) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          window.location.href = "/login?reason=inactive";
-        }
-      }, ms);
+    let timer = null;
+
+    const getToken = () => localStorage.getItem("token");
+
+    const logoutForInactivity = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("deviceToken");
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+
+      // Preserve cart and wishlist during automatic inactivity logout.
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "token",
+          newValue: null,
+        })
+      );
+
+      window.dispatchEvent(new Event("techmart-auth-change"));
+
+      window.location.href = "/login?reason=inactive";
     };
 
-    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
-    events.forEach(e => window.addEventListener(e, reset, { passive: true }));
-    reset(); // start timer
+    const checkInactivity = () => {
+      const token = getToken();
+
+      if (!token) {
+        clearTimeout(timer);
+        timer = null;
+        return;
+      }
+
+      const lastActivity = Number(
+        localStorage.getItem(LAST_ACTIVITY_KEY)
+      );
+
+      // Establish a timestamp for legacy sessions that don't have one.
+      if (!lastActivity || Number.isNaN(lastActivity)) {
+        const now = Date.now();
+        localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+
+        clearTimeout(timer);
+        timer = setTimeout(checkInactivity, INACTIVITY_MS);
+        return;
+      }
+
+      const elapsed = Date.now() - lastActivity;
+
+      if (elapsed >= INACTIVITY_MS) {
+        logoutForInactivity();
+        return;
+      }
+
+      clearTimeout(timer);
+      timer = setTimeout(
+        checkInactivity,
+        INACTIVITY_MS - elapsed
+      );
+    };
+
+    const recordActivity = () => {
+      if (!getToken()) return;
+
+      const now = Date.now();
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+
+      clearTimeout(timer);
+      timer = setTimeout(checkInactivity, INACTIVITY_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkInactivity();
+      }
+    };
+
+    const handlePageShow = () => {
+      checkInactivity();
+    };
+
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+      "pointerdown",
+    ];
+
+    events.forEach((event) => {
+      window.addEventListener(event, recordActivity, {
+        passive: true,
+      });
+    });
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    window.addEventListener("pageshow", handlePageShow);
+
+    // Check immediately when TechMart loads.
+    checkInactivity();
 
     return () => {
       clearTimeout(timer);
-      events.forEach(e => window.removeEventListener(e, reset));
+
+      events.forEach((event) => {
+        window.removeEventListener(event, recordActivity);
+      });
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, [minutes]);
 }
-
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
   const [slowConn, setSlowConn] = useState(false);
@@ -151,27 +250,6 @@ export default function App() {
     return () => clearInterval(keepAlive);
   }, []);
 
-  useEffect(() => {
-    // Only auto-logout if user is actually logged in
-    if (!localStorage.getItem("token")) return;
-    let timer;
-    const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
-        window.location.href = "/login";
-      }, 30 * 60 * 1000); // 30 minutes
-    };
-    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
-    events.forEach((e) => window.addEventListener(e, resetTimer));
-    resetTimer();
-    return () => {
-      clearTimeout(timer);
-      events.forEach((e) => window.removeEventListener(e, resetTimer));
-    };
-  }, []);
   return (
     <ToastProvider>
     <div style={styles.appContainer}>

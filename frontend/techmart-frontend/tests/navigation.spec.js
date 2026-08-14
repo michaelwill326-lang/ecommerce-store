@@ -4,7 +4,7 @@ test('main navigation links work', async ({ page }) => {
   await page.goto('/');
 
   // Navbar exists
-  await expect(page.locator('nav')).toBeVisible();
+  await expect(page.locator('nav:not(.techmart-bottom-nav)')).toBeVisible();
 
   // Orders link
   await page.getByText('Orders', { exact: true }).click();
@@ -12,11 +12,11 @@ test('main navigation links work', async ({ page }) => {
 
   // Pay link
   await page.goto('/');
-  await page.getByText('Pay', { exact: true }).click();
+  await page.getByRole('link', { name: 'Pay', exact: true }).click();
   await expect(page).toHaveURL(/pay/);
 
   // Login link (guest user)
   await page.goto('/');
-  await page.getByText('Login', { exact: true }).click();
+  await page.getByRole('link', { name: 'Login', exact: true }).click();
   await expect(page).toHaveURL(/login/);
 });
