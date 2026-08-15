@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const { randomInt } = require("crypto");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
@@ -91,6 +92,22 @@ const authLimiter = rateLimit({
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/signup", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
+
+// Dedicated protection for 6-digit password reset codes.
+// Reset codes have only 900,000 possible values, so brute-force attempts
+// must be restricted independently from the general API limiter.
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many password reset attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req)
+});
+
+app.use("/api/auth/reset-password", passwordResetLimiter);
+app.use("/api/seller/reset-password", passwordResetLimiter);
+app.use("/api/seller/forgot-password", authLimiter);
 
 /* ===========================
    🌐 CORS CONFIG
@@ -430,18 +447,34 @@ const BehaviorEvent = mongoose.model("BehaviorEvent", new mongoose.Schema({
 
 // 💳 BNPL Schema
 const BNPLPlan = mongoose.model("BNPLPlan", new mongoose.Schema({
-  userId: { type: String, required: true },
-  orderId: { type: String, required: true },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+  orderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Order",
+    required: true
+  },
   totalAmount: { type: Number, required: true },
   installments: { type: Number, enum: [2, 3], required: true },
   installmentAmount: { type: Number, required: true },
   paidInstallments: { type: Number, default: 1 },
-  status: { type: String, enum: ["active", "completed", "defaulted"], default: "active" },
+  status: {
+    type: String,
+    enum: ["active", "completed", "defaulted"],
+    default: "active"
+  },
   payments: [{
     amount: Number,
     dueDate: Date,
     paidAt: { type: Date, default: null },
-    status: { type: String, enum: ["paid", "pending", "overdue"], default: "pending" }
+    status: {
+      type: String,
+      enum: ["paid", "pending", "overdue"],
+      default: "pending"
+    }
   }],
   createdAt: { type: Date, default: Date.now }
 }));
@@ -922,13 +955,12 @@ app.post("/api/auth/forgot-password", async (req, res) => {
       return res.json({ success: true, message: "If that email exists in our system, a recovery token has been generated." });
     }
 
-    // Generate secure 6-digit pin or token string
-    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a cryptographically secure 6-digit recovery code.
+    // The code is valid for 15 minutes and is never logged.
+    const resetToken = randomInt(100000, 1000000).toString();
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiration window
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
-
-    console.log(`🔑 Reset Token Generated for ${user.email}: ${resetToken}`);
 
     // 📧 SEND RESET EMAIL
     try {
@@ -969,7 +1001,6 @@ app.post("/api/auth/reset-password", async (req, res) => {
     if (!user) return res.status(400).json({ error: "Invalid or expired recovery token" });
 
     // Update and hash password securely
-    const bcrypt = require("bcrypt"); // Ensuring bcrypt is accessible
     user.password = await bcrypt.hash(newPassword, 10);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
@@ -2078,63 +2109,6 @@ app.get("/api/bnpl/eligibility", auth, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to check eligibility" });
-  }
-});
-
-// 💳 Create BNPL Plan
-app.post("/api/bnpl/create", auth, async (req, res) => {
-  try {
-    const { orderId, installments } = req.body;
-    if (![2, 3].includes(Number(installments))) return res.status(400).json({ error: "Choose 2 or 3 installments" });
-
-    const user = await User.findById(req.user.id);
-    const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    if (order.email !== user.email) return res.status(403).json({ error: "Not your order" });
-    if (order.amount < 5000) return res.status(400).json({ error: "Minimum order amount for BNPL is ₦5,000" });
-
-    // Check eligibility
-    const completedOrders = await Order.countDocuments({ email: user.email, status: "Delivered" });
-    if (completedOrders < 3) return res.status(403).json({ error: "You need at least 3 completed orders to use BNPL" });
-
-    const totalAmount = Number(order.amount);
-    const installmentAmount = Math.ceil(totalAmount / Number(installments));
-    const now = new Date();
-
-    // First installment is paid now, rest are scheduled
-    const payments = [];
-    for (let i = 0; i < Number(installments); i++) {
-      const dueDate = new Date(now);
-      dueDate.setDate(dueDate.getDate() + (i * 30));
-      payments.push({
-        amount: installmentAmount,
-        dueDate,
-        paidAt: i === 0 ? now : null,
-        status: i === 0 ? "paid" : "pending"
-      });
-    }
-
-    // Deduct first installment from wallet
-    if ((user.walletBalance || 0) < installmentAmount) {
-      return res.status(400).json({ error: `Insufficient wallet balance. First installment is ₦${installmentAmount.toLocaleString()}` });
-    }
-    user.walletBalance -= installmentAmount;
-    user.walletTransactions.push({
-      type: "debit",
-      amount: installmentAmount,
-      description: `BNPL 1st installment for order #${order.trackingNumber || orderId}`,
-      reference: "BNPL-" + Date.now()
-    });
-    await user.save();
-
-    const plan = await BNPLPlan.create({ userId: req.user.id, orderId, totalAmount, installments: Number(installments), installmentAmount, paidInstallments: 1, payments });
-
-    // Update network score for BNPL usage
-    try { await updateNetworkScore(req.user.id, 100, { bnplCompleted: 1 }); } catch {}
-    res.json({ success: true, plan, message: `BNPL plan created! First installment of ₦${installmentAmount.toLocaleString()} paid. Remaining ${Number(installments) - 1} payment(s) will be auto-deducted.` });
-  } catch (err) {
-    console.error("BNPL create error:", err.message);
-    res.status(500).json({ error: "Failed to create BNPL plan" });
   }
 });
 
@@ -4418,7 +4392,7 @@ app.post("/api/admin/orders/:id/send-payment-link", adminOnly, async (req, res) 
       "https://api.paystack.co/transaction/initialize",
       {
         email: order.email,
-        amount: order.amount * 100,
+        amount: Math.round(order.amount * 100),
         reference,
         callback_url: `${process.env.FRONTEND_URL}/success?reference=${reference}`,
         metadata: { orderId: order._id.toString(), isPodPayment: true }
@@ -4635,7 +4609,9 @@ app.post("/api/seller/login", async (req, res) => {
 app.post("/api/seller/forgot-password", async (req,res)=>{
   try{
 
-    const {email}=req.body;
+    const email = req.body.email
+      ? String(req.body.email).toLowerCase().trim()
+      : req.body.email;
 
     if(!email)
       return res.status(400).json({error:"Email is required"});
@@ -4649,18 +4625,14 @@ app.post("/api/seller/forgot-password", async (req,res)=>{
       });
     }
 
-    const token=Math.floor(
-      100000+Math.random()*900000
-    ).toString();
+    // Generate a cryptographically secure 6-digit recovery code.
+    // The code is valid for 15 minutes and is never logged.
+    const token = randomInt(100000, 1000000).toString();
 
-    seller.resetPasswordToken=token;
-    seller.resetPasswordExpires=Date.now()+3600000;
+    seller.resetPasswordToken = token;
+    seller.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
 
     await seller.save();
-
-    console.log(
-      `🔑 Seller Reset Token for ${seller.email}: ${token}`
-    );
 
     try{
       if(typeof sendPasswordResetEmail==="function"){
@@ -5016,7 +4988,7 @@ app.post("/api/paystack/init", async (req, res) => {
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: finalAmount * 100,
+        amount: Math.round(finalAmount * 100),
         reference,
         callback_url: `${process.env.FRONTEND_URL}/success`
       },
@@ -5030,6 +5002,43 @@ app.post("/api/paystack/init", async (req, res) => {
     res.json({ url: response.data.data.authorization_url });
   } catch (err) {
     console.error("PAYSTACK ERROR:", err.response?.data || err.message);
+
+    // Roll back stock and wallet debit if Paystack initialization fails.
+    try {
+      if (typeof allocatedItems !== "undefined" && Array.isArray(allocatedItems)) {
+        for (const rollbackItem of allocatedItems) {
+          await Product.findByIdAndUpdate(rollbackItem.productId, {
+            $inc: { stock: rollbackItem.quantity }
+          });
+        }
+      }
+
+      if (typeof appliedWalletDebit !== "undefined" && appliedWalletDebit > 0 && email) {
+        await User.findOneAndUpdate(
+          { email },
+          {
+            $inc: { walletBalance: appliedWalletDebit },
+            $push: {
+              walletTransactions: {
+                type: "credit",
+                amount: appliedWalletDebit,
+                description: "Wallet refund after failed Paystack initialization",
+                reference: typeof reference !== "undefined" ? reference : "PAYSTACK-INIT-REFUND-" + Date.now()
+              }
+            }
+          }
+        );
+      }
+
+      if (typeof reference !== "undefined") {
+        await Order.deleteOne({ reference, status: "Pending" });
+      }
+
+      console.log("✅ Paystack initialization rollback completed");
+    } catch (rollbackError) {
+      console.error("❌ Paystack rollback failed:", rollbackError.message);
+    }
+
     res.status(500).json({ error: "Payment routing setup failed" });
   }
 });
@@ -5139,20 +5148,66 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     if (paymentData.metadata?.isPodPayment) {
       try {
         const orderId = paymentData.metadata.orderId;
-        const order = await Order.findByIdAndUpdate(orderId, { status: "Paid" }, { new: true });
-        if (order) {
-          // Credit cashback
-          const buyer = await User.findOne({ email: order.email });
-          if (buyer) {
-            const cashback = Math.round((CASHBACK_PERCENT / 100) * order.amount);
+
+        // Only the first successful webhook may transition POD -> Paid.
+        const order = await Order.findOneAndUpdate(
+          {
+            _id: orderId,
+            status: "Pay on Delivery"
+          },
+          {
+            $set: {
+              status: "Paid",
+              podPaymentReference: paymentData.reference
+            }
+          },
+          { new: true }
+        );
+
+        if (!order) {
+          console.log(`ℹ️ POD payment already processed or order not eligible: ${orderId}`);
+          return res.status(200).json({ status: "duplicate" });
+        }
+
+        // Cashback is also protected by its transaction reference.
+        const buyer = await User.findOne({ email: order.email });
+
+        if (buyer) {
+          buyer.walletTransactions = buyer.walletTransactions || [];
+
+          const cashbackReference = `POD-CASHBACK-${order.reference}`;
+
+          const alreadyCredited = buyer.walletTransactions.some(
+            t => t.reference === cashbackReference
+          );
+
+          if (!alreadyCredited) {
+            const cashback = Math.round(
+              (CASHBACK_PERCENT / 100) * order.amount
+            );
+
             if (cashback > 0) {
               buyer.walletBalance = (buyer.walletBalance || 0) + cashback;
-              buyer.walletTransactions.push({ type: "credit", amount: cashback, description: `Cashback on POD payment ${order.reference}`, reference: paymentData.reference });
+
+              buyer.walletTransactions.push({
+                type: "credit",
+                amount: cashback,
+                description: `${CASHBACK_PERCENT}% cashback on POD payment ${order.reference}`,
+                reference: cashbackReference
+              });
+
               await buyer.save();
+
+              console.log(
+                `💰 POD cashback credited: ${buyer.email} +₦${cashback}`
+              );
             }
+          } else {
+            console.log(`ℹ️ POD cashback already credited: ${order.reference}`);
           }
-          console.log(`POD order ${orderId} marked as Paid`);
         }
+
+        console.log(`✅ POD order ${orderId} marked as Paid`);
       } catch(e) {
         console.error("POD payment webhook error:", e.message);
       }
@@ -6981,72 +7036,313 @@ app.post("/api/orders/bundle", auth, async (req, res) => {
   }
 });
 
-// 2. Checkout with escrow (wallet payment)
+// 2. Checkout with wallet escrow / BNPL
 app.post("/api/orders/checkout-escrow", auth, async (req, res) => {
   try {
-    const { items, amount, deliveryAddress, phone, couponCode, deliveryFee, deliveryZone } = req.body;
-    if (!items || !items.length || !amount) return res.status(400).json({ error: "Items and amount are required" });
-    if (!deliveryAddress) return res.status(400).json({ error: "Delivery address is required" });
+    const {
+      items,
+      amount,
+      deliveryAddress,
+      phone,
+      couponCode,
+      deliveryFee,
+      deliveryZone,
+      paymentMode = "escrow",
+      installments
+    } = req.body;
 
-    const user = await User.findById(req.user.id);
-    if ((user.walletBalance || 0) < Number(amount)) {
-      return res.status(400).json({ error: `Insufficient wallet balance. You need ₦${Number(amount).toLocaleString()} but have ₦${(user.walletBalance || 0).toLocaleString()}` });
+    if (!items || !Array.isArray(items) || !items.length) {
+      return res.status(400).json({
+        error: "Items are required"
+      });
     }
 
-    // Check stock availability
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({
+        error: "A valid order amount is required"
+      });
+    }
+
+    if (!deliveryAddress?.trim()) {
+      return res.status(400).json({
+        error: "Delivery address is required"
+      });
+    }
+
+    if (!phone?.trim()) {
+      return res.status(400).json({
+        error: "Phone number is required"
+      });
+    }
+
+    if (!["escrow", "bnpl"].includes(paymentMode)) {
+      return res.status(400).json({
+        error: "Invalid payment mode"
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(401).json({
+        error: "User not found"
+      });
+    }
+
+    // Validate stock and always use the database product price.
+    const validatedItems = [];
+
     for (const item of items) {
-      const product = await Product.findById(item._id);
-      if (!product || product.stock < (item.quantity || 1)) {
-        return res.status(400).json({ error: `${item.name} is out of stock` });
+      const productId = item.productId || item._id;
+
+      if (!productId) {
+        return res.status(400).json({
+          error: "Invalid item — missing product ID"
+        });
+      }
+
+      const qty = Number(item.quantity) || 1;
+
+      if (qty < 1 || qty > 100) {
+        return res.status(400).json({
+          error: "Quantity must be between 1 and 100"
+        });
+      }
+
+      const product = await Product.findById(productId)
+        .select("name price stock vendorId");
+
+      if (!product) {
+        return res.status(404).json({
+          error: `Product not found: ${productId}`
+        });
+      }
+
+      if (product.stock < qty) {
+        return res.status(400).json({
+          error:
+            `Sorry, only ${product.stock} unit(s) of "${product.name}" available`
+        });
+      }
+
+      validatedItems.push({
+        productId: product._id,
+        _id: product._id,
+        name: product.name,
+        price: Number(product.price),
+        quantity: qty,
+        vendorId: product.vendorId
+      });
+    }
+
+    const totalAmount = Number(amount);
+
+    // BNPL must have a valid installment count.
+    const installmentCount = Number(installments || 2);
+
+    if (
+      paymentMode === "bnpl" &&
+      ![2, 3].includes(installmentCount)
+    ) {
+      return res.status(400).json({
+        error: "Choose 2 or 3 installments"
+      });
+    }
+
+    // BNPL eligibility.
+    if (paymentMode === "bnpl") {
+      if (totalAmount < 5000) {
+        return res.status(400).json({
+          error: "Minimum order amount for BNPL is ₦5,000"
+        });
+      }
+
+      const completedOrders = await Order.countDocuments({
+        email: user.email,
+        status: "Delivered"
+      });
+
+      if (completedOrders < 3) {
+        return res.status(403).json({
+          error:
+            `You need ${3 - completedOrders} more completed order(s) to unlock Buy Now Pay Later`
+        });
       }
     }
 
-    const reference = "ESC-" + Date.now();
-    const trackingNumber = "TM" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Calculate the amount actually charged to the wallet.
+    // For BNPL, split the total exactly so installments never
+    // overcharge due to rounding.
+    let walletCharge = totalAmount;
+    let bnplPaymentAmounts = [];
 
-    // Debit wallet and hold in escrow
-    user.walletBalance = (user.walletBalance || 0) - Number(amount);
-    user.walletTransactions.push({
-      type: "debit",
-      amount: Number(amount),
-      description: `Escrow hold for order ${trackingNumber}`,
-      reference
-    });
-    await user.save();
+    if (paymentMode === "bnpl") {
+      const baseInstallment = Math.floor(totalAmount / installmentCount);
+      const remainder = totalAmount - (baseInstallment * installmentCount);
 
-    // Deduct stock atomically
-    for (const item of items) {
-      await Product.findByIdAndUpdate(item._id, { $inc: { stock: -(item.quantity || 1) } });
+      for (let i = 0; i < installmentCount; i++) {
+        bnplPaymentAmounts.push(
+          baseInstallment + (i < remainder ? 1 : 0)
+        );
+      }
+
+      walletCharge = bnplPaymentAmounts[0];
     }
 
-    // Create order with escrow
+    if ((user.walletBalance || 0) < walletCharge) {
+      return res.status(400).json({
+        error:
+          `Insufficient wallet balance. You need ₦${walletCharge.toLocaleString()} ` +
+          `but have ₦${(user.walletBalance || 0).toLocaleString()}`
+      });
+    }
+
+    // Deduct wallet amount exactly once.
+    user.walletBalance =
+      (user.walletBalance || 0) - walletCharge;
+
+    const referencePrefix =
+      paymentMode === "bnpl" ? "BNPL-" : "ESC-";
+
+    const reference =
+      referencePrefix + Date.now();
+
+    const trackingNumber =
+      "TM" +
+      Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase();
+
+    user.walletTransactions.push({
+      type: "debit",
+      amount: walletCharge,
+      description:
+        paymentMode === "bnpl"
+          ? `BNPL first installment for order ${trackingNumber}`
+          : `Escrow hold for order ${trackingNumber}`,
+      reference
+    });
+
+    await user.save();
+
+    // Deduct stock.
+    for (const item of validatedItems) {
+      const updated = await Product.findOneAndUpdate(
+        {
+          _id: item.productId,
+          stock: { $gte: item.quantity }
+        },
+        {
+          $inc: { stock: -item.quantity }
+        },
+        { new: true }
+      );
+
+      if (!updated) {
+        return res.status(409).json({
+          error:
+            `"${item.name}" is no longer available in the requested quantity`
+        });
+      }
+    }
+
     const order = await Order.create({
       email: req.user.email,
-      items,
-      amount: Number(amount),
-      originalAmount: Number(amount),
-      deliveryFee: deliveryFee || 0,
+      items: validatedItems,
+      amount: totalAmount,
+      originalAmount: totalAmount,
+      deliveryFee: Number(deliveryFee) || 0,
       deliveryZone: deliveryZone || "",
-      deliveryAddress,
-      phone: phone || "",
+      deliveryAddress: sanitize(deliveryAddress),
+      phone: sanitize(phone),
       couponCode: couponCode || "",
       reference,
       trackingNumber,
       status: "Paid",
-      paymentMethod: "TechMart Wallet",
-      escrow: true,
-      escrowStatus: "holding"
+      paymentMethod:
+        paymentMode === "bnpl"
+          ? "BNPL"
+          : "TechMart Wallet",
+      escrow: paymentMode === "escrow",
+      escrowStatus:
+        paymentMode === "escrow"
+          ? "holding"
+          : "none",
+      buyerConfirmed: false
     });
 
-    // Notify via socket
-    io.to(order.email).emit("orderUpdated", { orderId: order._id, reference: order.reference, status: "Paid", trackingNumber });
+    // BNPL plan is created here so checkout is one complete operation.
+    let plan = null;
 
-    res.json({ success: true, order, message: `Order placed! ₦${Number(amount).toLocaleString()} held in escrow until delivery confirmed.` });
+    if (paymentMode === "bnpl") {
+      // Build an exact repayment schedule so all installments
+      // add up to totalAmount with no rounding discrepancy.
+      const baseInstallment =
+        Math.floor(totalAmount / installmentCount);
+
+      const remainder =
+        totalAmount - (baseInstallment * installmentCount);
+
+      const now = new Date();
+      const payments = [];
+
+      for (let i = 0; i < installmentCount; i++) {
+        // Distribute any remainder across the earliest installments.
+        const paymentAmount =
+          baseInstallment + (i < remainder ? 1 : 0);
+
+        const dueDate = new Date(now);
+        dueDate.setDate(
+          dueDate.getDate() + (i * 30)
+        );
+
+        payments.push({
+          amount: paymentAmount,
+          dueDate,
+          paidAt: i === 0 ? now : null,
+          status: i === 0 ? "paid" : "pending"
+        });
+      }
+
+      const installmentAmount = payments[0].amount;
+
+      plan = await BNPLPlan.create({
+        userId: req.user.id,
+        orderId: order._id,
+        totalAmount,
+        installments: installmentCount,
+        installmentAmount,
+        paidInstallments: 1,
+        payments
+      });
+
+      try {
+        await updateNetworkScore(req.user.id, 100, {
+          bnplCompleted: 1
+        });
+      } catch {}
+    }
+
+    res.json({
+      success: true,
+      order,
+      plan,
+      message:
+        paymentMode === "bnpl"
+          ? `Order placed! First BNPL installment of ₦${walletCharge.toLocaleString()} paid.`
+          : `Order placed! ₦${totalAmount.toLocaleString()} held in escrow until delivery confirmed.`
+    });
+
   } catch (err) {
-    console.error("Escrow checkout error:", err.message);
-    res.status(500).json({ error: "Checkout failed" });
+    console.error("Checkout escrow/BNPL error:", err);
+
+    res.status(500).json({
+      error: "Checkout failed"
+    });
   }
 });
+
 
 // 3. Mark order as Shipped (admin or seller)
 app.post("/api/orders/:orderId/ship", auth, async (req, res) => {

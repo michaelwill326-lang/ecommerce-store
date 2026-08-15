@@ -133,25 +133,69 @@ export default function Checkout() {
   };
 
   const handleBNPLCheckout = async () => {
-    if (!address.trim()) return showToast("Please enter your delivery address", "warning");
-    if (!phone.trim()) return showToast("Please enter your phone number", "warning");
+    if (!token || !user) {
+      navigate("/login");
+      return;
+    }
+
+    if (cart.length === 0) {
+      return showToast("Your cart is empty", "warning");
+    }
+
+    if (!address.trim()) {
+      return showToast("Please enter your delivery address", "warning");
+    }
+
+    if (!phone.trim()) {
+      return showToast("Please enter your phone number", "warning");
+    }
+
+    if (!bnplEligible) {
+      return showToast("You are not eligible for BNPL yet", "warning");
+    }
+
+    if (finalTotal < 5000) {
+      return showToast("Minimum order amount for BNPL is ₦5,000", "warning");
+    }
+
     setLoading(true);
+
     try {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-      // First create the order via escrow
-      const orderRes = await axios.post(`${API}/api/orders/checkout-escrow`,
-        { cart, deliveryAddress: address, phone, couponCode: couponStatus?.discount ? couponCode : null, walletDebit: 0, deliveryFee, deliveryZone },
+      const headers = {
+        Authorization: `Bearer ${token}`
+      };
+
+      const res = await axios.post(
+        `${API}/api/orders/checkout-escrow`,
+        {
+          items: cart,
+          amount: finalTotal,
+          deliveryAddress: address,
+          phone,
+          couponCode: couponStatus?.discount ? couponCode : null,
+          deliveryFee,
+          deliveryZone,
+          paymentMode: "bnpl",
+          installments: bnplInstallments
+        },
         { headers }
       );
-      const orderId = orderRes.data.order._id;
-      // Then create BNPL plan
-      const bnplRes = await axios.post(`${API}/api/bnpl/create`, { orderId, installments: bnplInstallments }, { headers });
-      clearCart();
-      navigate(`/tracking?ref=${orderRes.data.order.reference}&bnpl=true&installments=${bnplInstallments}`);
+
+      if (res.data.success) {
+        clearCart();
+
+        navigate(
+          `/tracking?ref=${res.data.order.reference}&bnpl=true&installments=${bnplInstallments}`
+        );
+      }
     } catch (err) {
-      showToast(err.response?.data?.error || "BNPL checkout failed", "error");
-    } finally { setLoading(false); }
+      showToast(
+        err.response?.data?.error || "BNPL checkout failed",
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEscrowCheckout = async () => {
@@ -167,7 +211,8 @@ export default function Checkout() {
         phone,
         couponCode: couponStatus?.discount ? couponCode : null,
         deliveryFee,
-        deliveryZone
+        deliveryZone,
+        paymentMode: "escrow"
       }, { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) {
         clearCart();

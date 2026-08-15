@@ -72,6 +72,7 @@ const sendOrderConfirmation = async (order) => {
     console.log(`📧 Order confirmation email sent to ${order.email}`);
   } catch (err) {
     console.error("❌ BREVO ERROR inside sendOrderConfirmation:", err.message);
+    throw err;
   }
 };
 
@@ -222,7 +223,7 @@ const sendPasswordResetEmail = async (email, token) => {
           <div style="background: #111; border: 1px solid #222; border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
             <p style="color: #888; font-size: 14px; margin: 0 0 16px;">Your reset code is:</p>
             <p style="color: #f97316; font-size: 48px; font-weight: 900; letter-spacing: 12px; margin: 0;">${token}</p>
-            <p style="color: #555; font-size: 12px; margin: 16px 0 0;">This code expires in 1 hour.</p>
+            <p style="color: #555; font-size: 12px; margin: 16px 0 0;">This code expires in 15 minutes.</p>
           </div>
 
           <div style="background: #111; border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
