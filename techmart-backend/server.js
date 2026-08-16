@@ -109,6 +109,31 @@ app.use("/api/auth/reset-password", passwordResetLimiter);
 app.use("/api/seller/reset-password", passwordResetLimiter);
 app.use("/api/seller/forgot-password", authLimiter);
 
+// Wallet PIN security
+const pinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many PIN attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    if (req.user?.id) return `user:${req.user.id}`;
+    return ipKeyGenerator(req);
+  }
+});
+
+const pinResetRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: "Too many PIN reset requests. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    if (req.user?.id) return `user:${req.user.id}`;
+    return ipKeyGenerator(req);
+  }
+});
+
 /* ===========================
    🌐 CORS CONFIG
 =========================== */
@@ -1770,16 +1795,16 @@ async function verifyWalletPin(user, pin) {
   return { ok: true };
 }
 
-app.post("/api/pay/send", auth, async (req, res) => {
+app.post("/api/pay/send", auth, pinLimiter, async (req, res) => {
   try {
     const { recipientEmail, amount, note, pin } = req.body;
     if (!recipientEmail || !amount) return res.status(400).json({ error: "Recipient email and amount are required" });
     if (Number(amount) < 100) return res.status(400).json({ error: "Minimum transfer is N100" });
     const sender = await User.findById(req.user.id);
-    if (!sender.walletPinSet) return res.status(400).json({ error: "Please set a wallet PIN before sending money" });
-    if (!pin) return res.status(400).json({ error: "Wallet PIN is required" });
-    const pinMatch = await bcrypt.compare(String(pin), sender.walletPin || "");
-    if (!pinMatch) return res.status(400).json({ error: "Incorrect PIN" });
+    const pinCheck = await verifyWalletPin(sender, pin);
+    if (!pinCheck.ok) {
+      return res.status(400).json({ error: pinCheck.error });
+    }
     const recipient = await User.findOne({ email: recipientEmail });
     if (!recipient) return res.status(404).json({ error: "No TechMart user found with that email" });
     if (sender.email === recipientEmail) return res.status(400).json({ error: "You cannot send money to yourself" });
@@ -2922,7 +2947,7 @@ app.post("/api/pay/verify-account", auth, async (req, res) => {
 });
 
 // 6. Bill Payments (Airtime via Paystack)
-app.post("/api/pay/airtime", auth, async (req, res) => {
+app.post("/api/pay/airtime", auth, pinLimiter, async (req, res) => {
   try {
     const { phone, amount, network, pin } = req.body;
     if (!phone || !amount || !network) return res.status(400).json({ error: "Phone, amount and network are required" });
@@ -3013,7 +3038,7 @@ app.get("/api/pay/data-plans/:network", auth, async (req, res) => {
   }
 });
 // 9. Purchase Data Bundle
-app.post("/api/pay/data", auth, async (req, res) => {
+app.post("/api/pay/data", auth, pinLimiter, async (req, res) => {
   try {
     const { phone, network, planId, amount, planName, pin } = req.body;
     if (!phone || !network || !planId || !amount) return res.status(400).json({ error: "Phone, network, plan and amount are required" });
@@ -3068,7 +3093,7 @@ app.post("/api/pay/electricity/verify", auth, async (req, res) => {
 });
 
 // 11. Pay Electricity Bill
-app.post("/api/pay/electricity", auth, async (req, res) => {
+app.post("/api/pay/electricity", auth, pinLimiter, async (req, res) => {
   try {
     const { meterNumber, disco, meterType, amount, customerName, pin } = req.body;
     if (!meterNumber || !disco || !meterType || !amount) return res.status(400).json({ error: "All fields are required" });
@@ -3161,7 +3186,7 @@ app.get("/api/pay/cabletv/plans/:provider", auth, async (req, res) => {
 });
 
 // 14. Pay Cable TV Subscription
-app.post("/api/pay/cabletv", auth, async (req, res) => {
+app.post("/api/pay/cabletv", auth, pinLimiter, async (req, res) => {
   try {
     const { smartcardNumber, provider, planId, planName, amount, customerName, pin } = req.body;
     if (!smartcardNumber || !provider || !planId || !amount) return res.status(400).json({ error: "All fields are required" });
@@ -3197,10 +3222,12 @@ app.post("/api/pay/cabletv", auth, async (req, res) => {
 
 
 // Set Wallet PIN
-app.post("/api/pay/pin/set", auth, async (req, res) => {
+app.post("/api/pay/pin/set", auth, pinLimiter, async (req, res) => {
   try {
     const { pin } = req.body;
-    if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) return res.status(400).json({ error: "PIN must be exactly 4 digits" });
+    if (typeof pin !== "string" || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({ error: "PIN must be exactly 4 digits" });
+    }
     const hashed = await bcrypt.hash(pin, 10);
     await User.findByIdAndUpdate(req.user.id, { walletPin: hashed, walletPinSet: true });
     res.json({ success: true, message: "Wallet PIN set successfully" });
@@ -3210,7 +3237,7 @@ app.post("/api/pay/pin/set", auth, async (req, res) => {
 });
 
 // Verify Wallet PIN
-app.post("/api/pay/pin/verify", auth, async (req, res) => {
+app.post("/api/pay/pin/verify", auth, pinLimiter, async (req, res) => {
   try {
     const { pin } = req.body;
     if (!pin) return res.status(400).json({ error: "PIN is required" });
@@ -3226,12 +3253,12 @@ app.post("/api/pay/pin/verify", auth, async (req, res) => {
 
 
 // Forgot Wallet PIN - Send OTP
-app.post("/api/pay/pin/forgot", auth, async (req, res) => {
+app.post("/api/pay/pin/forgot", auth, pinResetRequestLimiter, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    user.walletPinResetOtp = otp;
+    const otp = randomInt(100000, 1000000).toString();
+    user.walletPinResetOtp = await bcrypt.hash(otp, 10);
     user.walletPinResetExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
@@ -3281,40 +3308,28 @@ app.post("/api/pay/pin/forgot", auth, async (req, res) => {
 
 
 // Reset Wallet PIN
-app.post("/api/pay/pin/reset", auth, async (req, res) => {
+app.post("/api/pay/pin/reset", auth, pinLimiter, async (req, res) => {
   try {
 
     const { otp, newPin } = req.body;
-
-    console.log("========== PIN RESET REQUEST ==========");
-    console.log("User:", req.user.id);
-    console.log("Body:", req.body);
-    console.log("OTP:", otp);
-    console.log("New PIN:", newPin);
-    console.log("=======================================");
 
     if (!otp || !newPin)
       return res.status(400).json({
         error: "OTP and new PIN are required"
       });
 
-    if (!/^\d{4}$/.test(newPin))
+    if (typeof newPin !== "string" || !/^\d{4}$/.test(newPin))
       return res.status(400).json({
         error: "PIN must be exactly 4 digits"
       });
 
     const user = await User.findById(req.user.id);
 
-    console.log("===== WALLET PIN RESET DEBUG =====");
-    console.log("OTP received:", otp);
-    console.log("OTP stored:", user.walletPinResetOtp);
-    console.log("Expires:", user.walletPinResetExpires);
-    console.log("Now:", new Date());
-
     if (
-      user.walletPinResetOtp !== otp ||
+      !user.walletPinResetOtp ||
       !user.walletPinResetExpires ||
-      user.walletPinResetExpires < new Date()
+      user.walletPinResetExpires < new Date() ||
+      !(await bcrypt.compare(String(otp), user.walletPinResetOtp))
     ) {
       return res.status(400).json({
         error: "Invalid or expired OTP"
@@ -3343,7 +3358,7 @@ app.post("/api/pay/pin/reset", auth, async (req, res) => {
 
 
 // Change Wallet PIN
-app.post("/api/pay/pin/change", auth, async (req, res) => {
+app.post("/api/pay/pin/change", auth, pinLimiter, async (req, res) => {
   try {
     const { oldPin, newPin, confirmPin } = req.body;
 
@@ -3353,7 +3368,7 @@ app.post("/api/pay/pin/change", auth, async (req, res) => {
       });
     }
 
-    if (!/^\d{4}$/.test(newPin)) {
+    if (typeof newPin !== "string" || !/^\d{4}$/.test(newPin)) {
       return res.status(400).json({
         error: "New PIN must be exactly 4 digits"
       });
@@ -3414,7 +3429,7 @@ app.get("/api/pay/betting/platforms", auth, async (req, res) => {
 });
 
 // 16. Fund Betting Wallet
-app.post("/api/pay/betting", auth, async (req, res) => {
+app.post("/api/pay/betting", auth, pinLimiter, async (req, res) => {
   try {
     const { platform, bettingId, amount, pin } = req.body;
     if (!platform || !bettingId || !amount) return res.status(400).json({ error: "Platform, betting ID and amount are required" });
@@ -3423,7 +3438,15 @@ app.post("/api/pay/betting", auth, async (req, res) => {
     if (!validPlatforms.includes(platform.toLowerCase())) return res.status(400).json({ error: "Invalid betting platform" });
 
     const user = await User.findById(req.user.id);
-    if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) {
+      return res.status(400).json({ error: pinCheck.error });
+    }
+
+    if ((user.walletBalance || 0) < Number(amount)) {
+      return res.status(400).json({ error: "Insufficient wallet balance" });
+    }
 
     const reference = "BET-" + Date.now();
     const platformNames = { bet9ja: "Bet9ja", sportybet: "SportyBet", "1xbet": "1xBet" };
