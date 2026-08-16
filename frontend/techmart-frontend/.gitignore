@@ -3,3 +3,7 @@ dist/
 *.backup
 *.bak
 .DS_Store
+.env
+.env.*
+playwright-report/
+test-results/

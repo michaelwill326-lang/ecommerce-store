@@ -5,7 +5,7 @@ export default function Recommendations({ currentProduct }) {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/products`)
+    fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/products`)
       .then(res => res.json())
       .then(data => {
 
