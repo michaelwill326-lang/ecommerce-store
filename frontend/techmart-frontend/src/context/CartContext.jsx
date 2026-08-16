@@ -1,127 +1,227 @@
 import { createContext, useEffect, useState, useCallback } from "react";
-const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
+
+const API =
+  import.meta.env.VITE_API_URL ||
+  "https://techmart-backend-ecbi.onrender.com";
+
 export const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const isLoggedIn = () => !!localStorage.getItem("token");
 
-  // Never expose a saved cart to a logged-out visitor.
-  // A customer's cart is available only while authenticated.
+  // Never expose a customer's cart to a logged-out visitor.
   const [cart, setCart] = useState(() => {
-    if (!localStorage.getItem("token")) return [];
-    const saved = localStorage.getItem("cart");
-    return saved ? JSON.parse(saved) : [];
+    if (!isLoggedIn()) return [];
+
+    try {
+      const saved = localStorage.getItem("cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
-  // Save to localStorage whenever cart changes
+  // Persist the browser copy ONLY while authenticated.
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
+    if (isLoggedIn()) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    } else {
+      localStorage.removeItem("cart");
+    }
   }, [cart]);
 
-  // Sync cart to backend when user logs in
+  // Sync the authenticated customer's cart to the backend.
   const syncCartToServer = useCallback(async () => {
     const token = localStorage.getItem("token");
-    if (!token || !cart.length) return;
+
+    if (!token) return;
+
     try {
       await fetch(`${API}/api/cart/sync`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ items: cart })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items: cart }),
       });
-    } catch {}
+    } catch {
+      // Keep the local authenticated cart if the server is temporarily unavailable.
+    }
   }, [cart]);
 
-  // Load cart from backend on login
+  // Load the authenticated customer's persistent cart.
   const loadCartFromServer = useCallback(async () => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+
+    if (!token) {
+      setCart([]);
+      return;
+    }
+
     try {
       const res = await fetch(`${API}/api/cart`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      if (!res.ok) {
+        throw new Error(`Cart request failed: ${res.status}`);
+      }
+
       const data = await res.json();
-      if (data.items && data.items.length > 0) {
+
+      if (Array.isArray(data.items)) {
         setCart(data.items);
       } else {
-        const saved = localStorage.getItem("cart");
-        setCart(saved ? JSON.parse(saved) : []);
+        setCart([]);
       }
-    } catch {}
+    } catch {
+      // Do not expose a stale guest/browser cart after authentication fails.
+      setCart([]);
+    }
   }, []);
 
-  // Handle storage events (login/logout)
+  // Handle login/logout events.
   useEffect(() => {
-    const handleStorage = (e) => {
-      if (e.key === "token") {
-        if (!e.newValue) {
-          // Logged out — immediately clear the visible and browser cart.
-          // The authenticated customer's persistent cart remains on the server.
-          setCart([]);
-          localStorage.setItem("cart", "[]");
-        } else {
-          // Logged in — load that user's cart from the server.
-          loadCartFromServer();
-        }
+    const handleAuthChange = (e) => {
+      if (e?.key !== "token" && e?.type !== "techmart-auth-change") {
+        return;
       }
-    };
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("techmart-auth-change", handleStorage);
 
-    // Load on mount only if logged in.
-    if (isLoggedIn()) loadCartFromServer();
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        // Logout/inactivity logout:
+        // immediately remove the browser-visible customer cart.
+        setCart([]);
+        localStorage.removeItem("cart");
+        return;
+      }
+
+      // Login:
+      // load the cart belonging to the authenticated account.
+      loadCartFromServer();
+    };
+
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener("techmart-auth-change", handleAuthChange);
+
+    if (isLoggedIn()) {
+      loadCartFromServer();
+    }
 
     return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("techmart-auth-change", handleStorage);
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener("techmart-auth-change", handleAuthChange);
     };
   }, [loadCartFromServer]);
 
-  // Sync to server on cart change (debounced)
+  // Sync changes to MongoDB after the user pauses cart activity.
   useEffect(() => {
-    if (!isLoggedIn() || !cart.length) return;
-    const timer = setTimeout(() => syncCartToServer(), 2000);
+    if (!isLoggedIn()) return;
+
+    const timer = setTimeout(() => {
+      syncCartToServer();
+    }, 2000);
+
     return () => clearTimeout(timer);
   }, [cart, syncCartToServer]);
 
+  // SINGLE AUTHENTICATED CART ENTRY POINT.
   const addToCart = (product) => {
-    // Cart operations require an authenticated customer.
-    if (!isLoggedIn()) return false;
+    if (!isLoggedIn()) {
+      return false;
+    }
 
     setCart((prev) => {
       const existing = prev.find((item) => item._id === product._id);
+
       if (existing) {
         return prev.map((item) =>
-          item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+          item._id === product._id
+            ? {
+                ...item,
+                quantity: (item.quantity || 1) + 1,
+              }
+            : item
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+
+      return [
+        ...prev,
+        {
+          ...product,
+          quantity: 1,
+        },
+      ];
     });
 
     return true;
   };
 
-  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item._id !== id));
+  const removeFromCart = (id) => {
+    if (!isLoggedIn()) return;
+
+    setCart((prev) => prev.filter((item) => item._id !== id));
+  };
 
   const updateQuantity = (id, quantity) => {
+    if (!isLoggedIn()) return;
     if (quantity < 1) return;
-    setCart((prev) => prev.map((item) => item._id === id ? { ...item, quantity } : item));
+
+    setCart((prev) =>
+      prev.map((item) =>
+        item._id === id
+          ? {
+              ...item,
+              quantity,
+            }
+          : item
+      )
+    );
   };
 
   const clearCart = () => {
-    setCart([]);
-    localStorage.setItem("lastCartItems", localStorage.getItem("cart") || "[]");
-    localStorage.removeItem("cart");
-    // Clear from server too
     const token = localStorage.getItem("token");
+
+    setCart([]);
+
+    localStorage.setItem(
+      "lastCartItems",
+      localStorage.getItem("cart") || "[]"
+    );
+
+    localStorage.removeItem("cart");
+
     if (token) {
-      fetch(`${API}/api/cart/clear`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+      fetch(`${API}/api/cart/clear`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch(() => {});
     }
   };
 
-  const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const cartTotal = cart.reduce(
+    (total, item) =>
+      total + Number(item.price || 0) * Number(item.quantity || 1),
+    0
+  );
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal }}>
+    <CartContext.Provider
+      value={{
+        cart: isLoggedIn() ? cart : [],
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        cartTotal: isLoggedIn() ? cartTotal : 0,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

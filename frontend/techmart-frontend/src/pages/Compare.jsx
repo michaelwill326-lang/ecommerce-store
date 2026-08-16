@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useContext } from "react";
+import { CartContext } from "../context/CartContext";
 
 export default function Compare() {
   const [items, setItems] = useState([]);
   const navigate = useNavigate();
+  const { addToCart } = useContext(CartContext);
 
   useEffect(() => {
     try { setItems(JSON.parse(localStorage.getItem("compareItems") || "[]")); } catch { setItems([]); }
@@ -63,11 +66,8 @@ export default function Compare() {
         <div />
         {items.map((p, i) => (
           <button key={i} onClick={() => {
-            const cart = (() => { try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; } })();
-            const ex = cart.find(c => c._id === p._id);
-            if (ex) ex.quantity += 1; else cart.push({ ...p, quantity: 1 });
-            localStorage.setItem("cart", JSON.stringify(cart));
-            window.dispatchEvent(new Event("storage"));
+            const added = addToCart(p);
+            if (!added) navigate("/login");
           }} style={{ padding: "10px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
             🛒 Add to Cart
           </button>
