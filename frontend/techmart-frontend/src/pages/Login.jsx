@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   // Auth view switcher state: "login" | "forgot" | "reset"
   const [view, setView] = useState("login");
@@ -24,6 +25,16 @@ export default function Login() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const getPostLoginPath = () => {
+    const redirect = searchParams.get("redirect");
+
+    if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+      return redirect;
+    }
+
+    return "/dashboard";
+  };
 
   // 1. Core Login Handler
   const handleLogin = async (e) => {
@@ -47,7 +58,7 @@ export default function Login() {
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("techmart_last_activity", String(Date.now()));
         window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: response.data.token }));
-        navigate("/");
+        navigate(getPostLoginPath());
       }
     } catch (err) {
       console.error(err);
@@ -70,7 +81,7 @@ export default function Login() {
       localStorage.setItem("techmart_last_activity", String(Date.now()));
       if (res.data.deviceToken) localStorage.setItem("deviceToken", res.data.deviceToken);
       window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: res.data.token }));
-      navigate("/");
+      navigate(getPostLoginPath());
     } catch (err) {
       setError(err.response?.data?.error || "Invalid or expired OTP");
     } finally {

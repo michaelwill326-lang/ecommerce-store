@@ -19,6 +19,7 @@ import Chatbot from "./components/Chatbot";
 import BottomNav from "./components/BottomNav";
 import CompareBar from "./components/CompareBar";
 import Compare from "./pages/Compare";
+import RequireAuth from "./utils/RequireAuth";
 import LiveNotification from "./components/LiveNotification";
 
 // Eagerly loaded (above the fold)
@@ -266,25 +267,67 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
+          <Route
+            path="/checkout"
+            element={
+              <RequireAuth>
+                <Checkout />
+              </RequireAuth>
+            }
+          />
           <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
+                <Dashboard />
+              </RequireAuth>
+            }
+          />
           <Route path="/admin" element={<Admin />} />
           <Route path="/tracking" element={<Tracking />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/success" element={<Success />} />
-          <Route path="/wishlist" element={<Wishlist />} />
+          <Route
+            path="/wishlist"
+            element={
+              <RequireAuth>
+                <Wishlist />
+              </RequireAuth>
+            }
+          />
           <Route path="/policy" element={<Policy />} />
           <Route path="/buyer-protection" element={<BuyerProtection />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/seller/apply" element={<SellerApply />} />
-          <Route path="/account" element={<Account />} />
+          <Route
+            path="/account"
+            element={
+              <RequireAuth>
+                <Account />
+              </RequireAuth>
+            }
+          />
           <Route path="/ai-search" element={<AISearch />} />
-          <Route path="/pay" element={<TechMartPay />} />
+          <Route
+            path="/pay"
+            element={
+              <RequireAuth>
+                <TechMartPay />
+              </RequireAuth>
+            }
+          />
           <Route path="/pay/user/:userId" element={<PayProfile />} />
           <Route path="/pay/link/:linkId" element={<PayLink />} />
           <Route path="/compare" element={<Compare />} />
-          <Route path="/referral" element={<Referral />} />
+          <Route
+            path="/referral"
+            element={
+              <RequireAuth>
+                <Referral />
+              </RequireAuth>
+            }
+          />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />

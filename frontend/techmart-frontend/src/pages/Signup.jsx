@@ -23,8 +23,14 @@ export default function Signup() {
     setError("");
 
     // VALIDATION
-    if (name.trim().length < 2) {
+    const cleanName = name.trim();
+
+    if (cleanName.length < 2) {
       return setError("Name must be at least 2 characters");
+    }
+
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/.test(cleanName)) {
+      return setError("Please enter a valid name using letters, spaces, hyphens or apostrophes.");
     }
 
     if (!phone.trim()) {
@@ -55,7 +61,7 @@ export default function Signup() {
       localStorage.setItem("techmart_last_activity", String(Date.now()));
       localStorage.setItem("user", JSON.stringify(response.data.user));
 
-      navigate("/");
+      navigate("/dashboard");
 
     } catch (err) {
       console.error(err.response?.data || err.message);
