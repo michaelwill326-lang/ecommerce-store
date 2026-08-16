@@ -38,7 +38,7 @@ test('logout clears the visible cart for the guest session', async ({ page }) =>
 
   // Confirm the cart storage was cleared as well.
   const cartStorage = await page.evaluate(() => localStorage.getItem('cart'));
-  expect(cartStorage).toBe('[]');
+  expect(cartStorage).toBeNull();
 });
 
 test('guest cannot add products to the cart', async ({ page }) => {
@@ -55,5 +55,5 @@ test('guest cannot add products to the cart', async ({ page }) => {
   await expect(page.getByText('Your cart is empty', { exact: true })).toBeVisible();
 
   const cartStorage = await page.evaluate(() => localStorage.getItem('cart'));
-  expect(cartStorage).toBe('[]');
+  expect(cartStorage).toBeNull();
 });

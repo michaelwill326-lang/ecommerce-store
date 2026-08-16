@@ -90,7 +90,7 @@ function useInactivityLogout(minutes = 20) {
       localStorage.removeItem("deviceToken");
       localStorage.removeItem(LAST_ACTIVITY_KEY);
 
-      // Preserve cart and wishlist during automatic inactivity logout.
+      // Clear browser-visible cart and wishlist during automatic inactivity logout.
       window.dispatchEvent(
         new StorageEvent("storage", {
           key: "token",

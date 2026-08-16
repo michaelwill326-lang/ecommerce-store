@@ -10,10 +10,10 @@ test('main navigation links work', async ({ page }) => {
   await page.getByText('Orders', { exact: true }).click();
   await expect(page).toHaveURL(/tracking/);
 
-  // Pay link
+  // Pay link — authenticated feature redirects guests to login
   await page.goto('/');
   await page.getByRole('link', { name: 'Pay', exact: true }).click();
-  await expect(page).toHaveURL(/pay/);
+  await expect(page).toHaveURL(/login/);
 
   // Login link (guest user)
   await page.goto('/');

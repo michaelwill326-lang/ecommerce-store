@@ -49,7 +49,7 @@ export default function Home() {
     if (category !== "All") params.set("category", category);
     if (minPrice) params.set("minPrice", minPrice);
     if (maxPrice) params.set("maxPrice", maxPrice);
-    fetch(`${import.meta.env.VITE_API_URL}/api/products?${params.toString()}`)
+    fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/products?${params.toString()}`)
       .then(res => { if (!res.ok) throw new Error("Failed to fetch"); return res.json(); })
       .then(data => {
         const productList = Array.isArray(data)

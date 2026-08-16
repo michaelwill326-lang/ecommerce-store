@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useContext } from "react";
+import { CartContext } from "../context/CartContext";
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
   const navigate = useNavigate();
+  const { addToCart } = useContext(CartContext);
   const [isOpen, setIsOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState({ isPro: false, remaining: 10, limit: 10, dailyUsage: 0 });
   const [showProBanner, setShowProBanner] = useState(false);
@@ -165,12 +168,13 @@ export default function Chatbot() {
       speak(data.message || "");
       if (data.data?.type === "navigate") setTimeout(() => navigate(data.data.path), 1500);
       if (data.data?.type === "add_to_cart") {
-        const cart = (() => { try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; } })();
-        const existing = cart.find(i => i._id === data.data.product._id);
-        if (existing) existing.quantity += 1;
-        else cart.push({ ...data.data.product, quantity: 1 });
-        localStorage.setItem("cart", JSON.stringify(cart));
-        window.dispatchEvent(new Event("storage"));
+        const added = addToCart(data.data.product);
+
+        if (!added) {
+          const msg = "Please log in to add products to your cart.";
+          addMessage(msg, "bot");
+          speak(msg);
+        }
       }
     } catch { setTyping(false); addMessage("Connection error. Please try again.", "bot"); }
   };

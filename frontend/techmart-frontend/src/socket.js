@@ -1,6 +1,10 @@
 import { io } from "socket.io-client";
 
-export const socket = io(import.meta.env.VITE_API_URL, {
+const API =
+  import.meta.env.VITE_API_URL ||
+  "https://techmart-backend-ecbi.onrender.com";
+
+export const socket = io(API, {
   transports: ["websocket"],
   reconnection: true,
 });

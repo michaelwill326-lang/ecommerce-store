@@ -5,6 +5,8 @@ import { OrderCardSkeleton } from "../components/Skeleton";
 import { io } from "socket.io-client";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { useContext } from "react";
+import { CartContext } from "../context/CartContext";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
@@ -17,6 +19,7 @@ const STEPS = [
 
 export default function Tracking() {
   const showToast = useToast();
+  const { addToCart } = useContext(CartContext);
   const [reference, setReference] = useState("");
   const [order, setOrder] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
@@ -368,14 +371,21 @@ export default function Tracking() {
                   {/* Reorder Button */}
                   {order.status === "Delivered" && (
                     <button onClick={() => {
-                      const cart = (() => { try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; } })();
+                      if (!localStorage.getItem("token")) {
+                        showToast("Please log in to buy these items again.", "error");
+                        return;
+                      }
+
                       order.items.forEach(item => {
-                        const existing = cart.find(i => i._id === (item.productId || item._id));
-                        if (existing) existing.quantity += 1;
-                        else cart.push({ _id: item.productId || item._id, name: item.name, price: item.price, images: item.images || [], quantity: 1 });
+                        addToCart({
+                          _id: item.productId || item._id,
+                          name: item.name,
+                          price: item.price,
+                          images: item.images || [],
+                          stock: item.stock ?? 1
+                        });
                       });
-                      localStorage.setItem("cart", JSON.stringify(cart));
-                      window.dispatchEvent(new Event("storage"));
+
                       showToast("Items added to cart!", "success");
                     }} style={{ width: "100%", marginTop: "12px", padding: "10px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
                       🔄 Buy Again
