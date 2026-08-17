@@ -45,7 +45,9 @@ export function WishlistProvider({ children }) {
   }, []);
 
   const addToWishlist = (product) => {
-    if (!isLoggedIn()) return;
+    if (!isLoggedIn()) {
+      return false;
+    }
 
     setWishlist((prev) => {
       if (prev.find((p) => p._id === product._id)) {
@@ -54,6 +56,8 @@ export function WishlistProvider({ children }) {
 
       return [...prev, product];
     });
+
+    return true;
   };
 
   const removeFromWishlist = (id) => {

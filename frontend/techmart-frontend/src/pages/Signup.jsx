@@ -61,6 +61,8 @@ export default function Signup() {
       localStorage.setItem("techmart_last_activity", String(Date.now()));
       localStorage.setItem("user", JSON.stringify(response.data.user));
 
+      window.dispatchEvent(new Event("techmart-auth-change"));
+
       navigate("/dashboard");
 
     } catch (err) {
@@ -168,10 +170,34 @@ export default function Signup() {
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((prev) => !prev)}
                 style={styles.eyeBtn}
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? (
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path
+                      d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 4.2A10.8 10.8 0 0112 4c5.2 0 9.2 3.6 10.5 8a11.7 11.7 0 01-3.1 5.1M6.1 6.1A11.7 11.7 0 001.5 12c1.3 4.4 5.3 8 10.5 8 1.1 0 2.2-.2 3.2-.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path
+                      d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                )}
               </button>
             </div>
 
@@ -210,10 +236,34 @@ export default function Signup() {
               />
               <button
                 type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
+                aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                title={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                onClick={() => setShowConfirm((prev) => !prev)}
                 style={styles.eyeBtn}
               >
-                {showConfirm ? "🙈" : "👁️"}
+                {showConfirm ? (
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path
+                      d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 4.2A10.8 10.8 0 0112 4c5.2 0 9.2 3.6 10.5 8a11.7 11.7 0 01-3.1 5.1M6.1 6.1A11.7 11.7 0 001.5 12c1.3 4.4 5.3 8 10.5 8 1.1 0 2.2-.2 3.2-.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path
+                      d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                )}
               </button>
             </div>
             {confirm && confirm !== password && (
@@ -343,13 +393,22 @@ const styles = {
   },
   eyeBtn: {
     position: "absolute",
-    right: "12px",
+    right: "6px",
     top: "50%",
     transform: "translateY(-50%)",
+    width: "40px",
+    height: "40px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
     background: "transparent",
     border: "none",
+    borderRadius: "8px",
     cursor: "pointer",
-    fontSize: "16px",
+    color: "var(--text-primary)",
+    zIndex: 20,
+    flexShrink: 0,
   },
   strengthWrap: {
     display: "flex",

@@ -25,7 +25,7 @@ export default function Verify() {
         localStorage.setItem("techmart_last_activity", String(Date.now()));
         localStorage.setItem("user", JSON.stringify(data.user));
         if (data.deviceToken) localStorage.setItem("deviceToken", data.deviceToken);
-        window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: data.token }));
+        window.dispatchEvent(new Event("techmart-auth-change"));
         navigate("/");
       } else {
         setError(data.error || "Verification failed");

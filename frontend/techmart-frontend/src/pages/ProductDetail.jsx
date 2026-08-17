@@ -213,10 +213,17 @@ export default function ProductDetail() {
   const handleWishlist = () => {
     if (wishlisted) {
       removeFromWishlist(id);
-    } else {
-      addToWishlist(product);
-      trackWishlist(product);
+      return;
     }
+
+    const added = addToWishlist(product);
+
+    if (!added) {
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    trackWishlist(product);
   };
 
   if (loading) return <ProductDetailSkeleton />;

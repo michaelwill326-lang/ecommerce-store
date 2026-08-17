@@ -57,7 +57,7 @@ export default function Login() {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("techmart_last_activity", String(Date.now()));
-        window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: response.data.token }));
+        window.dispatchEvent(new Event("techmart-auth-change"));
         navigate(getPostLoginPath());
       }
     } catch (err) {
@@ -80,7 +80,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(res.data.user));
       localStorage.setItem("techmart_last_activity", String(Date.now()));
       if (res.data.deviceToken) localStorage.setItem("deviceToken", res.data.deviceToken);
-      window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: res.data.token }));
+      window.dispatchEvent(new Event("techmart-auth-change"));
       navigate(getPostLoginPath());
     } catch (err) {
       setError(err.response?.data?.error || "Invalid or expired OTP");
@@ -230,10 +230,34 @@ export default function Login() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((prev) => !prev)}
                     style={styles.eyeBtn}
                   >
-                    {showPassword ? "🙈" : "👁️"}
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path
+                          d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 4.2A10.8 10.8 0 0112 4c5.2 0 9.2 3.6 10.5 8a11.7 11.7 0 01-3.1 5.1M6.1 6.1A11.7 11.7 0 001.5 12c1.3 4.4 5.3 8 10.5 8 1.1 0 2.2-.2 3.2-.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path
+                          d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinejoin="round"
+                        />
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
@@ -311,8 +335,36 @@ export default function Login() {
                     required
                     style={{ ...styles.input, marginBottom: 0 }}
                   />
-                  <button type="button" onClick={() => setShowPassword(p => !p)} style={styles.eyeBtn}>
-                    {showPassword ? "🙈" : "👁️"}
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide new password" : "Show new password"}
+                    title={showPassword ? "Hide new password" : "Show new password"}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    style={styles.eyeBtn}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path
+                          d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 4.2A10.8 10.8 0 0112 4c5.2 0 9.2 3.6 10.5 8a11.7 11.7 0 01-3.1 5.1M6.1 6.1A11.7 11.7 0 001.5 12c1.3 4.4 5.3 8 10.5 8 1.1 0 2.2-.2 3.2-.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path
+                          d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinejoin="round"
+                        />
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    )}
                   </button>
                 </div>
                 <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "4px 0 0" }}>Must include uppercase, lowercase, number and symbol (e.g. Abc@1234)</p>
@@ -441,20 +493,23 @@ const styles = {
   },
   eyeBtn: {
     position: "absolute",
-    right: "10px",
+    right: "6px",
     top: "50%",
     transform: "translateY(-50%)",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "18px",
-    color: "#888",
-    padding: "6px",
-    lineHeight: 1,
-    zIndex: 10,
+    width: "40px",
+    height: "40px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    padding: 0,
+    background: "transparent",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    color: "var(--text-primary)",
+    lineHeight: 1,
+    zIndex: 20,
+    flexShrink: 0,
   },
   forgotBtn: {
     background: "transparent",

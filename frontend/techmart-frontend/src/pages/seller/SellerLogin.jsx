@@ -7,6 +7,7 @@ export default function SellerLogin() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -132,13 +133,41 @@ export default function SellerLogin() {
                 style={inp}
               />
 
-              <input
-                placeholder="New Password"
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                style={inp}
-              />
+              <div style={{ position: "relative", marginBottom: "12px" }}>
+                <input
+                  placeholder="New Password"
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  style={{ ...inp, marginBottom: 0, paddingRight: "52px" }}
+                />
+                <button
+                  type="button"
+                  aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                  title={showNewPassword ? "Hide new password" : "Show new password"}
+                  onClick={() => setShowNewPassword(prev => !prev)}
+                  style={{
+                    position: "absolute",
+                    right: "6px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "40px",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    color: "var(--text-primary)",
+                    zIndex: 20,
+                  }}
+                >
+                  {showNewPassword ? "◉" : "◌"}
+                </button>
+              </div>
 
               <button
                 onClick={handleResetPassword}
@@ -170,10 +199,29 @@ export default function SellerLogin() {
 
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(p => !p)}
-                  style={{position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer"}}
+                  style={{
+                    position: "absolute",
+                    right: "6px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "40px",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    color: "var(--text-primary)",
+                    zIndex: 20,
+                  }}
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? "◉" : "◌"}
                 </button>
               </div>
 
