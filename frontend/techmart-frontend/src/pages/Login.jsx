@@ -119,6 +119,7 @@ export default function Login() {
     try {
       setLoading(true);
       const response = await axios.post(`${API}/api/auth/reset-password`, { 
+        email: email.trim(),
         token: token.trim(), 
         newPassword: newPassword.trim() 
       });

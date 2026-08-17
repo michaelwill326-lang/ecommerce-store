@@ -134,6 +134,40 @@ const pinResetRequestLimiter = rateLimit({
   }
 });
 
+/* Authentication OTP security */
+const otpSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: "Too many OTP requests. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const email = req.body?.email
+      ? String(req.body.email).toLowerCase().trim()
+      : "";
+    const ip = ipKeyGenerator(req);
+    return email ? `otp-send:${ip}:${email}` : `otp-send:${ip}`;
+  }
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many OTP verification attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const email = req.body?.email
+      ? String(req.body.email).toLowerCase().trim()
+      : "";
+    const ip = ipKeyGenerator(req);
+    return email ? `otp-verify:${ip}:${email}` : `otp-verify:${ip}`;
+  }
+});
+
+app.use("/api/auth/send-otp", otpSendLimiter);
+app.use("/api/auth/verify-otp", otpVerifyLimiter);
+
 /* ===========================
    🌐 CORS CONFIG
 =========================== */
@@ -983,7 +1017,9 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     // Generate a cryptographically secure 6-digit recovery code.
     // The code is valid for 15 minutes and is never logged.
     const resetToken = randomInt(100000, 1000000).toString();
-    user.resetPasswordToken = resetToken;
+    const resetTokenHash = await bcrypt.hash(resetToken, 10);
+
+    user.resetPasswordToken = resetTokenHash;
     user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
 
@@ -1009,8 +1045,14 @@ app.post("/api/auth/forgot-password", async (req, res) => {
 /* RESET PASSWORD */
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
-    if (!token || !newPassword) return res.status(400).json({ error: "Token and new password are required" });
+    const { email, token, newPassword } = req.body;
+    const normalizedEmail = email ? String(email).toLowerCase().trim() : "";
+
+    if (!normalizedEmail || !token || !newPassword) {
+      return res.status(400).json({
+        error: "Email, token and new password are required"
+      });
+    }
 
     if (!isStrongPassword(newPassword)) {
       return res.status(400).json({
@@ -1019,11 +1061,22 @@ app.post("/api/auth/reset-password", async (req, res) => {
     }
 
     const user = await User.findOne({
-      resetPasswordToken: token.trim(),
-      resetPasswordExpires: { $gt: Date.now() } // Checks if token is still valid
+      email: normalizedEmail,
+      resetPasswordExpires: { $gt: Date.now() }
     });
 
-    if (!user) return res.status(400).json({ error: "Invalid or expired recovery token" });
+    if (!user || !user.resetPasswordToken) {
+      return res.status(400).json({ error: "Invalid or expired recovery token" });
+    }
+
+    const tokenValid = await bcrypt.compare(
+      String(token).trim(),
+      user.resetPasswordToken
+    );
+
+    if (!tokenValid) {
+      return res.status(400).json({ error: "Invalid or expired recovery token" });
+    }
 
     // Update and hash password securely
     user.password = await bcrypt.hash(newPassword, 10);
@@ -4651,8 +4704,9 @@ app.post("/api/seller/forgot-password", async (req,res)=>{
     // Generate a cryptographically secure 6-digit recovery code.
     // The code is valid for 15 minutes and is never logged.
     const token = randomInt(100000, 1000000).toString();
+    const tokenHash = await bcrypt.hash(token, 10);
 
-    seller.resetPasswordToken = token;
+    seller.resetPasswordToken = tokenHash;
     seller.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
 
     await seller.save();
@@ -4685,11 +4739,14 @@ app.post("/api/seller/reset-password", async (req,res)=>{
 
   try{
 
-    const {token,newPassword}=req.body;
+    const {email,token,newPassword}=req.body;
+    const normalizedEmail = email
+      ? String(email).toLowerCase().trim()
+      : "";
 
-    if(!token||!newPassword){
+    if(!normalizedEmail||!token||!newPassword){
       return res.status(400).json({
-        error:"Token and password required"
+        error:"Email, token and password required"
       });
     }
 
@@ -4700,13 +4757,24 @@ app.post("/api/seller/reset-password", async (req,res)=>{
     }
 
     const seller=await Seller.findOne({
-      resetPasswordToken:token.trim(),
+      email: normalizedEmail,
       resetPasswordExpires:{
         $gt:Date.now()
       }
     });
 
-    if(!seller){
+    if(!seller || !seller.resetPasswordToken){
+      return res.status(400).json({
+        error:"Invalid or expired reset code"
+      });
+    }
+
+    const tokenValid = await bcrypt.compare(
+      String(token).trim(),
+      seller.resetPasswordToken
+    );
+
+    if(!tokenValid){
       return res.status(400).json({
         error:"Invalid or expired reset code"
       });
@@ -6100,10 +6168,15 @@ app.post("/api/auth/send-otp", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a cryptographically secure 6-digit OTP.
+    const otp = randomInt(100000, 1000000).toString();
+    const otpHash = await bcrypt.hash(otp, 10);
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    await User.findByIdAndUpdate(user._id, { otpCode: otp, otpExpires: expires });
+    await User.findByIdAndUpdate(user._id, {
+      otpCode: otpHash,
+      otpExpires: expires
+    });
 
     await sendOTPEmail(user.email, user.name, otp);
     res.json({ success: true, message: "OTP sent to your email" });
@@ -6121,8 +6194,18 @@ app.post("/api/auth/verify-otp", async (req, res) => {
     if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found" });
-    if (!user.otpCode || user.otpCode !== otp) return res.status(400).json({ error: "Invalid OTP" });
-    if (new Date() > new Date(user.otpExpires)) return res.status(400).json({ error: "OTP has expired. Please request a new one." });
+    if (!user.otpCode || !user.otpExpires) {
+      return res.status(400).json({ error: "Invalid or expired OTP" });
+    }
+
+    if (new Date() > new Date(user.otpExpires)) {
+      return res.status(400).json({ error: "OTP has expired. Please request a new one." });
+    }
+
+    const otpValid = await bcrypt.compare(String(otp), user.otpCode);
+    if (!otpValid) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
 
     const crypto = require("crypto");
     const deviceToken = crypto.randomBytes(32).toString("hex");

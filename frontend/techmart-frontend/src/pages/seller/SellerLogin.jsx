@@ -66,6 +66,7 @@ export default function SellerLogin() {
     try {
       setLoading(true);
       const res = await axios.post(`${API}/api/seller/reset-password`, {
+        email: form.email.trim(),
         token: resetToken.trim(),
         newPassword: newPassword.trim()
       });
