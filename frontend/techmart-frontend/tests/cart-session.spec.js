@@ -57,3 +57,35 @@ test('guest cannot add products to the cart', async ({ page }) => {
   const cartStorage = await page.evaluate(() => localStorage.getItem('cart'));
   expect(cartStorage).toBeNull();
 });
+
+test('guest is redirected to login when adding a product from product detail', async ({ page }) => {
+  await page.goto('/');
+
+  // Start completely unauthenticated.
+  await page.evaluate(() => {
+    localStorage.clear();
+  });
+
+  await page.reload();
+
+  // Open the first real product from the homepage.
+  const productLink = page.locator('a[href^="/product/"]').first();
+  await expect(productLink).toBeVisible();
+
+  await productLink.click();
+
+  await expect(page).toHaveURL(/\/product\//);
+
+  // The Add to Cart button should be available on the product detail page.
+  const addToCartButton = page.getByRole('button', { name: /Add to Cart/i });
+  await expect(addToCartButton).toBeVisible();
+
+  // Guest must be sent to login instead of adding the product.
+  await addToCartButton.click();
+
+  await expect(page).toHaveURL(/\/login/);
+
+  // Cart storage must remain empty/nonexistent.
+  const cartStorage = await page.evaluate(() => localStorage.getItem('cart'));
+  expect(cartStorage).toBeNull();
+});

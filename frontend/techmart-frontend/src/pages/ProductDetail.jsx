@@ -154,16 +154,42 @@ export default function ProductDetail() {
     }
 
     setCartLoading(true);
+
     const itemToAdd = selectedVariant
-      ? { ...product, price: selectedVariant.price, selectedVariant, name: `${product.name} — ${selectedVariant.name || selectedVariant.color || selectedVariant.storage || ""}`.trim().replace(/— $/, "") }
+      ? {
+          ...product,
+          price: selectedVariant.price,
+          selectedVariant,
+          name: `${product.name} — ${selectedVariant.name || selectedVariant.color || selectedVariant.storage || ""}`
+            .trim()
+            .replace(/— $/, "")
+        }
       : product;
+
+    let addedSuccessfully = true;
+
     for (let i = 0; i < quantity; i++) {
-      addToCart(itemToAdd);
+      const result = addToCart(itemToAdd);
+      if (result === false) {
+        addedSuccessfully = false;
+        break;
+      }
     }
+
+    if (!addedSuccessfully) {
+      if (showToast) showToast("Please login to add items to your cart", "error");
+      setCartLoading(false);
+      return;
+    }
+
     setAdded(true);
     if (showToast) showToast(`${product.name} added to cart!`);
     trackAddToCart(itemToAdd);
-    setTimeout(() => { setAdded(false); setCartLoading(false); }, 1500);
+
+    setTimeout(() => {
+      setAdded(false);
+      setCartLoading(false);
+    }, 1500);
   };
 
   const handleCompare = () => {
@@ -572,8 +598,28 @@ export default function ProductDetail() {
 
           <ReviewSection product={product} onRefresh={fetchProduct} />
       <AIBundle productId={product._id} onAddBundle={(bundleProducts) => {
-        bundleProducts.forEach(p => addToCart(p));
-        showToast("Bundle added to cart!", "success");
+        if (!localStorage.getItem("token")) {
+          if (showToast) showToast("Please login to add items to your cart", "error");
+          navigate("/login");
+          return;
+        }
+
+        let addedSuccessfully = true;
+
+        for (const bundleProduct of bundleProducts) {
+          const result = addToCart(bundleProduct);
+          if (result === false) {
+            addedSuccessfully = false;
+            break;
+          }
+        }
+
+        if (addedSuccessfully) {
+          showToast("Bundle added to cart!", "success");
+        } else {
+          showToast("Please login to add items to your cart", "error");
+          navigate("/login");
+        }
       }} />
 
       {/* YOU MAY ALSO LIKE */}
