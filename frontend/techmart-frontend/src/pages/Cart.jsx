@@ -4,6 +4,36 @@ import { CartContext } from "../context/CartContext";
 
 const FALLBACK_IMG = "https://placehold.co/150x150?text=No+Image";
 
+const styles = {
+  container: { maxWidth: "1100px", margin: "0 auto", padding: "16px", paddingBottom: "80px", minHeight: "100vh" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
+  title: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px" },
+  badge: { background: "#f97316", color: "var(--text-primary)", fontSize: "12px", fontWeight: "600", padding: "3px 8px", borderRadius: "999px" },
+  layout: { display: "grid", gridTemplateColumns: "1fr 340px", gap: "32px", alignItems: "start" },
+  layoutMobile: { display: "flex", flexDirection: "column", gap: "12px" },
+  summaryMobile: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
+  itemsCol: { display: "flex", flexDirection: "column", gap: "12px" },
+  card: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "12px", display: "flex", gap: "12px", alignItems: "center" },
+  img: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "10px", background: "var(--bg-input)", flexShrink: 0 },
+  details: { flex: 1, minWidth: "0" },
+  itemName: { color: "var(--text-primary)", fontSize: "16px", fontWeight: "700", marginBottom: "4px" },
+  itemCategory: { color: "var(--text-muted)", fontSize: "12px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" },
+  itemPrice: { color: "#f97316", fontSize: "18px", fontWeight: "800", marginBottom: "4px" },
+  qtyRow: { display: "flex", alignItems: "center", gap: "12px", marginTop: "12px" },
+  qtyBtn: { width: "32px", height: "32px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-input)", color: "var(--text-primary)", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  qtyNum: { color: "var(--text-primary)", fontSize: "16px", fontWeight: "700", minWidth: "24px", textAlign: "center" },
+  removeBtn: { background: "transparent", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "8px 12px", fontSize: "18px", cursor: "pointer", color: "var(--text-primary)" },
+  clearBtn: { background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "12px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", alignSelf: "flex-start", marginTop: "8px" },
+  summary: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", position: "sticky", top: "90px" },
+  summaryTitle: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", marginBottom: "20px" },
+  summaryRow: { display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "15px" },
+  divider: { borderTop: "1px solid #2a2a2a", margin: "16px 0" },
+  checkoutBtn: { width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer" },
+  emptyWrap: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", textAlign: "center" },
+  blackBtn: { padding: "10px 18px", background: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border-color)", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
+  orangeBtn: { padding: "14px 28px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px" },
+};
+
 export default function Cart() {
   const { cart, removeFromCart, clearCart, updateQuantity } = useContext(CartContext);
 
@@ -110,33 +140,3 @@ export default function Cart() {
     </div>
   );
 }
-
-const styles = {
-  container: { maxWidth: "1100px", margin: "0 auto", padding: "16px", paddingBottom: "80px", minHeight: "100vh" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
-  title: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px" },
-  badge: { background: "#f97316", color: "var(--text-primary)", fontSize: "12px", fontWeight: "600", padding: "3px 8px", borderRadius: "999px" },
-  layout: { display: "grid", gridTemplateColumns: "1fr 340px", gap: "32px", alignItems: "start" },
-  layoutMobile: { display: "flex", flexDirection: "column", gap: "12px" },
-  summaryMobile: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
-  itemsCol: { display: "flex", flexDirection: "column", gap: "12px" },
-  card: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "12px", display: "flex", gap: "12px", alignItems: "center" },
-  img: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "10px", background: "var(--bg-input)", flexShrink: 0 },
-  details: { flex: 1, minWidth: "0" },
-  itemName: { color: "var(--text-primary)", fontSize: "16px", fontWeight: "700", marginBottom: "4px" },
-  itemCategory: { color: "var(--text-muted)", fontSize: "12px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" },
-  itemPrice: { color: "#f97316", fontSize: "18px", fontWeight: "800", marginBottom: "4px" },
-  qtyRow: { display: "flex", alignItems: "center", gap: "12px", marginTop: "12px" },
-  qtyBtn: { width: "32px", height: "32px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-input)", color: "var(--text-primary)", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-  qtyNum: { color: "var(--text-primary)", fontSize: "16px", fontWeight: "700", minWidth: "24px", textAlign: "center" },
-  removeBtn: { background: "transparent", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "8px 12px", fontSize: "18px", cursor: "pointer", color: "var(--text-primary)" },
-  clearBtn: { background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "12px 20px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", alignSelf: "flex-start", marginTop: "8px" },
-  summary: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", position: "sticky", top: "90px" },
-  summaryTitle: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", marginBottom: "20px" },
-  summaryRow: { display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "15px" },
-  divider: { borderTop: "1px solid #2a2a2a", margin: "16px 0" },
-  checkoutBtn: { width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer" },
-  emptyWrap: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", textAlign: "center" },
-  blackBtn: { padding: "10px 18px", background: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border-color)", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
-  orangeBtn: { padding: "14px 28px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px" },
-};

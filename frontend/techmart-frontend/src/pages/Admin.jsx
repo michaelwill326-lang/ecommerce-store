@@ -13,6 +13,44 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 
 const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow", "Intelligence", "Webhooks"];
 
+const styles = {
+  page: { maxWidth: "1200px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
+  centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px", flexWrap: "wrap", gap: "16px" },
+  title: { color: "var(--text-primary)", fontSize: "28px", fontWeight: "800", margin: 0 },
+  subtitle: { color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" },
+  backBtn: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
+  tabRow: { display: "flex", gap: "10px", marginBottom: "32px", flexWrap: "wrap" },
+  tabBtn: { padding: "10px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px", marginBottom: "32px" },
+  statCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", display: "flex", alignItems: "center", gap: "16px" },
+  statValue: { fontSize: "24px", fontWeight: "800", margin: 0 },
+  statLabel: { color: "var(--text-muted)", fontSize: "13px", margin: 0 },
+  chartCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
+  tableCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px", overflowX: "auto" },
+  sectionTitle: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", margin: "0 0 20px" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { color: "var(--text-muted)", fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", padding: "12px 16px", textAlign: "left", borderBottom: "1px solid var(--border-light)" },
+  tr: { borderBottom: "1px solid #1e1e1e" },
+  td: { color: "var(--text-primary)", fontSize: "14px", padding: "14px 16px" },
+  badge: { color: "var(--text-primary)", padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" },
+  select: { background: "var(--bg-input)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "6px 10px", borderRadius: "8px", fontSize: "13px", cursor: "pointer" },
+  formCard: { background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
+  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" },
+  input: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
+  uploadWrap: { marginBottom: "16px" },
+  uploadLabel: { color: "var(--text-secondary)", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" },
+  previewWrap: { position: "relative", width: "120px", height: "120px", marginBottom: "12px", borderRadius: "12px", overflow: "hidden" },
+  previewImg: { width: "100%", height: "100%", objectFit: "cover" },
+  uploadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" },
+  uploadBtn: { display: "inline-block", padding: "10px 20px", background: "var(--bg-card)", border: "1px solid #f97316", color: "#f97316", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600" },
+  orangeBtn: { padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
+  editBtn: { padding: "6px 12px", background: "#1e3a5f", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
+  deleteBtn: { padding: "6px 12px", background: "#3f0f0f", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
+  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
+  avatar: { background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800" },
+};
+
 export default function Admin() {
   const showToast = useToast();
   const navigate = useNavigate();
@@ -1329,41 +1367,3 @@ ${url}`, "success");
     </div>
   );
 }
-
-const styles = {
-  page: { maxWidth: "1200px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
-  centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px", flexWrap: "wrap", gap: "16px" },
-  title: { color: "var(--text-primary)", fontSize: "28px", fontWeight: "800", margin: 0 },
-  subtitle: { color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" },
-  backBtn: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
-  tabRow: { display: "flex", gap: "10px", marginBottom: "32px", flexWrap: "wrap" },
-  tabBtn: { padding: "10px 20px", borderRadius: "10px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px", marginBottom: "32px" },
-  statCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", display: "flex", alignItems: "center", gap: "16px" },
-  statValue: { fontSize: "24px", fontWeight: "800", margin: 0 },
-  statLabel: { color: "var(--text-muted)", fontSize: "13px", margin: 0 },
-  chartCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
-  tableCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "24px", marginBottom: "24px", overflowX: "auto" },
-  sectionTitle: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", margin: "0 0 20px" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { color: "var(--text-muted)", fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", padding: "12px 16px", textAlign: "left", borderBottom: "1px solid var(--border-light)" },
-  tr: { borderBottom: "1px solid #1e1e1e" },
-  td: { color: "var(--text-primary)", fontSize: "14px", padding: "14px 16px" },
-  badge: { color: "var(--text-primary)", padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" },
-  select: { background: "var(--bg-input)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "6px 10px", borderRadius: "8px", fontSize: "13px", cursor: "pointer" },
-  formCard: { background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "24px", marginBottom: "24px" },
-  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" },
-  input: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 14px", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" },
-  uploadWrap: { marginBottom: "16px" },
-  uploadLabel: { color: "var(--text-secondary)", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" },
-  previewWrap: { position: "relative", width: "120px", height: "120px", marginBottom: "12px", borderRadius: "12px", overflow: "hidden" },
-  previewImg: { width: "100%", height: "100%", objectFit: "cover" },
-  uploadingOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" },
-  uploadBtn: { display: "inline-block", padding: "10px 20px", background: "var(--bg-card)", border: "1px solid #f97316", color: "#f97316", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "600" },
-  orangeBtn: { padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
-  editBtn: { padding: "6px 12px", background: "#1e3a5f", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
-  deleteBtn: { padding: "6px 12px", background: "#3f0f0f", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
-  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
-  avatar: { background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800" },
-};

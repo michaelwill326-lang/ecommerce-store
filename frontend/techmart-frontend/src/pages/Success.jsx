@@ -5,146 +5,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
 
-export default function Success() {
-  const { clearCart } = useContext(CartContext);
-  const navigate = useNavigate();
-  const [countdown, setCountdown] = useState(10);
-  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
-  const [searchParams] = useSearchParams();
-  const isPOD = searchParams.get("pod") === "true";
-  const reference = searchParams.get("reference");
-
-  useEffect(() => {
-    // Clear cart on successful payment
-    clearCart();
-    try { const items = JSON.parse(localStorage.getItem("lastCartItems") || "[]"); if (items.length) trackPurchase(items); } catch {}
-
-    // 🎉 Confetti celebration
-    const duration = 3000;
-    const end = Date.now() + duration;
-    const frame = () => {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-        colors: ["#f97316", "#dc2626", "#22c55e", "#3b82f6", "#ffffff"]
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-        colors: ["#f97316", "#dc2626", "#22c55e", "#3b82f6", "#ffffff"]
-      });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    };
-    frame();
-
-    // Auto redirect countdown
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate("/");
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-
-        {/* SUCCESS ICON */}
-        <div style={styles.iconWrap}>
-          <div style={styles.iconCircle}>
-            <span style={{ fontSize: "48px" }}>✅</span>
-          </div>
-        </div>
-
-        {/* TITLE */}
-        <h1 style={styles.title}>{isPOD ? "Order Placed!" : "Payment Successful!"}</h1>
-        <p style={styles.subtitle}>
-          Thank you{user?.name ? `, ${user.name}` : ""}! {isPOD ? "Your order has been placed. Please have cash ready for delivery." : "Your order has been placed successfully."}
-        </p>
-
-        {/* ORDER DETAILS */}
-        <div style={styles.detailsCard}>
-          <div style={styles.detailRow}>
-            <span style={styles.detailLabel}>Status</span>
-            <span style={isPOD ? {...styles.successBadge, background: "#0a2a1a", color: "#22c55e", border: "1px solid #22c55e"} : styles.successBadge}>{isPOD ? "💵 Pay on Delivery" : "✅ Confirmed"}</span>
-          </div>
-          <div style={styles.detailRow}>
-            <span style={styles.detailLabel}>Delivery</span>
-            <span style={styles.detailValue}>2-5 business days</span>
-          </div>
-          {isPOD && (
-            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginTop: "12px" }}>
-              <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>Pay on Delivery Instructions</p>
-              <p style={{ color: "#86efac", fontSize: "13px", margin: 0 }}>Please have the exact cash amount ready when our delivery agent arrives. Do not pay before inspecting your item.</p>
-            </div>
-          )}
-          <div style={styles.detailRow}>
-            <span style={styles.detailLabel}>Email</span>
-            <span style={styles.detailValue}>{user?.email || "—"}</span>
-          </div>
-        </div>
-
-        {/* WHAT'S NEXT */}
-        <div style={styles.stepsCard}>
-          <h3 style={styles.stepsTitle}>What happens next?</h3>
-          <div style={styles.step}>
-            <span style={styles.stepIcon}>📧</span>
-            <div>
-              <p style={styles.stepTitle}>Confirmation Email</p>
-              <p style={styles.stepDesc}>You'll receive an order confirmation at your email.</p>
-            </div>
-          </div>
-          <div style={styles.step}>
-            <span style={styles.stepIcon}>📦</span>
-            <div>
-              <p style={styles.stepTitle}>Order Processing</p>
-              <p style={styles.stepDesc}>We'll prepare your items within 24 hours.</p>
-            </div>
-          </div>
-          <div style={styles.step}>
-            <span style={styles.stepIcon}>🚚</span>
-            <div>
-              <p style={styles.stepTitle}>Delivery</p>
-              <p style={styles.stepDesc}>Your order will arrive in 2-5 business days.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* COUNTDOWN */}
-        <p style={styles.countdownText}>
-          Redirecting to home in{" "}
-          <span style={{ color: "#f97316", fontWeight: "700" }}>{countdown}s</span>
-        </p>
-
-        {/* BUTTONS */}
-        <div style={styles.btnRow}>
-          <Link to="/" style={{ flex: 1 }}>
-            <button style={styles.primaryBtn}>
-              🛍️ Continue Shopping
-            </button>
-          </Link>
-          <Link to="/tracking" style={{ flex: 1 }}>
-            <button style={styles.secondaryBtn}>
-              📦 View Orders
-            </button>
-          </Link>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
 const styles = {
   page: {
     minHeight: "100vh",
@@ -292,3 +152,143 @@ const styles = {
     cursor: "pointer",
   },
 };
+
+export default function Success() {
+  const { clearCart } = useContext(CartContext);
+  const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(10);
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+  const [searchParams] = useSearchParams();
+  const isPOD = searchParams.get("pod") === "true";
+  const reference = searchParams.get("reference");
+
+  useEffect(() => {
+    // Clear cart on successful payment
+    clearCart();
+    try { const items = JSON.parse(localStorage.getItem("lastCartItems") || "[]"); if (items.length) trackPurchase(items); } catch {}
+
+    // 🎉 Confetti celebration
+    const duration = 3000;
+    const end = Date.now() + duration;
+    const frame = () => {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ["#f97316", "#dc2626", "#22c55e", "#3b82f6", "#ffffff"]
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ["#f97316", "#dc2626", "#22c55e", "#3b82f6", "#ffffff"]
+      });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    };
+    frame();
+
+    // Auto redirect countdown
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/");
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.card}>
+
+        {/* SUCCESS ICON */}
+        <div style={styles.iconWrap}>
+          <div style={styles.iconCircle}>
+            <span style={{ fontSize: "48px" }}>✅</span>
+          </div>
+        </div>
+
+        {/* TITLE */}
+        <h1 style={styles.title}>{isPOD ? "Order Placed!" : "Payment Successful!"}</h1>
+        <p style={styles.subtitle}>
+          Thank you{user?.name ? `, ${user.name}` : ""}! {isPOD ? "Your order has been placed. Please have cash ready for delivery." : "Your order has been placed successfully."}
+        </p>
+
+        {/* ORDER DETAILS */}
+        <div style={styles.detailsCard}>
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>Status</span>
+            <span style={isPOD ? {...styles.successBadge, background: "#0a2a1a", color: "#22c55e", border: "1px solid #22c55e"} : styles.successBadge}>{isPOD ? "💵 Pay on Delivery" : "✅ Confirmed"}</span>
+          </div>
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>Delivery</span>
+            <span style={styles.detailValue}>2-5 business days</span>
+          </div>
+          {isPOD && (
+            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid #22c55e", borderRadius: "10px", padding: "12px", marginTop: "12px" }}>
+              <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>Pay on Delivery Instructions</p>
+              <p style={{ color: "#86efac", fontSize: "13px", margin: 0 }}>Please have the exact cash amount ready when our delivery agent arrives. Do not pay before inspecting your item.</p>
+            </div>
+          )}
+          <div style={styles.detailRow}>
+            <span style={styles.detailLabel}>Email</span>
+            <span style={styles.detailValue}>{user?.email || "—"}</span>
+          </div>
+        </div>
+
+        {/* WHAT'S NEXT */}
+        <div style={styles.stepsCard}>
+          <h3 style={styles.stepsTitle}>What happens next?</h3>
+          <div style={styles.step}>
+            <span style={styles.stepIcon}>📧</span>
+            <div>
+              <p style={styles.stepTitle}>Confirmation Email</p>
+              <p style={styles.stepDesc}>You'll receive an order confirmation at your email.</p>
+            </div>
+          </div>
+          <div style={styles.step}>
+            <span style={styles.stepIcon}>📦</span>
+            <div>
+              <p style={styles.stepTitle}>Order Processing</p>
+              <p style={styles.stepDesc}>We'll prepare your items within 24 hours.</p>
+            </div>
+          </div>
+          <div style={styles.step}>
+            <span style={styles.stepIcon}>🚚</span>
+            <div>
+              <p style={styles.stepTitle}>Delivery</p>
+              <p style={styles.stepDesc}>Your order will arrive in 2-5 business days.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* COUNTDOWN */}
+        <p style={styles.countdownText}>
+          Redirecting to home in{" "}
+          <span style={{ color: "#f97316", fontWeight: "700" }}>{countdown}s</span>
+        </p>
+
+        {/* BUTTONS */}
+        <div style={styles.btnRow}>
+          <Link to="/" style={{ flex: 1 }}>
+            <button style={styles.primaryBtn}>
+              🛍️ Continue Shopping
+            </button>
+          </Link>
+          <Link to="/tracking" style={{ flex: 1 }}>
+            <button style={styles.secondaryBtn}>
+              📦 View Orders
+            </button>
+          </Link>
+        </div>
+
+      </div>
+    </div>
+  );
+}

@@ -1,55 +1,5 @@
 import React from "react";
 
-export default function Policy() {
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.mainTitle}>TechMart Legal Policy</h1>
-        <p style={styles.subtitle}>Last updated: May 2026</p>
-        
-        <hr style={styles.divider} />
-
-        {/* 1. Privacy Policy Section */}
-        <section style={styles.section}>
-          <h2 style={styles.sectionTitle}>1. Privacy Policy</h2>
-          <p style={styles.text}>
-            At TechMart, your privacy is our priority. We collect essential information 
-            required to process your orders, manage your marketplace interactions, and 
-            provide tailored AI recommendations. Your data is encrypted and secure. 
-            We do not sell, trade, or share your personal profile details with third-party marketers.
-          </p>
-        </section>
-
-        {/* 2. Refund Policy Section */}
-        <section style={styles.section}>
-          <h2 style={styles.sectionTitle}>2. 7-Days Refund Policy</h2>
-          <p style={styles.text}>
-            We stand behind every piece of hardware and consumer electronic listed on our marketplace. 
-            If you are not completely satisfied with your purchase, you are eligible for a full 
-            refund or replacement within <strong>7 days</strong> of delivery.
-          </p>
-          <div style={styles.bulletBox}>
-            <p style={styles.bulletItem}>📦 <strong>Condition:</strong> Items must be returned in their original packaging with all included accessories.</p>
-            <p style={styles.bulletItem}>🚚 <strong>Fulfillment:</strong> Our official, full-time TechMart delivery riders will come directly to your location to pick up and process verified return requests securely.</p>
-            <p style={styles.bulletItem}>💳 <strong>Reimbursement:</strong> Once processed, refunds are credited back instantly to your account via our secure payment gateway infrastructure.</p>
-          </div>
-        </section>
-
-        {/* 3. Terms of Service */}
-        <section style={styles.section}>
-          <h2 style={styles.sectionTitle}>3. Terms of Service</h2>
-          <p style={styles.text}>
-            By utilizing the TechMart platform, you agree to our marketplace terms. 
-            All listings are subject to local merchant verification rules, and real-time tracking 
-            status updates will be dynamically delivered via automated SMS and WhatsApp alerts.
-          </p>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-// Mobile-first, stable css-in-js styles
 const styles = {
   container: {
     padding: "20px 15px",
@@ -117,3 +67,54 @@ const styles = {
     margin: "0 0 10px 0",
   },
 };
+
+export default function Policy() {
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1 style={styles.mainTitle}>TechMart Legal Policy</h1>
+        <p style={styles.subtitle}>Last updated: May 2026</p>
+        
+        <hr style={styles.divider} />
+
+        {/* 1. Privacy Policy Section */}
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>1. Privacy Policy</h2>
+          <p style={styles.text}>
+            At TechMart, your privacy is our priority. We collect essential information 
+            required to process your orders, manage your marketplace interactions, and 
+            provide tailored AI recommendations. Your data is encrypted and secure. 
+            We do not sell, trade, or share your personal profile details with third-party marketers.
+          </p>
+        </section>
+
+        {/* 2. Refund Policy Section */}
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>2. 7-Days Refund Policy</h2>
+          <p style={styles.text}>
+            We stand behind every piece of hardware and consumer electronic listed on our marketplace. 
+            If you are not completely satisfied with your purchase, you are eligible for a full 
+            refund or replacement within <strong>7 days</strong> of delivery.
+          </p>
+          <div style={styles.bulletBox}>
+            <p style={styles.bulletItem}>📦 <strong>Condition:</strong> Items must be returned in their original packaging with all included accessories.</p>
+            <p style={styles.bulletItem}>🚚 <strong>Fulfillment:</strong> Our official, full-time TechMart delivery riders will come directly to your location to pick up and process verified return requests securely.</p>
+            <p style={styles.bulletItem}>💳 <strong>Reimbursement:</strong> Once processed, refunds are credited back instantly to your account via our secure payment gateway infrastructure.</p>
+          </div>
+        </section>
+
+        {/* 3. Terms of Service */}
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>3. Terms of Service</h2>
+          <p style={styles.text}>
+            By utilizing the TechMart platform, you agree to our marketplace terms. 
+            All listings are subject to local merchant verification rules, and real-time tracking 
+            status updates will be dynamically delivered via automated SMS and WhatsApp alerts.
+          </p>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// Mobile-first, stable css-in-js styles
