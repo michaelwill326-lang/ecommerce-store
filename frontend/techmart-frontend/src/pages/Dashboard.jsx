@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
 import { trackSearch } from "../utils/tracker";
 import usePullToRefresh from "../hooks/usePullToRefresh";
 import { ProductGridSkeleton } from "../components/Skeleton";
