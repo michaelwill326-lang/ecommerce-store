@@ -11,7 +11,7 @@ export const socket = io(API, {
 
 function joinUserRoom() {
   try {
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = JSON.parse(sessionStorage.getItem("user"));
     if (user?.email) socket.emit("join", user.email);
   } catch {}
 }

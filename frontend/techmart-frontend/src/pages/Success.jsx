@@ -9,7 +9,7 @@ export default function Success() {
   const { clearCart } = useContext(CartContext);
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(10);
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
   const [searchParams] = useSearchParams();
   const isPOD = searchParams.get("pod") === "true";
   const reference = searchParams.get("reference");

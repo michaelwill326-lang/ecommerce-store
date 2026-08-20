@@ -7,7 +7,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 
 export default function SellerDashboard() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("sellerToken");
+  const token = sessionStorage.getItem("sellerToken");
   const seller = (() => { try { return JSON.parse(localStorage.getItem("seller") || "{}"); } catch { return {}; } })();
   const headers = { Authorization: `Bearer ${token}` };
   const [tab, setTab] = useState("Overview");
@@ -197,7 +197,7 @@ export default function SellerDashboard() {
             </div>
           </div>
         </div>
-        <button onClick={() => { localStorage.removeItem("sellerToken"); localStorage.removeItem("seller"); navigate("/seller/login"); }}
+        <button onClick={() => { sessionStorage.removeItem("sellerToken"); localStorage.removeItem("seller"); navigate("/seller/login"); }}
           style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-muted)", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "13px" }}>
           Logout
         </button>

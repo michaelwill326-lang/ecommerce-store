@@ -5,7 +5,7 @@ export default function RequireAdmin({ children }) {
   const [isValid, setIsValid] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+    const token = sessionStorage.getItem("adminToken");
 
     if (!token) {
       setIsValid(false);
@@ -17,14 +17,14 @@ export default function RequireAdmin({ children }) {
       const payload = JSON.parse(atob(token.split(".")[1]));
 
       if (payload.exp * 1000 < Date.now()) {
-        localStorage.removeItem("adminToken");
+        sessionStorage.removeItem("adminToken");
         setIsValid(false);
       } else {
         setIsValid(true);
       }
 
     } catch (err) {
-      localStorage.removeItem("adminToken");
+      sessionStorage.removeItem("adminToken");
       setIsValid(false);
     }
   }, []);

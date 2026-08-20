@@ -54,8 +54,8 @@ export default function Login() {
         const interval = setInterval(() => setOtpTimer(prev => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; }), 1000);
       } else {
         // No 2FA — login directly
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        sessionStorage.setItem("token", response.data.token);
+        sessionStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("techmart_last_activity", String(Date.now()));
         window.dispatchEvent(new Event("techmart-auth-change"));
         navigate(getPostLoginPath());
@@ -76,8 +76,8 @@ export default function Login() {
       setLoading(true);
       const res = await axios.post(`${API}/api/auth/verify-otp`, { email, otp });
       localStorage.removeItem("_tempUser");
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      sessionStorage.setItem("token", res.data.token);
+      sessionStorage.setItem("user", JSON.stringify(res.data.user));
       localStorage.setItem("techmart_last_activity", String(Date.now()));
       if (res.data.deviceToken) localStorage.setItem("deviceToken", res.data.deviceToken);
       window.dispatchEvent(new Event("techmart-auth-change"));

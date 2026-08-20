@@ -21,7 +21,7 @@ export default function SellerLogin() {
     try {
       setLoading(true);
       const res = await axios.post(`${API}/api/seller/login`, form);
-      localStorage.setItem("sellerToken", res.data.token);
+      sessionStorage.setItem("sellerToken", res.data.token);
       localStorage.setItem("seller", JSON.stringify(res.data.seller));
       navigate("/seller/dashboard");
     } catch (err) {
