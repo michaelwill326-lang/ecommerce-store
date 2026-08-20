@@ -41,11 +41,15 @@ export default function Navbar() {
     : 0;
 
   useEffect(() => {
-    const handleStorage = () => {
+    const handleAuthChange = () => {
       try { setUser(JSON.parse(sessionStorage.getItem("user"))); } catch { setUser(null); }
     };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    window.addEventListener("techmart-auth-change", handleAuthChange);
+    window.addEventListener("storage", handleAuthChange);
+    return () => {
+      window.removeEventListener("techmart-auth-change", handleAuthChange);
+      window.removeEventListener("storage", handleAuthChange);
+    };
   }, []);
 
   // Automatically track viewport adjustments so elements adapt seamlessly
