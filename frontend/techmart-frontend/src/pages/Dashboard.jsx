@@ -72,7 +72,8 @@ export default function Dashboard() {
   const [dailyDeal, setDailyDeal] = useState(null);
   const [dealTimeLeft, setDealTimeLeft] = useState("");
   const [loading, setLoading] = useState(true);
-  const { pulling, pullDistance, threshold } = usePullToRefresh(fetchProducts);
+  const fetchProductsRef = useRef(null);
+  const { pulling, pullDistance, threshold } = usePullToRefresh(() => fetchProductsRef.current?.());
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -109,6 +110,7 @@ export default function Dashboard() {
   }, []);
 
   const fetchProducts = async () => {
+    fetchProductsRef.current = fetchProducts;
     try {
       setLoading(true);
       const [productsRes, trendRes, dealRes] = await Promise.allSettled([
