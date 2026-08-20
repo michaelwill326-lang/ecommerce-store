@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 const WishlistContext = createContext();
 
 export function WishlistProvider({ children }) {
-  const isLoggedIn = () => !!localStorage.getItem("token");
+  const isLoggedIn = () => !!sessionStorage.getItem("token");
 
   const [wishlist, setWishlist] = useState(() => {
     if (!isLoggedIn()) return [];
@@ -28,7 +28,7 @@ export function WishlistProvider({ children }) {
   useEffect(() => {
     const handleAuthChange = (e) => {
       if (e.key === "token" || e.type === "techmart-auth-change") {
-        if (!localStorage.getItem("token")) {
+        if (!sessionStorage.getItem("token")) {
           setWishlist([]);
           localStorage.removeItem("wishlist");
         }

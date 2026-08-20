@@ -12,13 +12,13 @@ export default function Checkout() {
   const { cart, clearCart } = useContext(CartContext);
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState((() => { try { return JSON.parse(localStorage.getItem("user"))?.phone || ""; } catch { return ""; } })());
+  const [phone, setPhone] = useState((() => { try { return JSON.parse(sessionStorage.getItem("user"))?.phone || ""; } catch { return ""; } })());
   const [error, setError] = useState("");
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
-  const token = localStorage.getItem("token");
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+  const token = sessionStorage.getItem("token");
   const total = cart.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
   const [couponCode, setCouponCode] = useState("");
   const [couponStatus, setCouponStatus] = useState(null);
@@ -203,7 +203,7 @@ export default function Checkout() {
     if (!phone.trim()) return showToast("Please enter your phone number", "warning");
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const res = await axios.post(`${API}/api/orders/checkout-escrow`, {
         items: cart,
         amount: finalTotal,

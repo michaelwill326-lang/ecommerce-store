@@ -26,13 +26,13 @@ export default function Navbar() {
 
   const [user, setUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user"));
+      return JSON.parse(sessionStorage.getItem("user"));
     } catch {
       return null;
     }
   });
 
-  const isLoggedIn = !!localStorage.getItem("token");
+  const isLoggedIn = !!sessionStorage.getItem("token");
 
   const wishlistCount = isLoggedIn ? wishlist.length : 0;
 
@@ -42,7 +42,7 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleStorage = () => {
-      try { setUser(JSON.parse(localStorage.getItem("user"))); } catch { setUser(null); }
+      try { setUser(JSON.parse(sessionStorage.getItem("user"))); } catch { setUser(null); }
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -60,10 +60,10 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    const t = localStorage.getItem("token");
+    const t = sessionStorage.getItem("token");
     if (t) fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     localStorage.removeItem("deviceToken");
     localStorage.removeItem("techmart_last_activity");
     window.dispatchEvent(new Event("techmart-auth-change"));

@@ -31,8 +31,8 @@ export default function Tracking() {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("track");
 
-  const token = localStorage.getItem("token");
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const token = sessionStorage.getItem("token");
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
 
   useEffect(() => {
     if (token && user) {
@@ -271,7 +271,7 @@ export default function Tracking() {
                     const reason = window.prompt("Reason for cancellation (optional):");
                     if (reason === null) return;
                     try {
-                      const token = localStorage.getItem("token");
+                      const token = sessionStorage.getItem("token");
                       const res = await fetch(`${API}/api/orders/${order._id}/cancel`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -299,7 +299,7 @@ export default function Tracking() {
                     if (!reason) return;
                     const description = prompt("Additional details (optional):");
                     try {
-                      const token = localStorage.getItem("token");
+                      const token = sessionStorage.getItem("token");
                       const res = await fetch(`${API}/api/returns`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -324,7 +324,7 @@ export default function Tracking() {
                   <button onClick={async () => {
                     if (!window.confirm("Confirm you have received this order? This will release payment to the seller.")) return;
                     try {
-                      const token = localStorage.getItem("token");
+                      const token = sessionStorage.getItem("token");
                       const res = await fetch(`${API}/api/orders/${order._id}/confirm-delivery`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
@@ -371,7 +371,7 @@ export default function Tracking() {
                   {/* Reorder Button */}
                   {order.status === "Delivered" && (
                     <button onClick={() => {
-                      if (!localStorage.getItem("token")) {
+                      if (!sessionStorage.getItem("token")) {
                         showToast("Please log in to buy these items again.", "error");
                         return;
                       }

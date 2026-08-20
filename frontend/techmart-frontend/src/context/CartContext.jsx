@@ -7,7 +7,7 @@ const API =
 export const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const isLoggedIn = () => !!localStorage.getItem("token");
+  const isLoggedIn = () => !!sessionStorage.getItem("token");
 
   // Never expose a customer's cart to a logged-out visitor.
   const [cart, setCart] = useState(() => {
@@ -32,7 +32,7 @@ export function CartProvider({ children }) {
 
   // Sync the authenticated customer's cart to the backend.
   const syncCartToServer = useCallback(async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     if (!token) return;
 
@@ -52,7 +52,7 @@ export function CartProvider({ children }) {
 
   // Load the authenticated customer's persistent cart.
   const loadCartFromServer = useCallback(async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     if (!token) {
       setCart([]);
@@ -90,7 +90,7 @@ export function CartProvider({ children }) {
         return;
       }
 
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       if (!token) {
         // Logout/inactivity logout:
@@ -184,7 +184,7 @@ export function CartProvider({ children }) {
   };
 
   const clearCart = () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     setCart([]);
 

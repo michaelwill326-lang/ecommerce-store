@@ -8,7 +8,7 @@ const getSessionId = () => {
 
 export const track = async (type, data = {}) => {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     await fetch(`${API}/api/behavior/track`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

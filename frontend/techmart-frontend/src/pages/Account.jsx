@@ -8,8 +8,8 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 export default function Account() {
   const showToast = useToast();
   const navigate = useNavigate();
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
-  const token = localStorage.getItem("token");
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+  const token = sessionStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const [tab, setTab] = useState("Wallet");
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
@@ -559,7 +559,7 @@ export default function Account() {
               </div>
             </div>
           )}
-          <button onClick={() => { const t = localStorage.getItem("token"); if (t) fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {}); localStorage.removeItem("token"); localStorage.removeItem("user"); localStorage.removeItem("deviceToken"); localStorage.removeItem("techmart_last_activity"); window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null })); window.dispatchEvent(new Event("techmart-auth-change")); navigate("/login"); }}
+          <button onClick={() => { const t = sessionStorage.getItem("token"); if (t) fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {}); sessionStorage.removeItem("token"); sessionStorage.removeItem("user"); localStorage.removeItem("deviceToken"); localStorage.removeItem("techmart_last_activity"); window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null })); window.dispatchEvent(new Event("techmart-auth-change")); navigate("/login"); }}
             style={{ marginTop: "20px", width: "100%", padding: "12px", background: "var(--bg-card)", border: "1px solid #dc2626", color: "#dc2626", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" }}>
             Logout
           </button>

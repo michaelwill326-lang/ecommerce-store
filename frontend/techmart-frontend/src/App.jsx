@@ -83,11 +83,11 @@ function useInactivityLogout(minutes = 20) {
 
     let timer = null;
 
-    const getToken = () => localStorage.getItem("token");
+    const getToken = () => sessionStorage.getItem("token");
 
     const logoutForInactivity = () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
       localStorage.removeItem("deviceToken");
       localStorage.removeItem(LAST_ACTIVITY_KEY);
 

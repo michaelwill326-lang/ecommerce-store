@@ -10,8 +10,8 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 
 export default function TechMartPay() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const token = sessionStorage.getItem("token");
+  const user = JSON.parse(sessionStorage.getItem("user") || "null");
   const headers = { Authorization: `Bearer ${token}` };
   const location = useLocation();
   const [tab, setTab] = useState("Dashboard");

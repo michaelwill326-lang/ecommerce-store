@@ -38,7 +38,7 @@ export default function Chatbot() {
 
   useEffect(() => {
     const syncUser = () => {
-      const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+      const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
       setUserName(user?.name?.split(" ")[0] || "Guest");
       setUserRole(user?.role || "customer");
     };
@@ -53,10 +53,10 @@ export default function Chatbot() {
 
   // Proactive alerts check when chatbot opens
   useEffect(() => {
-    if (isOpen && localStorage.getItem("token")) {
+    if (isOpen && sessionStorage.getItem("token")) {
       fetch(`${API}/api/ai/assistant`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionStorage.getItem("token")}` },
         body: JSON.stringify({ message: "check for alerts", context: {}, history: [] })
       }).then(r => r.json()).then(data => {
         if (data.data?.type === "alerts" && data.data.items?.length > 0) {
@@ -107,7 +107,7 @@ export default function Chatbot() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) return;
     fetch(`${API}/api/ai/pro/status`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
@@ -116,7 +116,7 @@ export default function Chatbot() {
   }, []);
 
   const upgradeAIPro = async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     setUpgradingPro(true);
     try {
       const res = await fetch(`${API}/api/ai/pro/upgrade`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
@@ -133,7 +133,7 @@ export default function Chatbot() {
   };
 
   const sendMessage = async (overrideMsg) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     const message = (overrideMsg || input).trim();
     if (!message) return;
     addMessage(message, "user");
@@ -180,7 +180,7 @@ export default function Chatbot() {
   };
 
   const executeAction = async (action, actionData, pin) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (action === "confirm_transfer") {
       if (!pin) { setPinPromptAction({ action, actionData }); return; }
       setPendingAction(null);

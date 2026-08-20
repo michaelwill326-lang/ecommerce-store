@@ -56,8 +56,8 @@ export default function Admin() {
   const [uploading, setUploading] = useState(false);
   const [uploadPreview, setUploadPreview] = useState(null);
 
-  const token = localStorage.getItem("token");
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const token = sessionStorage.getItem("token");
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {

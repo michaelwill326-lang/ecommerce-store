@@ -13,7 +13,7 @@ export default function PayLink() {
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   useEffect(() => {
     axios.get(`${API}/api/paylink/${linkId}`)

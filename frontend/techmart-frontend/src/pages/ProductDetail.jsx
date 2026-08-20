@@ -32,7 +32,7 @@ export default function ProductDetail() {
 
   const submitReport = async () => {
     if (!reportForm.reason) return;
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) { if (showToast) showToast("Please login to report a product", "error"); return; }
     setReportLoading(true);
     try {
@@ -147,7 +147,7 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (cartLoading) return;
 
-    if (!localStorage.getItem("token")) {
+    if (!sessionStorage.getItem("token")) {
       if (showToast) showToast("Please login to add items to your cart", "error");
       navigate("/login");
       return;
@@ -509,8 +509,8 @@ export default function ProductDetail() {
           {product.vendorId && (
             <button
               onClick={async () => {
-                const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
-                const token = localStorage.getItem("token");
+                const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+                const token = sessionStorage.getItem("token");
                 if (!user || !token) { navigate("/login"); return; }
                 const msg = prompt("Send a message to the seller about this product:");
                 if (!msg) return;
@@ -605,7 +605,7 @@ export default function ProductDetail() {
 
           <ReviewSection product={product} onRefresh={fetchProduct} />
       <AIBundle productId={product._id} onAddBundle={(bundleProducts) => {
-        if (!localStorage.getItem("token")) {
+        if (!sessionStorage.getItem("token")) {
           if (showToast) showToast("Please login to add items to your cart", "error");
           navigate("/login");
           return;

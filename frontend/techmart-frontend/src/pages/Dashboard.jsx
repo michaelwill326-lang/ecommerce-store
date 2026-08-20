@@ -30,7 +30,7 @@ export default function Dashboard() {
   const [sortBy, setSortBy] = useState("newest");
   const [addedId, setAddedId] = useState(null);
 
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
   const recent = (() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } })();
 
   useEffect(() => {
@@ -504,8 +504,8 @@ export default function Dashboard() {
             {user ? (
               <span
                 onClick={() => {
-                  localStorage.removeItem("token");
-                  localStorage.removeItem("user");
+                  sessionStorage.removeItem("token");
+                  sessionStorage.removeItem("user");
                   localStorage.removeItem("deviceToken");
                   localStorage.removeItem("techmart_last_activity");
                   window.dispatchEvent(new Event("techmart-auth-change"));

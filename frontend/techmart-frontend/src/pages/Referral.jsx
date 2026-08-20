@@ -9,7 +9,7 @@ export default function Referral() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   useEffect(() => {
     if (!token) { navigate("/login"); return; }

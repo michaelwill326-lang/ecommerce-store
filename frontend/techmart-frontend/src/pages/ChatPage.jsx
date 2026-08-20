@@ -15,7 +15,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+    const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
     setUserEmail(user?.email || "Guest");
     setUserName(user?.name?.split(" ")[0] || "Guest");
   }, []);
@@ -35,7 +35,7 @@ export default function ChatPage() {
     setInput("");
     setTyping(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(`${API}/api/ai/assistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

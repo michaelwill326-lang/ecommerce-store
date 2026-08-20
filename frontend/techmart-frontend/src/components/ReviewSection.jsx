@@ -13,8 +13,8 @@ export default function ReviewSection({ product, onRefresh }) {
   const [hoveredStar, setHoveredStar] = useState(0);
   const [flagging, setFlagging] = useState(null);
 
-  const token = localStorage.getItem("token");
-  const user = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const token = sessionStorage.getItem("token");
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
 
   const approvedReviews = product.reviews?.filter((r) => r.approved) || [];
 
