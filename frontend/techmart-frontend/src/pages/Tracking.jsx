@@ -30,6 +30,8 @@ export default function Tracking() {
   const [myOrdersLoading, setMyOrdersLoading] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("track");
+  const [pullDistance, setPullDistance] = useState(0);
+  const [pulling, setPulling] = useState(false);
 
   const token = sessionStorage.getItem("token");
   const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
