@@ -757,7 +757,7 @@ const requestPinReset = async () => {
 
         {/* MESSAGE */}
         {msg.text && (
-          <div style={{ background: msg.type === "success" ? "#0a2a1a" : "#2a1010", border: `1px solid ${msg.type === "success" ? "#22c55e" : "#dc2626"}`, color: msg.type === "success" ? "#86efac" : "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}>
+          <div style={{ background: msg.type === "success" ? "#0d0f1e" : "#2a1010", border: `1px solid ${msg.type === "success" ? "#818cf8" : "#dc2626"}`, color: msg.type === "success" ? "#c7d2fe" : "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}>
             {msg.text}
           </div>
         )}
@@ -771,7 +771,7 @@ const requestPinReset = async () => {
                 <p style={{ color: "var(--text-primary)", fontWeight: "800", fontSize: "22px", margin: "0 0 4px", letterSpacing: "2px" }}>{dashboard.virtualAccount.accountNumber}</p>
                 <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 2px" }}>{dashboard.virtualAccount.bankName}</p>
                 <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{dashboard.virtualAccount.accountName}</p>
-                <p style={{ color: "#22c55e", fontSize: "12px", marginTop: "8px" }}>Transfer to this account to fund your wallet instantly</p>
+                <p style={{ color: "#818cf8", fontSize: "12px", marginTop: "8px" }}>Transfer to this account to fund your wallet instantly</p>
               </div>
             ) : (
               <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
@@ -786,20 +786,20 @@ const requestPinReset = async () => {
             )}
 
             {!bvnVerified && !ninVerified && (
-              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "12px", padding: "16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                 <div>
-                  <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>🔐 Verify Your BVN</p>
+                  <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>🔐 Verify Your BVN</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Unlock higher limits: ₦500k/day funding, ₦200k/day transfers</p>
                 </div>
-                <button onClick={() => setTab("KYC")} style={{ padding: "10px 16px", background: "#22c55e", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px", flexShrink: 0 }}>Verify</button>
+                <button onClick={() => setTab("KYC")} style={{ padding: "10px 16px", background: "#818cf8", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px", flexShrink: 0 }}>Verify</button>
               </div>
             )}
 
             {(bvnVerified || ninVerified) && (
-              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <p style={{ fontSize: "20px", margin: 0 }}>✅</p>
                 <div>
-                  <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>BVN Verified</p>
+                  <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>BVN Verified</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>You have access to higher transaction limits</p>
                 </div>
               </div>
@@ -836,7 +836,7 @@ const requestPinReset = async () => {
                       <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{tx.description}</p>
                       <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{new Date(tx.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <p style={{ color: tx.type === "credit" ? "#22c55e" : "#f87171", fontWeight: "700", fontSize: "14px", margin: 0 }}>
+                    <p style={{ color: tx.type === "credit" ? "#34d399" : "#f87171", fontWeight: "700", fontSize: "14px", margin: 0 }}>
                       {tx.type === "credit" ? "+" : "-"}₦{tx.amount?.toLocaleString()}
                     </p>
                   </div>
@@ -920,8 +920,8 @@ const requestPinReset = async () => {
                 </button>
               </div>
               {withdrawForm.accountName && (
-                <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
-                  <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: 0 }}>{withdrawForm.accountName}</p>
+                <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "14px", margin: 0 }}>{withdrawForm.accountName}</p>
                 </div>
               )}
               <button onClick={() => requirePin(withdraw)} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: !withdrawForm.accountName ? 0.6 : 1 }}>
@@ -948,14 +948,14 @@ const requestPinReset = async () => {
                   return (
                     <div key={days} onClick={() => setVaultForm({...vaultForm, lockDays: days})} style={{ flex: 1, padding: "10px 6px", borderRadius: "8px", border: `2px solid ${vaultForm.lockDays === days ? "#f97316" : "#333"}`, background: vaultForm.lockDays === days ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
                       <p style={{ color: vaultForm.lockDays === days ? "#f97316" : "#888", fontWeight: "700", fontSize: "13px", margin: "0 0 2px" }}>{label}</p>
-                      {interest > 0 && <p style={{ color: "#22c55e", fontSize: "10px", margin: 0 }}>+₦{interest.toLocaleString()}</p>}
+                      {interest > 0 && <p style={{ color: "#818cf8", fontSize: "10px", margin: 0 }}>+₦{interest.toLocaleString()}</p>}
                     </div>
                   );
                 })}
               </div>
               {vaultForm.amount && Number(vaultForm.amount) >= 1000 && (
-                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px", marginBottom: "12px" }}>
-                  <p style={{ color: "#22c55e", fontSize: "13px", margin: 0, fontWeight: "700" }}>
+                <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px", marginBottom: "12px" }}>
+                  <p style={{ color: "#818cf8", fontSize: "13px", margin: 0, fontWeight: "700" }}>
                     You'll earn ₦{Math.floor(Number(vaultForm.amount) * 0.05/30 * vaultForm.lockDays).toLocaleString()} interest — Total: ₦{(Number(vaultForm.amount) + Math.floor(Number(vaultForm.amount) * 0.05/30 * vaultForm.lockDays)).toLocaleString()}
                   </p>
                 </div>
@@ -977,17 +977,17 @@ const requestPinReset = async () => {
                  const matured = new Date() >= new Date(v.maturityDate);
                  const daysLeft = Math.ceil((new Date(v.maturityDate) - new Date()) / (1000*60*60*24));
                  return (
-                   <div key={i} style={{ background: "#111", border: `1px solid ${v.status === "withdrawn" ? "#333" : matured ? "#22c55e" : "#f97316"}`, borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
+                   <div key={i} style={{ background: "#111", border: `1px solid ${v.status === "withdrawn" ? "#333" : matured ? "#818cf8" : "#f97316"}`, borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                        <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: 0 }}>₦{v.amount.toLocaleString()}</p>
-                       <span style={{ background: v.status === "withdrawn" ? "#1a1a1a" : matured ? "#0a2a1a" : "#1a0a00", color: v.status === "withdrawn" ? "#888" : matured ? "#22c55e" : "#f97316", padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700" }}>
+                       <span style={{ background: v.status === "withdrawn" ? "#1a1a1a" : matured ? "#0d0f1e" : "#1a0a00", color: v.status === "withdrawn" ? "#888" : matured ? "#818cf8" : "#f97316", padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700" }}>
                          {v.status === "withdrawn" ? "WITHDRAWN" : matured ? "MATURED ✅" : `${daysLeft}d left`}
                        </span>
                      </div>
-                     <p style={{ color: "#22c55e", fontSize: "12px", margin: "0 0 4px" }}>+₦{v.expectedInterest.toLocaleString()} interest • {v.lockDays} days</p>
+                     <p style={{ color: "#818cf8", fontSize: "12px", margin: "0 0 4px" }}>+₦{v.expectedInterest.toLocaleString()} interest • {v.lockDays} days</p>
                      <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 8px" }}>Matures: {new Date(v.maturityDate).toLocaleDateString("en-NG")}</p>
                      {(matured || v.status === "matured") && v.status !== "withdrawn" && (
-                       <button onClick={() => withdrawVault(v._id)} style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+                       <button onClick={() => withdrawVault(v._id)} style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
                          💰 Withdraw ₦{(v.amount + v.expectedInterest).toLocaleString()}
                        </button>
                      )}
@@ -1031,7 +1031,7 @@ const requestPinReset = async () => {
                   </div>
                   <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
                     <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 4px", textTransform: "uppercase" }}>Next Reward</p>
-                    <p style={{ color: "#22c55e", fontWeight: "800", fontSize: "20px", margin: 0 }}>{loyalty.nextReward} pts</p>
+                    <p style={{ color: "#818cf8", fontWeight: "800", fontSize: "20px", margin: 0 }}>{loyalty.nextReward} pts</p>
                   </div>
                 </div>
 
@@ -1078,7 +1078,7 @@ const requestPinReset = async () => {
               <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 12px" }}>Redeem a Gift Card</p>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input placeholder="TECH-XXXX-XXXX-XXXX" value={redeemCode} onChange={e => setRedeemCode(e.target.value.toUpperCase())} style={{ ...inp, marginBottom: 0, flex: 1, letterSpacing: "2px" }} />
-                <button onClick={redeemGiftCard} disabled={redeemLoading} style={{ padding: "12px 16px", background: "#22c55e", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px", flexShrink: 0 }}>
+                <button onClick={redeemGiftCard} disabled={redeemLoading} style={{ padding: "12px 16px", background: "#818cf8", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px", flexShrink: 0 }}>
                   {redeemLoading ? "..." : "Redeem"}
                 </button>
               </div>
@@ -1129,11 +1129,11 @@ const requestPinReset = async () => {
 
             {/* New Link Result */}
             {newLink && (
-              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-                <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>✅ Payment Link Created!</p>
+              <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>✅ Payment Link Created!</p>
                 <p style={{ color: "var(--text-primary)", fontSize: "12px", fontFamily: "monospace", margin: "0 0 10px", wordBreak: "break-all" }}>{newLink.url}</p>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <button onClick={() => { navigator.clipboard?.writeText(newLink.url); setMsg({ text: "Link copied!", type: "success" }); }} style={{ flex: 1, padding: "10px", background: "#22c55e", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>📋 Copy Link</button>
+                  <button onClick={() => { navigator.clipboard?.writeText(newLink.url); setMsg({ text: "Link copied!", type: "success" }); }} style={{ flex: 1, padding: "10px", background: "#818cf8", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>📋 Copy Link</button>
                   <button onClick={() => { window.open(`https://wa.me/?text=Pay me ₦${newLink.amount.toLocaleString()} via TechMart: ${newLink.url}`, "_blank"); }} style={{ flex: 1, padding: "10px", background: "#25d366", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>💬 Share on WhatsApp</button>
                 </div>
               </div>
@@ -1150,7 +1150,7 @@ const requestPinReset = async () => {
                   <div key={i} style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                       <p style={{ color: "#f97316", fontWeight: "700", fontSize: "16px", margin: 0 }}>₦{pl.amount.toLocaleString()}</p>
-                      <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "12px", margin: 0 }}>₦{pl.totalCollected.toLocaleString()} collected</p>
+                      <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "12px", margin: 0 }}>₦{pl.totalCollected.toLocaleString()} collected</p>
                     </div>
                     {pl.description && <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 6px" }}>{pl.description}</p>}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1188,7 +1188,7 @@ const requestPinReset = async () => {
                   <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
                     <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 6px", textTransform: "uppercase" }}>This Month</p>
                     <p style={{ color: "#f97316", fontWeight: "900", fontSize: "20px", margin: "0 0 4px" }}>₦{Number(insights.thisMonth).toLocaleString()}</p>
-                    <p style={{ color: insights.change >= 0 ? "#dc2626" : "#22c55e", fontSize: "11px", margin: 0 }}>{insights.change >= 0 ? "▲" : "▼"} {Math.abs(insights.change)}% vs last month</p>
+                    <p style={{ color: insights.change >= 0 ? "#dc2626" : "#34d399", fontSize: "11px", margin: 0 }}>{insights.change >= 0 ? "▲" : "▼"} {Math.abs(insights.change)}% vs last month</p>
                   </div>
                   <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
                     <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 6px", textTransform: "uppercase" }}>Last Month</p>
@@ -1205,14 +1205,14 @@ const requestPinReset = async () => {
                   </div>
                   {insights.budget > 0 ? (
                     <div style={{ background: "#1a1a1a", borderRadius: "6px", height: "8px", marginBottom: "10px" }}>
-                      <div style={{ width: `${insights.budgetProgress}%`, height: "8px", borderRadius: "6px", background: insights.budgetProgress >= 80 ? "#dc2626" : "#22c55e", transition: "width 0.5s ease" }} />
+                      <div style={{ width: `${insights.budgetProgress}%`, height: "8px", borderRadius: "6px", background: insights.budgetProgress >= 80 ? "#dc2626" : "#34d399", transition: "width 0.5s ease" }} />
                     </div>
                   ) : (
                     <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 10px" }}>No budget set yet</p>
                   )}
                   <div style={{ display: "flex", gap: "8px" }}>
                     <input type="number" placeholder="Set monthly budget (₦)" value={budget} onChange={e => setBudgetInput(e.target.value)} style={{ flex: 1, padding: "10px 14px", background: "#111", border: "1px solid #333", borderRadius: "8px", color: "var(--text-primary)", fontSize: "13px" }} />
-                    <button onClick={saveBudget} disabled={budgetSaving} style={{ padding: "10px 16px", background: "#22c55e", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+                    <button onClick={saveBudget} disabled={budgetSaving} style={{ padding: "10px 16px", background: "#818cf8", color: "#000", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
                       {budgetSaving ? "..." : "Set"}
                     </button>
                   </div>
@@ -1270,19 +1270,19 @@ const requestPinReset = async () => {
           <div>
             <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>🔐 Identity Verification</h2>
             {(bvnVerified || ninVerified) ? (
-              <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "12px", padding: "24px", textAlign: "center" }}>
+              <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "12px", padding: "24px", textAlign: "center" }}>
                 <p style={{ fontSize: "40px", margin: "0 0 12px" }}>✅</p>
-                <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "18px", margin: "0 0 8px" }}>BVN Verified</p>
+                <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "18px", margin: "0 0 8px" }}>BVN Verified</p>
                 <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Your identity has been verified. You have access to higher transaction limits.</p>
                 <div style={{ marginTop: "16px", background: "var(--bg-card)", borderRadius: "10px", padding: "16px" }}>
                   <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "13px", margin: "0 0 8px" }}>Your Limits</p>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                     <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Daily Funding</p>
-                    <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦500,000</p>
+                    <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦500,000</p>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>Daily Transfers</p>
-                    <p style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦200,000</p>
+                    <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "13px", margin: 0 }}>₦200,000</p>
                   </div>
                 </div>
               </div>
@@ -1296,7 +1296,7 @@ const requestPinReset = async () => {
                         <p style={{ fontSize: "20px", margin: 0 }}>{icon}</p>
                         <div>
                           <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 2px" }}>{label}</p>
-                          <p style={{ color: "#22c55e", fontSize: "12px", margin: 0 }}>{value}</p>
+                          <p style={{ color: "#818cf8", fontSize: "12px", margin: 0 }}>{value}</p>
                         </div>
                       </div>
                     ))}
@@ -1305,7 +1305,7 @@ const requestPinReset = async () => {
                 <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
                   <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
                     {["bvn", "nin"].map(method => (
-                      <button key={method} onClick={() => setKycMethod(method)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `2px solid ${kycMethod === method ? "#22c55e" : "#333"}`, background: kycMethod === method ? "#0a1a0a" : "#111", color: kycMethod === method ? "#22c55e" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "13px", textTransform: "uppercase" }}>{method}</button>
+                      <button key={method} onClick={() => setKycMethod(method)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `2px solid ${kycMethod === method ? "#818cf8" : "#333"}`, background: kycMethod === method ? "#0d0f1e" : "#111", color: kycMethod === method ? "#818cf8" : "#888", fontWeight: "700", cursor: "pointer", fontSize: "13px", textTransform: "uppercase" }}>{method}</button>
                     ))}
                   </div>
                   {kycMethod === "bvn" ? (
@@ -1313,7 +1313,7 @@ const requestPinReset = async () => {
                       <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Your BVN is an 11-digit number. Dial *565*0# on your registered phone to get it.</p>
                       <input placeholder="Enter your 11-digit BVN" type="number" value={bvnInput} onChange={e => setBvnInput(e.target.value)} maxLength={11} style={{ width: "100%", padding: "12px 14px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", marginBottom: "12px", boxSizing: "border-box", letterSpacing: "2px" }} />
                       <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 16px" }}>🔒 Your BVN is encrypted and never stored. It is only used for identity verification.</p>
-                      <button onClick={verifyBvn} disabled={bvnLoading || bvnInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: bvnInput.length !== 11 ? 0.6 : 1 }}>
+                      <button onClick={verifyBvn} disabled={bvnLoading || bvnInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: bvnInput.length !== 11 ? 0.6 : 1 }}>
                         {bvnLoading ? "Verifying..." : "Verify BVN"}
                       </button>
                     </div>
@@ -1322,7 +1322,7 @@ const requestPinReset = async () => {
                       <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 12px" }}>Your NIN is an 11-digit number. Dial *346# to get it or check your NIN slip.</p>
                       <input placeholder="Enter your 11-digit NIN" type="number" value={ninInput} onChange={e => setNinInput(e.target.value)} maxLength={11} style={{ width: "100%", padding: "12px 14px", background: "#111", border: "1px solid #333", borderRadius: "10px", color: "var(--text-primary)", fontSize: "15px", marginBottom: "12px", boxSizing: "border-box", letterSpacing: "2px" }} />
                       <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 16px" }}>🔒 Your NIN is encrypted and never stored. It is only used for identity verification.</p>
-                      <button onClick={verifyNin} disabled={ninLoading || ninInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: ninInput.length !== 11 ? 0.6 : 1 }}>
+                      <button onClick={verifyNin} disabled={ninLoading || ninInput.length !== 11} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#000", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: ninInput.length !== 11 ? 0.6 : 1 }}>
                         {ninLoading ? "Verifying..." : "Verify NIN"}
                       </button>
                     </div>
@@ -1389,14 +1389,14 @@ const requestPinReset = async () => {
                     <div key={i} onClick={() => setDataForm({...dataForm, planId: plan.id || plan.code || String(i), planName: plan.name || plan.description, amount: String(plan.price || plan.amount)})}
                       style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)", cursor: "pointer", background: dataForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ color: dataForm.planId === (plan.id || plan.code || String(i)) ? "#f97316" : "#fff", fontSize: "13px" }}>{plan.name || plan.description}</span>
-                      <span style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
+                      <span style={{ color: "#818cf8", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
               )}
               {dataForm.planName && (
-                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
-                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>Selected: <strong>{dataForm.planName}</strong> — ₦{Number(dataForm.amount || 0).toLocaleString()}</p>
+                <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#818cf8", margin: 0, fontSize: "13px" }}>Selected: <strong>{dataForm.planName}</strong> — ₦{Number(dataForm.amount || 0).toLocaleString()}</p>
                 </div>
               )}
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
@@ -1436,8 +1436,8 @@ const requestPinReset = async () => {
                   {elecVerifying ? "Verifying..." : "Verify Meter"}
                 </button>
               ) : (
-                <div style={{ background: "#0a2a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
-                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{elecForm.customerName}</strong></p>
+                <div style={{ background: "#0a2a0a", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#818cf8", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{elecForm.customerName}</strong></p>
                 </div>
               )}
               <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
@@ -1472,8 +1472,8 @@ const requestPinReset = async () => {
                   {ctvVerifying ? "Verifying..." : "Verify Smartcard"}
                 </button>
               ) : (
-                <div style={{ background: "#0a2a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
-                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{ctvForm.customerName}</strong></p>
+                <div style={{ background: "#0a2a0a", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#818cf8", margin: 0, fontSize: "13px" }}>✅ Verified: <strong>{ctvForm.customerName}</strong></p>
                 </div>
               )}
               {ctvPlansLoading && <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Loading packages...</p>}
@@ -1483,14 +1483,14 @@ const requestPinReset = async () => {
                     <div key={i} onClick={() => setCtvForm({...ctvForm, planId: plan.id || plan.code || String(i), planName: plan.name || plan.description, amount: String(plan.price || plan.amount)})}
                       style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)", cursor: "pointer", background: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#1a0a00" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ color: ctvForm.planId === (plan.id || plan.code || String(i)) ? "#f97316" : "#fff", fontSize: "13px" }}>{plan.name || plan.description}</span>
-                      <span style={{ color: "#22c55e", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
+                      <span style={{ color: "#818cf8", fontWeight: "700", fontSize: "13px" }}>₦{(plan.price || plan.amount || 0).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
               )}
               {ctvForm.planName && (
-                <div style={{ background: "#0a1a0a", border: "1px solid #22c55e", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
-                  <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>Selected: <strong>{ctvForm.planName}</strong> — ₦{Number(ctvForm.amount || 0).toLocaleString()}</p>
+                <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
+                  <p style={{ color: "#818cf8", margin: 0, fontSize: "13px" }}>Selected: <strong>{ctvForm.planName}</strong> — ₦{Number(ctvForm.amount || 0).toLocaleString()}</p>
                 </div>
               )}
               <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
@@ -1545,7 +1545,7 @@ const requestPinReset = async () => {
                 dashboard.recentTransactions.map((tx, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--border-light)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: tx.type === "credit" ? "#0a2a1a" : "#2a1010", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
+                      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: tx.type === "credit" ? "#0d0f1e" : "#2a1010", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
                         {tx.type === "credit" ? "⬇️" : "⬆️"}
                       </div>
                       <div>
@@ -1553,7 +1553,7 @@ const requestPinReset = async () => {
                         <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>{new Date(tx.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
-                    <p style={{ color: tx.type === "credit" ? "#22c55e" : "#f87171", fontWeight: "800", fontSize: "15px", margin: 0 }}>
+                    <p style={{ color: tx.type === "credit" ? "#34d399" : "#f87171", fontWeight: "800", fontSize: "15px", margin: 0 }}>
                       {tx.type === "credit" ? "+" : "-"}₦{tx.amount?.toLocaleString()}
                     </p>
                   </div>
@@ -1628,11 +1628,11 @@ const requestPinReset = async () => {
             </div>
             <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Confirm New PIN</label>
             <div style={{position:"relative",marginBottom:"8px"}}>
-              <input type={showConfirmPin ? "text" : "password"} maxLength={4} placeholder="● ● ● ●" value={confirmChangePin} onChange={e=>setConfirmChangePin(e.target.value.replace(/\D/g,''))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px",borderColor:confirmChangePin.length===4?(confirmChangePin===changePin?"#22c55e":"#ef4444"):undefined}} />
+              <input type={showConfirmPin ? "text" : "password"} maxLength={4} placeholder="● ● ● ●" value={confirmChangePin} onChange={e=>setConfirmChangePin(e.target.value.replace(/\D/g,''))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px",borderColor:confirmChangePin.length===4?(confirmChangePin===changePin?"#818cf8":"#ef4444"):undefined}} />
               <button onClick={()=>setShowConfirmPin(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"16px"}}>{showConfirmPin ? "🙈" : "👁️"}</button>
             </div>
             {confirmChangePin.length === 4 && (
-              <p style={{fontSize:"12px",fontWeight:"600",marginBottom:"16px",color:confirmChangePin===changePin?"#22c55e":"#ef4444"}}>
+              <p style={{fontSize:"12px",fontWeight:"600",marginBottom:"16px",color:confirmChangePin===changePin?"#818cf8":"#ef4444"}}>
                 {confirmChangePin===changePin ? "✅ PINs match" : "❌ PINs do not match"}
               </p>
             )}
@@ -1663,7 +1663,7 @@ const requestPinReset = async () => {
               style={{
                 textAlign:"center",
                 marginBottom:"14px",
-                color: otpTimer > 0 ? "#16a34a" : "#dc2626",
+                color: otpTimer > 0 ? "#818cf8" : "#dc2626",
                 fontWeight:"bold"
               }}
             >
@@ -1713,7 +1713,7 @@ const requestPinReset = async () => {
                 padding:"12px",
                 border:"none",
                 borderRadius:"10px",
-                background:"linear-gradient(135deg,#16a34a,#15803d)",
+                background:"linear-gradient(135deg,#6366f1,#4f46e5)",
                 color:"#fff",
                 fontWeight:"700",
                 marginTop:"10px"
