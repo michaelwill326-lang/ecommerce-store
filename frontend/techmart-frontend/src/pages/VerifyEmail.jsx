@@ -17,7 +17,7 @@ export default function VerifyEmail() {
         localStorage.setItem("techmart_last_activity", String(Date.now()));
         window.dispatchEvent(new Event("techmart-auth-change"));
         setStatus("success");
-        setTimeout(() => navigate("/dashboard"), 2000);
+        setTimeout(() => navigate("/"), 2000);
       })
       .catch(err => { setStatus("error"); setMessage(err.response?.data?.error || "Verification failed. The link may have expired."); });
   }, []);

@@ -203,7 +203,7 @@ export default function Login() {
       return redirect;
     }
 
-    return "/dashboard";
+    return "/";
   };
 
   // 1. Core Login Handler
