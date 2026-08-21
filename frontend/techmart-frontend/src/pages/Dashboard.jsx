@@ -76,6 +76,7 @@ export default function Dashboard() {
   const { pulling, pullDistance, threshold } = usePullToRefresh(() => fetchProductsRef.current?.());
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [condition, setCondition] = useState("All");
@@ -86,6 +87,11 @@ export default function Dashboard() {
   const [addedId, setAddedId] = useState(null);
 
   const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 600);
+    return () => clearTimeout(timer);
+  }, [search]);
   const recent = (() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } })();
 
   useEffect(() => {
@@ -141,8 +147,8 @@ export default function Dashboard() {
   const filtered = products
     .filter((p) => {
       const matchSearch =
-        p.name?.toLowerCase().includes(search.toLowerCase()) ||
-        p.description?.toLowerCase().includes(search.toLowerCase());
+        p.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.description?.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchCategory = category === "All" || p.category?.toLowerCase() === category.toLowerCase();
       const matchMinPrice = !minPrice || (p.price || 0) >= Number(minPrice);
       const matchMaxPrice = !maxPrice || (p.price || 0) <= Number(maxPrice);
@@ -363,7 +369,7 @@ export default function Dashboard() {
     </div>
 
     {/* DAILY DEAL */}
-        {dailyDeal && !search && category === "All" && (
+        {dailyDeal && !debouncedSearch && category === "All" && (
           <div style={{ marginBottom: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <h2 style={styles.sectionTitle}>⚡ Deal of the Day</h2>
@@ -389,7 +395,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {trending.length > 0 && !search && category === "All" && (
+        {trending.length > 0 && !debouncedSearch && category === "All" && (
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
               <h2 style={styles.sectionTitle}>🔥 Trending Now</h2>
@@ -409,7 +415,7 @@ export default function Dashboard() {
         )}
 
         {/* 👀 RECENTLY VIEWED */}
-        {recent.length > 0 && !search && category === "All" && (
+        {recent.length > 0 && !debouncedSearch && category === "All" && (
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
               <h2 style={styles.sectionTitle}>👀 Recently Viewed</h2>
@@ -519,7 +525,7 @@ export default function Dashboard() {
           {!loading && !error && filtered.length === 0 && (
             <div style={styles.centered}>
               <p style={{ fontSize: "48px" }}>🔍</p>
-              <p style={{ color: "var(--text-muted)" }}>No products found for "{search}"</p>
+              <p style={{ color: "var(--text-muted)" }}>No products found for "{debouncedSearch}"</p>
               <button
                 onClick={() => { setSearch(""); setCategory("All"); }}
                 style={styles.retryBtn}
