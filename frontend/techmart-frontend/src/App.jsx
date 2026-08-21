@@ -41,6 +41,7 @@ const Policy = lazy(() => import("./pages/Policy"));
 const BuyerProtection = lazy(() => import("./pages/BuyerProtection"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const SellerApply = lazy(() => import("./pages/seller/SellerApply"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Account = lazy(() => import("./pages/Account"));
 const AISearch = lazy(() => import("./pages/AISearch"));
 const TechMartPay = lazy(() => import("./pages/TechMartPay"));
@@ -287,6 +288,7 @@ export default function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/tracking" element={<Tracking />} />
           <Route path="/verify" element={<Verify />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/success" element={<Success />} />
           <Route
             path="/wishlist"

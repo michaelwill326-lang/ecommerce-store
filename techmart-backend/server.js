@@ -822,6 +822,9 @@ const Order = mongoose.model(
 confirmationEmailSent: { type: Boolean, default: false },
 confirmationEmailSentAt: { type: Date, default: null },
 confirmationEmailError: { type: String, default: "" },
+    emailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String, default: null },
+    emailVerificationExpires: { type: Date, default: null },
     originalAmount: Number,
     couponCode: String,
     escrow: { type: Boolean, default: false },
@@ -955,22 +958,45 @@ app.post("/api/auth/signup", async (req, res) => {
       console.log("Welcome email failed:", e.message);
     }
 
-    const safeUser = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      referralCode: user.referralCode,
-      walletBalance: user.walletBalance || 0,
-      walletPinSet: user.walletPinSet || false,
-      twoFactorEnabled: user.twoFactorEnabled || false
-    };
-
-    res.status(201).json({ success: true, token, user: safeUser });
+    const crypto = require("crypto");
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    await User.findByIdAndUpdate(user._id, { emailVerificationToken: verifyToken, emailVerificationExpires: new Date(Date.now() + 24*60*60*1000) });
+    try { const { sendEmailVerification } = require("./utils/email"); await sendEmailVerification(user, verifyToken); } catch(e) { console.error("Verify email failed:", e.message); }
+    res.status(201).json({ success: true, requireVerification: true, message: "Account created! Please check your email to verify your account." });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Signup failed" });
   }
+});
+
+
+/* VERIFY EMAIL */
+app.get("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: "Verification token required" });
+    const user = await User.findOne({ emailVerificationToken: token, emailVerificationExpires: { $gt: new Date() } });
+    if (!user) return res.status(400).json({ error: "Invalid or expired verification link. Please request a new one." });
+    await User.findByIdAndUpdate(user._id, { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null });
+    const jwtToken = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.json({ success: true, token: jwtToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, referralCode: user.referralCode, walletBalance: user.walletBalance || 0, walletPinSet: user.walletPinSet || false, twoFactorEnabled: user.twoFactorEnabled || false } });
+  } catch (err) { res.status(500).json({ error: "Verification failed" }); }
+});
+
+app.post("/api/auth/resend-verification", async (req, res) => {
+  try {
+    const email = req.body.email?.toLowerCase().trim();
+    if (!email) return res.status(400).json({ error: "Email required" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ error: "Account not found" });
+    if (user.emailVerified) return res.status(400).json({ error: "Email already verified" });
+    const crypto = require("crypto");
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    await User.findByIdAndUpdate(user._id, { emailVerificationToken: verifyToken, emailVerificationExpires: new Date(Date.now() + 24*60*60*1000) });
+    const { sendEmailVerification } = require("./utils/email");
+    await sendEmailVerification(user, verifyToken);
+    res.json({ success: true, message: "Verification email resent!" });
+  } catch (err) { res.status(500).json({ error: "Failed to resend verification email" }); }
 });
 
 /* LOGIN */

@@ -169,6 +169,10 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -212,13 +216,15 @@ export default function Signup() {
         password: password.trim(),
       });
 
-      sessionStorage.setItem("token", response.data.token);
-      localStorage.setItem("techmart_last_activity", String(Date.now()));
-      sessionStorage.setItem("user", JSON.stringify(response.data.user));
-
-      window.dispatchEvent(new Event("techmart-auth-change"));
-
-      navigate("/dashboard");
+      if (response.data.requireVerification) {
+        setSignupEmail(email.trim());
+        setEmailSent(true);
+      } else {
+        sessionStorage.setItem("token", response.data.token);
+        sessionStorage.setItem("user", JSON.stringify(response.data.user));
+        window.dispatchEvent(new Event("techmart-auth-change"));
+        navigate("/dashboard");
+      }
 
     } catch (err) {
       console.error(err.response?.data || err.message);
@@ -243,6 +249,36 @@ export default function Signup() {
   };
 
   const strength = getPasswordStrength();
+
+  const handleResend = async () => {
+    setResendLoading(true); setResendMsg("");
+    try {
+      await axios.post(`${API}/api/auth/resend-verification`, { email: signupEmail });
+      setResendMsg("Verification email resent! Check your inbox.");
+    } catch (err) { setResendMsg(err.response?.data?.error || "Failed to resend. Try again."); }
+    finally { setResendLoading(false); }
+  };
+
+  if (emailSent) {
+    return (
+      <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg-primary)",padding:"24px" }}>
+        <div style={{ background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"20px",padding:"40px 32px",maxWidth:"420px",width:"100%",textAlign:"center" }}>
+          <div style={{ fontSize:"64px",marginBottom:"16px" }}>✉️</div>
+          <h2 style={{ color:"var(--text-primary)",fontSize:"22px",fontWeight:"800",marginBottom:"12px" }}>Check your email!</h2>
+          <p style={{ color:"var(--text-muted)",fontSize:"15px",marginBottom:"8px" }}>We sent a verification link to</p>
+          <p style={{ color:"#f97316",fontWeight:"700",fontSize:"15px",marginBottom:"24px" }}>{signupEmail}</p>
+          <p style={{ color:"var(--text-muted)",fontSize:"13px",marginBottom:"28px" }}>Click the link in the email to activate your account. Check your spam folder if you don't see it.</p>
+          {resendMsg && <p style={{ color:resendMsg.includes("resent")?"#22c55e":"#ef4444",fontSize:"13px",marginBottom:"16px",fontWeight:"600" }}>{resendMsg}</p>}
+          <button onClick={handleResend} disabled={resendLoading} style={{ width:"100%",padding:"12px",background:"linear-gradient(135deg,#f97316,#dc2626)",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:"15px",cursor:"pointer",marginBottom:"12px" }}>
+            {resendLoading ? "Sending..." : "Resend Verification Email"}
+          </button>
+          <button onClick={()=>navigate("/login")} style={{ width:"100%",padding:"12px",background:"none",color:"var(--text-muted)",border:"1px solid var(--border-color)",borderRadius:"10px",fontWeight:"600",fontSize:"14px",cursor:"pointer" }}>
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
