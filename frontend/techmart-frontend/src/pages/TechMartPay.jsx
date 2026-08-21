@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import QRCode from "qrcode";
+import { useToast } from "../App";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
@@ -20,6 +21,7 @@ export default function TechMartPay() {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState({ text: "", type: "" });
+  const toast = useToast();
   const [banks, setBanks] = useState([]);
 
   // Send money state
@@ -524,6 +526,7 @@ const [otpTimer, setOtpTimer] = useState(600);
 
       setOldPin("");
       setChangePin("");
+      if (toast) toast("🔐 Wallet PIN changed! A confirmation email has been sent.", "success");
       setShowChangePin(false);
 
     } catch (err) {

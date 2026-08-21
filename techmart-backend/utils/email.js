@@ -482,6 +482,16 @@ const sendAbandonedCartEmail = async (user, cartItems) => {
 };
 
 
+const sendPinChangedEmail = async (user) => {
+  try {
+    const now = new Date().toLocaleString("en-NG", { timeZone: "Africa/Lagos", dateStyle: "medium", timeStyle: "short" });
+    const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#0a0a0a;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;padding:32px 16px;"><div style="text-align:center;margin-bottom:32px;"><h1 style="color:#f97316;font-size:28px;font-weight:900;margin:0;">TechMart</h1><p style="color:#888;font-size:13px;margin:4px 0 0;">Security Alert</p></div><div style="background:linear-gradient(135deg,#f97316,#dc2626);border-radius:16px;padding:32px;text-align:center;margin-bottom:24px;"><p style="font-size:48px;margin:0;">🔐</p><h2 style="color:#fff;font-size:22px;font-weight:800;margin:16px 0 8px;">Wallet PIN Changed</h2><p style="color:rgba(255,255,255,0.9);font-size:15px;margin:0;">Hi ${user.name}, your TechMart wallet PIN was changed successfully.</p></div><div style="background:#111;border:1px solid #222;border-radius:16px;padding:24px;margin-bottom:24px;"><p style="color:#aaa;font-size:14px;margin:0 0 12px;">📅 <strong style="color:#fff;">Time:</strong> ${now}</p><p style="color:#aaa;font-size:14px;margin:0 0 20px;">If you made this change, no action is needed.</p><p style="color:#f97316;font-size:14px;font-weight:700;margin:0;">⚠️ If you did NOT change your PIN, please contact TechMart support immediately.</p></div><div style="text-align:center;margin-bottom:24px;"><a href="${process.env.FRONTEND_URL}/techmart-pay" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;">�� Go to TechMart Pay</a></div><div style="text-align:center;border-top:1px solid #222;padding-top:24px;"><p style="color:#f97316;font-weight:800;font-size:18px;margin:0 0 4px;">TechMart</p><p style="color:#555;font-size:12px;margin:0;">Built with ❤️ in Nigeria 🇳🇬</p></div></div></body></html>`;
+    await brevo.transactionalEmails.sendTransacEmail({ sender: FROM, to: [{ email: user.email }], subject: "🔐 Your TechMart Wallet PIN was changed", htmlContent: html });
+    console.log("📧 PIN changed email sent to " + user.email);
+  } catch (err) { console.error("❌ PIN changed email error:", err.message); }
+};
+
+
 module.exports = {
   sendAbandonedCartEmail,
   sendOrderConfirmation,
@@ -491,4 +501,5 @@ module.exports = {
   sendAdminOrderNotification,
   sendLowStockAlert,
   sendOTPEmail,
+  sendPinChangedEmail,
 };

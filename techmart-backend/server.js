@@ -22,7 +22,7 @@ const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert, sendOTPEmail, sendAbandonedCartEmail } = require("./utils/email");
+const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert, sendOTPEmail, sendAbandonedCartEmail, sendPinChangedEmail } = require("./utils/email");
 const cron = require("node-cron");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
@@ -3453,6 +3453,8 @@ app.post("/api/pay/pin/change", auth, pinLimiter, async (req, res) => {
 
     user.walletPin = await bcrypt.hash(String(newPin), 10);
     await user.save();
+
+    try { await sendPinChangedEmail(user); } catch (e) { console.error("PIN email error:", e.message); }
 
     res.json({
       success: true,
