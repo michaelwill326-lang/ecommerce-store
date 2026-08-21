@@ -92,7 +92,13 @@ export default function Dashboard() {
     const timer = setTimeout(() => setDebouncedSearch(search), 600);
     return () => clearTimeout(timer);
   }, [search]);
-  const recent = (() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } })();
+  const recent = (() => {
+    try {
+      const u = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+      if (!u?.id) return [];
+      return JSON.parse(localStorage.getItem(`recent_${u.id}`)) || [];
+    } catch { return []; }
+  })();
 
   useEffect(() => {
     if (!dailyDeal) return;
