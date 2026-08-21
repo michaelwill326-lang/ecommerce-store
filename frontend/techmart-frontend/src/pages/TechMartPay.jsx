@@ -85,6 +85,10 @@ export default function TechMartPay() {
   const [pinError, setPinError] = useState("");
   const [showSetPin, setShowSetPin] = useState(false);
   const [newPin, setNewPin] = useState("");
+  const [confirmNewPin, setConfirmNewPin] = useState("");
+  const [showNewPinEye, setShowNewPinEye] = useState(false);
+  const [showConfirmNewPinEye, setShowConfirmNewPinEye] = useState(false);
+  const [showPinInputEye, setShowPinInputEye] = useState(false);
   const [pinSet, setPinSet] = useState(false);
 
   const [showChangePin, setShowChangePin] = useState(false);
@@ -145,7 +149,9 @@ const [otpTimer, setOtpTimer] = useState(600);
       if (user?.id) generateQr(user.id);
 
       // Always trust the backend
-      setPinSet(Boolean(res.data.walletPinSet));
+      const pinIsSet = Boolean(res.data.walletPinSet);
+      setPinSet(pinIsSet);
+      if (!pinIsSet) setShowSetPin(true);
     } catch (err) {
       if (err.response?.status === 401) navigate("/login");
     } finally { setLoading(false); }
@@ -492,9 +498,13 @@ const [otpTimer, setOtpTimer] = useState(600);
   const setWalletPin = async () => {
     if (newPin.length !== 4) return setMsg({ text: "PIN must be 4 digits", type: "error" });
     try {
+      if (newPin !== confirmNewPin) {
+        return setMsg({ text: "PINs do not match", type: "error" });
+      }
       await axios.post(`${API}/api/pay/pin/set`, { pin: newPin }, { headers });
       setPinSet(true);
       setShowSetPin(false);
+      setConfirmNewPin("");
       setNewPin("");
       setMsg({ text: "Wallet PIN set successfully!", type: "success" });
     } catch (err) {
