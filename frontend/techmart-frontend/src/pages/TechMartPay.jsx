@@ -91,6 +91,10 @@ export default function TechMartPay() {
   const [oldPin, setOldPin] = useState("");
   const [changePin, setChangePin] = useState("");
   const [changeLoading, setChangeLoading] = useState(false);
+  const [confirmChangePin, setConfirmChangePin] = useState("");
+  const [showOldPin, setShowOldPin] = useState(false);
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   const [showForgotPin, setShowForgotPin] = useState(false);
 
@@ -499,11 +503,11 @@ const [otpTimer, setOtpTimer] = useState(600);
   }
 
   const changeWalletPin = async () => {
-    if (oldPin.length !== 4 || changePin.length !== 4) {
-      return setMsg({
-        text: "Both PINs must be exactly 4 digits",
-        type: "error"
-      });
+    if (oldPin.length !== 4 || changePin.length !== 4 || confirmChangePin.length !== 4) {
+      return setMsg({ text: "All PIN fields must be exactly 4 digits", type: "error" });
+    }
+    if (changePin !== confirmChangePin) {
+      return setMsg({ text: "New PIN and confirm PIN do not match", type: "error" });
     }
 
     setChangeLoading(true);
@@ -1598,40 +1602,34 @@ const requestPinReset = async () => {
       )}
 
       {showChangePin && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
-          <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"320px"}}>
-            <h3 style={{marginBottom:"15px"}}>Change Wallet PIN</h3>
-
-            <input
-              type="password"
-              maxLength={4}
-              placeholder="Current PIN"
-              value={oldPin}
-              onChange={e=>setOldPin(e.target.value.replace(/\D/g,''))}
-              style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",marginBottom:"12px"}}
-            />
-
-            <input
-              type="password"
-              maxLength={4}
-              placeholder="New PIN"
-              value={changePin}
-              onChange={e=>setChangePin(e.target.value.replace(/\D/g,''))}
-              style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",marginBottom:"20px"}}
-            />
-
-            <button
-              onClick={changeWalletPin}
-              disabled={changeLoading}
-              style={{width:"100%",padding:"12px",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,#f97316,#dc2626)",color:"#fff",fontWeight:"700"}}
-            >
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"16px"}}>
+          <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"100%",maxWidth:"340px"}}>
+            <h3 style={{marginBottom:"6px",fontSize:"18px"}}>🔐 Change Wallet PIN</h3>
+            <p style={{color:"var(--text-muted)",fontSize:"13px",marginBottom:"20px"}}>Enter your current PIN, then set a new one.</p>
+            <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Current PIN</label>
+            <div style={{position:"relative",marginBottom:"16px"}}>
+              <input type={showOldPin ? "text" : "password"} maxLength={4} placeholder="● ● ● ●" value={oldPin} onChange={e=>setOldPin(e.target.value.replace(/\D/g,''))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px"}} />
+              <button onClick={()=>setShowOldPin(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"16px"}}>{showOldPin ? "🙈" : "👁️"}</button>
+            </div>
+            <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>New PIN</label>
+            <div style={{position:"relative",marginBottom:"16px"}}>
+              <input type={showNewPin ? "text" : "password"} maxLength={4} placeholder="● ● ● ●" value={changePin} onChange={e=>setChangePin(e.target.value.replace(/\D/g,''))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px"}} />
+              <button onClick={()=>setShowNewPin(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"16px"}}>{showNewPin ? "🙈" : "👁️"}</button>
+            </div>
+            <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Confirm New PIN</label>
+            <div style={{position:"relative",marginBottom:"8px"}}>
+              <input type={showConfirmPin ? "text" : "password"} maxLength={4} placeholder="● ● ● ●" value={confirmChangePin} onChange={e=>setConfirmChangePin(e.target.value.replace(/\D/g,''))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px",borderColor:confirmChangePin.length===4?(confirmChangePin===changePin?"#22c55e":"#ef4444"):undefined}} />
+              <button onClick={()=>setShowConfirmPin(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"16px"}}>{showConfirmPin ? "🙈" : "👁️"}</button>
+            </div>
+            {confirmChangePin.length === 4 && (
+              <p style={{fontSize:"12px",fontWeight:"600",marginBottom:"16px",color:confirmChangePin===changePin?"#22c55e":"#ef4444"}}>
+                {confirmChangePin===changePin ? "✅ PINs match" : "❌ PINs do not match"}
+              </p>
+            )}
+            <button onClick={changeWalletPin} disabled={changeLoading||confirmChangePin!==changePin||changePin.length!==4} style={{width:"100%",padding:"12px",border:"none",borderRadius:"10px",background:(confirmChangePin===changePin&&changePin.length===4)?"linear-gradient(135deg,#f97316,#dc2626)":"#333",color:"#fff",fontWeight:"700",cursor:(confirmChangePin===changePin&&changePin.length===4)?"pointer":"not-allowed",transition:"background 0.2s"}}>
               {changeLoading ? "Updating..." : "Change PIN"}
             </button>
-
-            <button
-              onClick={()=>setShowChangePin(false)}
-              style={{marginTop:"10px",width:"100%",background:"none",border:"none",cursor:"pointer"}}
-            >
+            <button onClick={()=>{setShowChangePin(false);setOldPin("");setChangePin("");setConfirmChangePin("");}} style={{marginTop:"10px",width:"100%",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"14px"}}>
               Cancel
             </button>
           </div>
