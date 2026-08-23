@@ -1576,32 +1576,23 @@ const requestPinReset = async () => {
     </div>
 
       {pinModal.open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
-            <h3 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>🔐 Enter Wallet PIN</h3>
-            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "20px" }}>Enter your 4-digit PIN to confirm</p>
-            <input type="password" maxLength={4} placeholder="4 digits" value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/[^0-9]/g, "")); setPinError(""); }}
-              style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "8px" }} />
-            {pinError && <p style={{ color: "#f87171", fontSize: "12px", marginBottom: "8px" }}>{pinError}</p>}
-            <button onClick={confirmPin} disabled={pinLoading} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"16px" }}>
+          <div style={{ background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"28px 24px",width:"100%",maxWidth:"320px",textAlign:"center" }}>
+            <div style={{ fontSize:"44px",marginBottom:"8px" }}>🔐</div>
+            <h3 style={{ color:"var(--text-primary)",marginBottom:"6px",fontSize:"18px",fontWeight:"800" }}>Enter Wallet PIN</h3>
+            <p style={{ color:"var(--text-muted)",fontSize:"13px",marginBottom:"20px" }}>Enter your 4-digit PIN to confirm this transaction</p>
+            <div style={{ position:"relative",marginBottom:"8px" }}>
+              <input type={showPinInputEye ? "text" : "password"} maxLength={4} placeholder="● ● ● ●" value={pinInput} onChange={e => { setPinInput(e.target.value.replace(/[^0-9]/g,"")); setPinError(""); }} style={{ ...inp,textAlign:"center",fontSize:"24px",letterSpacing:"8px",paddingRight:"44px" }} autoFocus />
+              <button onClick={() => setShowPinInputEye(v => !v)} style={{ position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"18px" }}>
+                {showPinInputEye ? "🙈" : "👁️"}
+              </button>
+            </div>
+            {pinError && <p style={{ color:"#f87171",fontSize:"12px",marginBottom:"8px",fontWeight:"600" }}>{pinError}</p>}
+            <button onClick={confirmPin} disabled={pinLoading||pinInput.length!==4} style={{ width:"100%",padding:"12px",background:pinInput.length===4?"linear-gradient(135deg,#f97316,#dc2626)":"#333",color:"#fff",border:"none",borderRadius:"10px",cursor:pinInput.length===4?"pointer":"not-allowed",fontWeight:"700",marginBottom:"10px",transition:"background 0.2s" }}>
               {pinLoading ? "Verifying..." : "Confirm"}
             </button>
-
-            <button
-              onClick={requestPinReset}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#3b82f6",
-                cursor: "pointer",
-                fontSize: "13px",
-                marginBottom: "10px"
-              }}
-            >
-              Forgot Wallet PIN?
-            </button>
-
-            <button onClick={() => setPinModal({ open: false, onSuccess: null })} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+            <button onClick={requestPinReset} style={{ background:"none",border:"none",color:"#3b82f6",cursor:"pointer",fontSize:"13px",marginBottom:"10px",display:"block",width:"100%" }}>Forgot Wallet PIN?</button>
+            <button onClick={() => { setPinModal({ open:false,onSuccess:null }); setShowPinInputEye(false); }} style={{ background:"none",border:"none",color:"var(--text-muted)",cursor:"pointer",fontSize:"13px" }}>Cancel</button>
           </div>
         </div>
       )}
@@ -1659,96 +1650,38 @@ const requestPinReset = async () => {
 
       
       {showForgotPin && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
-          <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"340px"}}>
-            <h3 style={{marginBottom:"10px",color:"var(--text-primary)"}}>
-              Reset Wallet PIN
-            </h3>
-
-            <p style={{fontSize:"13px",color:"var(--text-muted)",marginBottom:"18px"}}>
-              Enter the OTP sent to your phone and choose a new 4-digit PIN.
-            </p>
-
-            <div
-              style={{
-                textAlign:"center",
-                marginBottom:"14px",
-                color: otpTimer > 0 ? "#818cf8" : "#dc2626",
-                fontWeight:"bold"
-              }}
-            >
-              {otpTimer > 0
-                ? `OTP expires in ${formatOtpTime()}`
-                : "OTP expired. Tap Resend Code."}
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"16px"}}>
+          <div style={{background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"16px",padding:"24px",width:"100%",maxWidth:"360px"}}>
+            <div style={{textAlign:"center",marginBottom:"16px"}}>
+              <div style={{fontSize:"40px",marginBottom:"8px"}}>🔑</div>
+              <h3 style={{margin:"0 0 6px",color:"var(--text-primary)",fontSize:"18px",fontWeight:"800"}}>Reset Wallet PIN</h3>
+              <p style={{fontSize:"13px",color:"var(--text-muted)",margin:0}}>Enter the OTP sent to your phone, then set a new PIN.</p>
             </div>
-
-            <button
-              onClick={requestPinReset}
-              disabled={otpTimer > 0}
-              style={{
-                width:"100%",
-                padding:"10px",
-                marginBottom:"16px",
-                borderRadius:"8px",
-                border:"none",
-                cursor: otpTimer > 0 ? "not-allowed" : "pointer",
-                opacity: otpTimer > 0 ? 0.6 : 1
-              }}
-            >
-              Resend Code
+            <div style={{textAlign:"center",marginBottom:"12px",color:otpTimer>0?"#818cf8":"#dc2626",fontWeight:"700",fontSize:"13px"}}>
+              {otpTimer > 0 ? `⏱ OTP expires in ${formatOtpTime()}` : "OTP expired. Tap Resend Code."}
+            </div>
+            <button onClick={requestPinReset} disabled={otpTimer>0} style={{width:"100%",padding:"10px",marginBottom:"16px",borderRadius:"8px",border:"1px solid var(--border-color)",background:"transparent",color:otpTimer>0?"#555":"var(--text-primary)",cursor:otpTimer>0?"not-allowed":"pointer",fontWeight:"600",fontSize:"13px",opacity:otpTimer>0?0.5:1}}>Resend Code</button>
+            <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>SMS OTP</label>
+            <input type="text" placeholder="Enter OTP" value={resetOtp} onChange={e=>setResetOtp(e.target.value)} style={{...inp,marginBottom:"14px"}} />
+            <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>New PIN</label>
+            <div style={{position:"relative",marginBottom:"14px"}}>
+              <input type={showResetPinEye?"text":"password"} maxLength={4} placeholder="● ● ● ●" value={resetPin} onChange={e=>setResetPin(e.target.value.replace(/[^0-9]/g,""))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px"}} />
+              <button onClick={()=>setShowResetPinEye(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"18px"}}>{showResetPinEye?"��":"👁️"}</button>
+            </div>
+            <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Confirm New PIN</label>
+            <div style={{position:"relative",marginBottom:"8px"}}>
+              <input type={showConfirmResetPinEye?"text":"password"} maxLength={4} placeholder="● ● ● ●" value={confirmResetPin} onChange={e=>setConfirmResetPin(e.target.value.replace(/[^0-9]/g,""))} style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px",paddingRight:"44px",borderColor:confirmResetPin.length===4?(confirmResetPin===resetPin?"#22c55e":"#ef4444"):undefined}} />
+              <button onClick={()=>setShowConfirmResetPinEye(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"18px"}}>{showConfirmResetPinEye?"🙈":"👁️"}</button>
+            </div>
+            {confirmResetPin.length===4 && (
+              <p style={{fontSize:"12px",fontWeight:"600",marginBottom:"14px",color:confirmResetPin===resetPin?"#22c55e":"#ef4444"}}>
+                {confirmResetPin===resetPin?"✅ PINs match":"❌ PINs do not match"}
+              </p>
+            )}
+            <button onClick={resetWalletPin} disabled={resetLoading||resetPin.length!==4||confirmResetPin!==resetPin||!resetOtp} style={{width:"100%",padding:"12px",border:"none",borderRadius:"10px",background:(resetPin.length===4&&confirmResetPin===resetPin&&resetOtp)?"linear-gradient(135deg,#6366f1,#4f46e5)":"#333",color:"#fff",fontWeight:"700",cursor:(resetPin.length===4&&confirmResetPin===resetPin&&resetOtp)?"pointer":"not-allowed",transition:"background 0.2s"}}>
+              {resetLoading?"Resetting...":"Reset PIN"}
             </button>
-
-            <input
-              type="text"
-              placeholder="SMS OTP"
-              value={resetOtp}
-              onChange={e=>setResetOtp(e.target.value)}
-              style={inp}
-            />
-
-            <input
-              type="password"
-              maxLength={4}
-              placeholder="New 4-digit PIN"
-              value={resetPin}
-              onChange={e=>setResetPin(e.target.value.replace(/\D/g,""))}
-              style={{...inp,textAlign:"center",fontSize:"22px",letterSpacing:"8px"}}
-            />
-
-            <button
-              onClick={resetWalletPin}
-              disabled={resetLoading}
-              style={{
-                width:"100%",
-                padding:"12px",
-                border:"none",
-                borderRadius:"10px",
-                background:"linear-gradient(135deg,#6366f1,#4f46e5)",
-                color:"#fff",
-                fontWeight:"700",
-                marginTop:"10px"
-              }}
-            >
-              {resetLoading ? "Resetting..." : "Reset PIN"}
-            </button>
-
-            <button
-              onClick={()=>{
-                setShowForgotPin(false);
-                setResetOtp("");
-                setResetPin("");
-              }}
-              style={{
-                width:"100%",
-                marginTop:"10px",
-                background:"none",
-                border:"none",
-                cursor:"pointer",
-                color:"var(--text-muted)"
-              }}
-            >
-              Cancel
-            </button>
+            <button onClick={()=>{setShowForgotPin(false);setResetOtp("");setResetPin("");setConfirmResetPin("");setShowResetPinEye(false);setShowConfirmResetPinEye(false);}} style={{width:"100%",marginTop:"10px",background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:"13px"}}>Cancel</button>
           </div>
         </div>
       )}
