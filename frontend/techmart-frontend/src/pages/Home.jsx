@@ -33,10 +33,11 @@ export default function Home() {
   const loaderRef = useRef(null);
 
   useEffect(() => {
+    const trimmed = search.trim();
+    if (trimmed.length === 1) return;
     const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-    }, 500);
-
+      setDebouncedSearch(trimmed);
+    }, 700);
     return () => clearTimeout(timer);
   }, [search]);
 
