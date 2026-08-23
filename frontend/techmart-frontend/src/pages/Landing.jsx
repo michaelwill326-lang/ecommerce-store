@@ -1,5 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 export default function Landing() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (sessionStorage.getItem("token")) navigate("/home", { replace: true });
+  }, []);
   return (
     <div style={{ minHeight:"100vh", background:"var(--bg-primary)", overflowX:"hidden" }}>
       <div style={{ position:"relative", overflow:"hidden", background:"linear-gradient(135deg,#0a0a0a 0%,#111827 60%,#0d0f1e 100%)", padding:"64px 24px 80px", textAlign:"center" }}>
