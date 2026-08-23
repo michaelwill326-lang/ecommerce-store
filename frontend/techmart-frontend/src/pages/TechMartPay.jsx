@@ -105,6 +105,10 @@ export default function TechMartPay() {
 
   const [resetOtp, setResetOtp] = useState("");
   const [resetPin, setResetPin] = useState("");
+  const [confirmResetPin, setConfirmResetPin] = useState("");
+  const [showResetPinEye, setShowResetPinEye] = useState(false);
+  const [showConfirmResetPinEye, setShowConfirmResetPinEye] = useState(false);
+  const [showBalance, setShowBalance] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 const [otpTimer, setOtpTimer] = useState(600);
   // Betting state
@@ -610,11 +614,11 @@ const requestPinReset = async () => {
   };
 
   const resetWalletPin = async () => {
-    if (resetPin.length !== 4) {
-      return setMsg({
-        text: "PIN must be exactly 4 digits",
-        type: "error"
-      });
+    if (resetPin.length !== 4 || confirmResetPin.length !== 4) {
+      return setMsg({ text: "PIN must be exactly 4 digits", type: "error" });
+    }
+    if (resetPin !== confirmResetPin) {
+      return setMsg({ text: "PINs do not match", type: "error" });
     }
 
     try {
@@ -632,6 +636,7 @@ const requestPinReset = async () => {
       setShowForgotPin(false);
       setResetOtp("");
       setResetPin("");
+      setConfirmResetPin("");
 
       setMsg({
         text: "Wallet PIN reset successfully.",
@@ -692,8 +697,13 @@ const requestPinReset = async () => {
 
         {/* BALANCE CARD */}
         <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "20px", padding: "28px", marginBottom: "20px", textAlign: "center" }}>
-          <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "1px" }}>Available Balance</p>
-          <p style={{ color: "var(--text-primary)", fontSize: "40px", fontWeight: "900", margin: "0 0 16px" }}>₦{(dashboard?.balance || 0).toLocaleString()}</p>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"8px", margin:"0 0 8px" }}>
+            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>Available Balance</p>
+            <button onClick={() => setShowBalance(v => !v)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:"18px", lineHeight:1, padding:"2px 4px" }} title={showBalance ? "Hide balance" : "Show balance"}>{showBalance ? "🙈" : "👁️"}</button>
+          </div>
+          <p style={{ color: "var(--text-primary)", fontSize: "40px", fontWeight: "900", margin: "0 0 16px", letterSpacing: showBalance ? "normal" : "4px" }}>
+            {showBalance ? `₦${(dashboard?.balance || 0).toLocaleString()}` : "₦ ••••••"}
+          </p>
           <div style={{ display: "flex", justifyContent: "center", gap: "24px" }}>
             <div style={{ textAlign: "center" }}>
               <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "11px", margin: "0 0 2px" }}>TOTAL IN</p>
