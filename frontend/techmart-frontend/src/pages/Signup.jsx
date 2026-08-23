@@ -223,7 +223,7 @@ export default function Signup() {
         sessionStorage.setItem("token", response.data.token);
         sessionStorage.setItem("user", JSON.stringify(response.data.user));
         window.dispatchEvent(new Event("techmart-auth-change"));
-        navigate("/");
+        navigate("/home");
       }
 
     } catch (err) {

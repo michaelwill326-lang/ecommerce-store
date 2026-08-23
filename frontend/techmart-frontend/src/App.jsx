@@ -42,6 +42,7 @@ const BuyerProtection = lazy(() => import("./pages/BuyerProtection"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const SellerApply = lazy(() => import("./pages/seller/SellerApply"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const Landing = lazy(() => import("./pages/Landing"));
 const Account = lazy(() => import("./pages/Account"));
 const AISearch = lazy(() => import("./pages/AISearch"));
 const TechMartPay = lazy(() => import("./pages/TechMartPay"));
@@ -264,7 +265,8 @@ export default function App() {
         <ErrorBoundary>
         <Suspense fallback={<div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>Loading...</div>}>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/home" element={<RequireAuth><Home /></RequireAuth>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/cart" element={<Cart />} />
@@ -276,7 +278,7 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/product/:id" element={<RequireAuth><ProductDetail /></RequireAuth>} />
           <Route
             path="/dashboard"
             element={
@@ -332,7 +334,7 @@ export default function App() {
           />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
-          <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />
+          <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/home" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />
         </Routes>
         </Suspense>
         </ErrorBoundary>
