@@ -26,6 +26,7 @@ export default function Home() {
   const [showFilters, setShowFilters] = useState(false);
   const [recent] = useState(() => { try { return JSON.parse(localStorage.getItem("recent")) || []; } catch { return []; } });
   const [page, setPage] = useState(1);
+  const isLoggedIn = !!sessionStorage.getItem("token");
   const ITEMS_PER_PAGE = 20;
   const observerRef = useRef(null);
   
@@ -147,9 +148,11 @@ export default function Home() {
               <Link to="/pay" style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"12px 22px", borderRadius:"12px", background:"linear-gradient(135deg,#6366f1,#4f46e5)", color:"#fff", textDecoration:"none", fontWeight:"800", fontSize:"13px", boxShadow:"0 6px 20px rgba(99,102,241,0.4)", whiteSpace:"nowrap" }}>
                 Open TechMart Pay →
               </Link>
-              <Link to="/signup" style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"10px 22px", borderRadius:"12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.7)", textDecoration:"none", fontWeight:"700", fontSize:"12px", whiteSpace:"nowrap" }}>
-                Create Free Account
-              </Link>
+              {!isLoggedIn && (
+                <Link to="/signup" style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"10px 22px", borderRadius:"12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.7)", textDecoration:"none", fontWeight:"700", fontSize:"12px", whiteSpace:"nowrap" }}>
+                  Create Free Account
+                </Link>
+              )}
             </div>
           </div>
         </div>
