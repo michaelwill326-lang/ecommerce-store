@@ -127,6 +127,33 @@ export default function Home() {
       <div className="tm-container">
         <FlashSaleBanner />
 
+        {/* 💳 TECHMART PAY PROMO */}
+        <div style={{ margin:"0 0 20px", position:"relative", overflow:"hidden", borderRadius:"18px", background:"linear-gradient(135deg,#0d1117 0%,#161b27 55%,#1a1f35 100%)", border:"1px solid rgba(99,102,241,0.3)", boxShadow:"0 8px 32px rgba(0,0,0,0.35)" }}>
+          <div style={{ position:"absolute", width:"200px", height:"200px", borderRadius:"50%", background:"rgba(99,102,241,0.1)", filter:"blur(40px)", top:"-60px", right:"-40px", pointerEvents:"none" }} />
+          <div style={{ position:"relative", zIndex:1, padding:"20px 20px 18px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"16px", flexWrap:"wrap" }}>
+            <div style={{ flex:"1 1 220px" }}>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"4px 10px", borderRadius:"999px", background:"rgba(99,102,241,0.15)", border:"1px solid rgba(99,102,241,0.3)", color:"#818cf8", fontSize:"10px", fontWeight:"800", letterSpacing:"0.6px", marginBottom:"10px" }}>
+                💳 TECHMART PAY
+              </div>
+              <h3 style={{ margin:"0 0 6px", color:"#fff", fontSize:"clamp(15px,3vw,20px)", fontWeight:"900", lineHeight:1.2 }}>Send Money. Pay Bills. Buy Airtime.</h3>
+              <p style={{ margin:"0 0 14px", color:"rgba(255,255,255,0.55)", fontSize:"12px", lineHeight:1.6 }}>TechMart's built-in fintech wallet — fund, send, save and pay all in one place.</p>
+              <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                {["💸 Send Money","📱 Airtime & Data","🧾 Pay Bills","🔒 Savings Vault","🔗 Pay Links"].map(f => (
+                  <span key={f} style={{ padding:"4px 10px", borderRadius:"999px", background:"rgba(99,102,241,0.1)", border:"1px solid rgba(99,102,241,0.2)", color:"rgba(255,255,255,0.65)", fontSize:"10px", fontWeight:"600" }}>{f}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:"8px", flexShrink:0 }}>
+              <Link to="/pay" style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"12px 22px", borderRadius:"12px", background:"linear-gradient(135deg,#6366f1,#4f46e5)", color:"#fff", textDecoration:"none", fontWeight:"800", fontSize:"13px", boxShadow:"0 6px 20px rgba(99,102,241,0.4)", whiteSpace:"nowrap" }}>
+                Open TechMart Pay →
+              </Link>
+              <Link to="/signup" style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"10px 22px", borderRadius:"12px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.7)", textDecoration:"none", fontWeight:"700", fontSize:"12px", whiteSpace:"nowrap" }}>
+                Create Free Account
+              </Link>
+            </div>
+          </div>
+        </div>
+
         {/* SEARCH BAR */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
           <input type="text" placeholder="🔍 Search products..." value={search} onChange={e=>setSearch(e.target.value)} className="tm-search" style={{ flex: 1 }} />
