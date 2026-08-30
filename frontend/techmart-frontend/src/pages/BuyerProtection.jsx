@@ -18,13 +18,13 @@ export default function BuyerProtection() {
   ];
 
   return (
-    <div style={{ background: "var(--bg-primary)", minHeight: "100vh", padding: "0 0 80px" }}>
+    <div style={{ background: "var(--bg-primary)", minHeight: "100vh", padding: "0 0 100px" }}>
       {/* Hero */}
-      <div style={{ background: "linear-gradient(135deg, #0a1a0a, #0d2b1c)", borderBottom: "1px solid rgba(34,197,94,0.3)", padding: "48px 24px", textAlign: "center" }}>
-        <p style={{ color: "#4ade80", fontWeight: "800", fontSize: "12px", letterSpacing: "2px", margin: "0 0 12px", textTransform: "uppercase" }}>🛡️ TechMart Buyer Protection</p>
+      <div style={{ background: "linear-gradient(135deg, #0d1117, #111827)", borderBottom: "1px solid rgba(249,115,22,0.2)", padding: "48px 24px", textAlign: "center" }}>
+        <p style={{ color: "#fb923c", fontWeight: "800", fontSize: "12px", letterSpacing: "2px", margin: "0 0 12px", textTransform: "uppercase" }}>🛡️ TechMart Buyer Protection</p>
         <h1 style={{ color: "#fff", fontSize: "clamp(24px, 5vw, 36px)", fontWeight: "900", margin: "0 0 12px" }}>Shop with 100% Confidence</h1>
         <p style={{ color: "rgba(255,255,255,0.65)", fontSize: "15px", margin: "0 0 24px", maxWidth: "500px", marginLeft: "auto", marginRight: "auto" }}>Every purchase on TechMart is protected by our escrow system, return policy, and buyer guarantee.</p>
-        <Link to="/" style={{ display: "inline-block", padding: "14px 28px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", textDecoration: "none", borderRadius: "12px", fontWeight: "800", fontSize: "15px" }}>Shop Now →</Link>
+        <Link to="/home" style={{ display: "inline-block", padding: "14px 28px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", textDecoration: "none", borderRadius: "12px", fontWeight: "800", fontSize: "15px" }}>Shop Now →</Link>
       </div>
 
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "40px 20px" }}>
@@ -45,7 +45,7 @@ export default function BuyerProtection() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "40px" }}>
           {steps.map((s, i) => (
             <div key={i} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px 20px", display: "flex", gap: "16px", alignItems: "flex-start" }}>
-              <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "900", color: "#fff", fontSize: "14px", flexShrink: 0 }}>{s.step}</div>
+              <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #f97316, #dc2626)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "900", color: "#fff", fontSize: "14px", flexShrink: 0 }}>{s.step}</div>
               <div>
                 <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 4px" }}>{s.title}</p>
                 <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>{s.desc}</p>
@@ -55,8 +55,8 @@ export default function BuyerProtection() {
         </div>
 
         {/* CTA */}
-        <div style={{ background: "linear-gradient(135deg, #0a1a0a, #0d2b1c)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "16px", padding: "28px", textAlign: "center" }}>
-          <p style={{ color: "#4ade80", fontWeight: "800", fontSize: "13px", margin: "0 0 8px" }}>Still have questions?</p>
+        <div style={{ background: "linear-gradient(135deg, #0a1a0a, #0d2b1c)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: "16px", padding: "28px", textAlign: "center" }}>
+          <p style={{ color: "#fb923c", fontWeight: "800", fontSize: "13px", margin: "0 0 8px" }}>Still have questions?</p>
           <p style={{ color: "#fff", fontWeight: "700", fontSize: "16px", margin: "0 0 16px" }}>Our support team is available 24/7</p>
           <a href="https://wa.me/2349032657217" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", padding: "12px 24px", background: "#25d366", color: "#fff", textDecoration: "none", borderRadius: "10px", fontWeight: "700", fontSize: "14px" }}>💬 Chat on WhatsApp</a>
         </div>

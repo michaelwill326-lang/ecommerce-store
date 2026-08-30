@@ -2,12 +2,9 @@ import React from "react";
 
 const styles = {
   container: {
-    padding: "20px 15px",
+    padding: "24px 16px 80px",
     backgroundColor: "var(--bg-primary)",
     minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "flex-start",
     boxSizing: "border-box",
   },
   card: {
@@ -16,7 +13,8 @@ const styles = {
     padding: "24px 20px",
     width: "100%",
     maxWidth: "800px",
-    border: "1px solid var(--border-light)",
+    margin: "0 auto",
+    border: "1px solid var(--border-color)",
     boxSizing: "border-box",
   },
   mainTitle: {

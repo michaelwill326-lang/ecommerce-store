@@ -45,14 +45,14 @@ export default function SellerApply() {
 
     if (score <= 2) return { label: "Weak", color: "#dc2626", width: "33%" };
     if (score <= 4) return { label: "Medium", color: "#f97316", width: "66%" };
-    return { label: "Strong", color: "#22c55e", width: "100%" };
+    return { label: "Strong", color: "#34d399", width: "100%" };
   };
 
   const strength = getPasswordStrength();
 
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 24px 80px" }}>
       <div style={{ width: "100%", maxWidth: "500px" }}>
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <h1 style={{ color: "#f97316", fontSize: "28px", fontWeight: "900", margin: 0 }}>TechMart</h1>
@@ -62,7 +62,7 @@ export default function SellerApply() {
           <h2 style={{ color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", marginBottom: "8px" }}>Apply to Sell</h2>
           <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "24px" }}>Fill the form below. We review all applications within 24 hours.</p>
           {error && <div style={{ background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}>{error}</div>}
-          {success && <div style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#86efac", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}>{success}</div>}
+          {success && <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", color: "#a5b4fc", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}>{success}</div>}
           <input placeholder="Full Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={inp} />
           <input placeholder="Email Address *" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} style={inp} />
           <input placeholder="Password *" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} style={inp} />
