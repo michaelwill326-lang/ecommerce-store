@@ -18,6 +18,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
@@ -160,7 +161,7 @@ export default function Home() {
 
         {/* SEARCH BAR */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
-          <input type="text" placeholder="🔍 Search products..." value={search} onChange={e=>setSearch(e.target.value)} className="tm-search" style={{ flex: 1 }} />
+          <input type="text" placeholder="🔍 Search products..." value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={e => { if (e.key === "Enter") setSearch(inputValue.trim()); }} className="tm-search" style={{ flex: 1 }} />
           <Link to="/ai-search" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "12px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", borderRadius: "999px", textDecoration: "none", fontWeight: "700", fontSize: "13px", whiteSpace: "nowrap", flexShrink: 0 }}>
             🤖 AI Search
           </Link>
@@ -182,7 +183,7 @@ export default function Home() {
             {showFilters ? "Hide Filters" : "Price Filter"}
           </button>
           {isFiltering && (
-            <button onClick={() => { setSearch(""); setCategory("All"); setSortBy("newest"); setMinPrice(""); setMaxPrice(""); }} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid #dc2626", background: "transparent", color: "#dc2626", fontSize: "13px", cursor: "pointer", fontWeight: "600" }}>
+            <button onClick={() => { setSearch(""); setInputValue(""); setCategory("All"); setSortBy("newest"); setMinPrice(""); setMaxPrice(""); }} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid #dc2626", background: "transparent", color: "#dc2626", fontSize: "13px", cursor: "pointer", fontWeight: "600" }}>
               Clear All
             </button>
           )}
@@ -211,7 +212,7 @@ export default function Home() {
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <p style={{ fontSize: "40px", margin: "0 0 12px" }}>😕</p>
                 <p style={{ color: "var(--text-muted)" }}>No products found. Try different filters.</p>
-                <button onClick={() => { setSearch(""); setCategory("All"); setSortBy("newest"); setMinPrice(""); setMaxPrice(""); }} style={{ marginTop: "12px", padding: "10px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Clear Filters</button>
+                <button onClick={() => { setSearch(""); setInputValue(""); setCategory("All"); setSortBy("newest"); setMinPrice(""); setMaxPrice(""); }} style={{ marginTop: "12px", padding: "10px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Clear Filters</button>
               </div>
             ) : (
               <div className="tm-grid">{filtered.map(p=><ProductCard key={p._id} p={p}/>)}</div>

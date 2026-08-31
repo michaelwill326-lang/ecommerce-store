@@ -76,6 +76,7 @@ export default function Dashboard() {
   const { pulling, pullDistance, threshold } = usePullToRefresh(() => fetchProductsRef.current?.());
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -333,8 +334,9 @@ export default function Dashboard() {
             <input
               type="text"
               placeholder="🔍 Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") setSearch(inputValue.trim()); }}
               style={styles.searchInput}
             />
             <select
@@ -416,7 +418,7 @@ export default function Dashboard() {
               <p style={{ fontSize: "48px" }}>🔍</p>
               <p style={{ color: "var(--text-muted)" }}>No products found for "{debouncedSearch}"</p>
               <button
-                onClick={() => { setSearch(""); setCategory("All"); }}
+                onClick={() => { setSearch(""); setInputValue(""); setCategory("All"); }}
                 style={styles.retryBtn}
               >
                 Clear Filters
