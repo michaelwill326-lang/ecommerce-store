@@ -89,6 +89,14 @@ export default function TechMartPay() {
   const [showNewPinEye, setShowNewPinEye] = useState(false);
   const [showConfirmNewPinEye, setShowConfirmNewPinEye] = useState(false);
   const [showPinInputEye, setShowPinInputEye] = useState(false);
+            {/* My Account */}
+            <div style={{ marginBottom:"16px" }}>
+              <a href="/pay/account" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:"12px",color:"#a5b4fc",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
+                <span>📊 My Account — Ledger, KYC & Limits</span><span style={{flexShrink:0}}>→</span>
+              </a>
+            </div>
+
+
   const [pinSet, setPinSet] = useState(false);
 
   const [showChangePin, setShowChangePin] = useState(false);
