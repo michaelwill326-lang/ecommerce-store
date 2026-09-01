@@ -50,6 +50,94 @@ app.set("trust proxy", 1);
    🔒 SECURITY
 =========================== */
 app.use(helmet());
+
+/* =========================================================================
+   PROVIDER ABSTRACTION LAYER
+   ========================================================================= */
+const VIRTUAL_ACCOUNT_ENABLED = false;
+
+const providers = {
+  paystack: {
+    name: "Paystack",
+    async createVirtualAccount(user) {
+      if (!VIRTUAL_ACCOUNT_ENABLED) throw new Error("Virtual accounts not yet enabled");
+      const { data: customer } = await axios.post(
+        "https://api.paystack.co/customer",
+        { email: user.email, first_name: user.name.split(" ")[0], last_name: user.name.split(" ").slice(1).join(" ") || user.name, phone: user.phone },
+        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      );
+      const { data: dva } = await axios.post(
+        "https://api.paystack.co/dedicated_account",
+        { customer: customer.data.customer_code, preferred_bank: "titan-paystack" },
+        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      );
+      return { accountNumber: dva.data.account_number, bankName: dva.data.bank.name, providerRef: customer.data.customer_code };
+    }
+  },
+  flutterwave: {
+    name: "Flutterwave",
+    async createVirtualAccount(user) {
+      if (!VIRTUAL_ACCOUNT_ENABLED) throw new Error("Virtual accounts not yet enabled");
+      const { data } = await axios.post(
+        "https://api.flutterwave.com/v3/virtual-account-numbers",
+        { email: user.email, is_permanent: true, bvn: user.bvn || "00000000000", tx_ref: "VA-" + user._id, firstname: user.name.split(" ")[0], lastname: user.name.split(" ").slice(1).join(" ") || user.name, narration: "TechMart Pay — " + user.name },
+        { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
+      );
+      return { accountNumber: data.data.account_number, bankName: data.data.bank_name, providerRef: data.data.order_ref };
+    }
+  },
+};
+
+const ACTIVE_PROVIDER = process.env.VA_PROVIDER || "paystack";
+const payProvider = providers[ACTIVE_PROVIDER] || providers.paystack;
+
+function getLagosDate() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
+}
+function resetDailyUsageIfNeeded(user) {
+  const today = getLagosDate();
+  if (!user.dailyUsage) user.dailyUsage = {};
+  if (user.dailyUsage.date !== today) {
+    user.dailyUsage = { date: today, deposited: 0, withdrawn: 0, transferred: 0 };
+  }
+}
+function checkLimit(user, type, amount) {
+  resetDailyUsageIfNeeded(user);
+  const limits = user.limits || {};
+  const usage  = user.dailyUsage || {};
+  const limitMap = { deposit: ["dailyDeposit","deposited"], withdrawal: ["dailyWithdrawal","withdrawn"], transfer: ["dailyTransfer","transferred"] };
+  const [limitKey, usageKey] = limitMap[type] || [];
+  if (!limitKey) return { ok: true };
+  const limit = limits[limitKey] ?? (type === "deposit" ? 50000 : 20000);
+  const used  = usage[usageKey] ?? 0;
+  if (Number(amount) > (limits.singleTx ?? 100000)) return { ok: false, error: `Single transaction limit is ₦${(limits.singleTx||100000).toLocaleString()}` };
+  if (used + Number(amount) > limit) return { ok: false, error: `Daily ${type} limit of ₦${limit.toLocaleString()} reached` };
+  return { ok: true };
+}
+function recordUsage(user, type, amount) {
+  resetDailyUsageIfNeeded(user);
+  const usageMap = { deposit: "deposited", withdrawal: "withdrawn", transfer: "transferred" };
+  const key = usageMap[type];
+  if (key) user.dailyUsage[key] = (user.dailyUsage[key] || 0) + Number(amount);
+}
+function appendAudit(user, action, req, meta = {}) {
+  if (!user.auditLog) user.auditLog = [];
+  user.auditLog.push({ action, ip: req?.ip || "system", userAgent: req?.headers?.["user-agent"] || "", meta, createdAt: new Date() });
+  if (user.auditLog.length > 200) user.auditLog = user.auditLog.slice(-200);
+}
+function getKycTier(user) {
+  if (user.kyc?.ninVerified || user.ninVerified) return 3;
+  if (user.kyc?.bvnVerified || user.bvnVerified) return 2;
+  if (user.phone) return 1;
+  return 0;
+}
+function upgradeKycLimits(user) {
+  const tier = getKycTier(user);
+  if (!user.limits) user.limits = {};
+  if (tier >= 2) { user.limits.dailyDeposit = 500000; user.limits.dailyWithdrawal = 200000; user.limits.dailyTransfer = 200000; user.limits.singleTx = 1000000; }
+  if (tier >= 3) { user.limits.dailyDeposit = 5000000; user.limits.dailyWithdrawal = 1000000; user.limits.dailyTransfer = 2000000; user.limits.singleTx = 5000000; }
+}
+
 // Skip JSON parsing for the Paystack webhook path — it needs the raw,
 // unparsed body to verify the HMAC signature. Runs before rate limiters
 // so req.body is available to the auth rate limiter's keyGenerator on
@@ -384,6 +472,47 @@ const User = mongoose.model(
       amount: Number,
       description: String,
       reference: String,
+      channel: { type: String, default: "internal" },
+      status: { type: String, enum: ["pending","completed","failed","reversed"], default: "completed" },
+      meta: { type: Object, default: {} },
+      createdAt: { type: Date, default: Date.now }
+    }],
+    virtualAccount: {
+      enabled: { type: Boolean, default: false },
+      accountNumber: { type: String, default: null },
+      accountName: { type: String, default: null },
+      bankName: { type: String, default: null },
+      bankCode: { type: String, default: null },
+      providerRef: { type: String, default: null },
+      provider: { type: String, default: null },
+      issuedAt: { type: Date, default: null },
+    },
+    kyc: {
+      tier: { type: Number, default: 0 },
+      status: { type: String, enum: ["pending","approved","rejected","under_review"], default: "pending" },
+      bvnVerified: { type: Boolean, default: false },
+      ninVerified: { type: Boolean, default: false },
+      docUploaded: { type: Boolean, default: false },
+      reviewedAt: { type: Date, default: null },
+      reviewNote: { type: String, default: null },
+    },
+    limits: {
+      dailyDeposit: { type: Number, default: 50000 },
+      dailyWithdrawal: { type: Number, default: 20000 },
+      dailyTransfer: { type: Number, default: 20000 },
+      singleTx: { type: Number, default: 100000 },
+    },
+    dailyUsage: {
+      date: { type: String, default: null },
+      deposited: { type: Number, default: 0 },
+      withdrawn: { type: Number, default: 0 },
+      transferred: { type: Number, default: 0 },
+    },
+    auditLog: [{
+      action: String,
+      ip: String,
+      userAgent: String,
+      meta: Object,
       createdAt: { type: Date, default: Date.now }
     }],
     virtualAccountNumber: { type: String, default: null },
@@ -8095,4 +8224,169 @@ process.on("unhandledRejection", (reason, promise) => {
 process.on("uncaughtException", (err) => {
   console.error("🔥 Uncaught Exception:", err.message);
   process.exit(1);
+});
+
+/* =========================================================================
+   TECHMART PAY INFRASTRUCTURE ROUTES
+   ========================================================================= */
+
+app.post("/api/pay/virtual-account/create", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (user.virtualAccount?.enabled && user.virtualAccount?.accountNumber) {
+      return res.json({ success: true, account: user.virtualAccount, existing: true });
+    }
+    if (!VIRTUAL_ACCOUNT_ENABLED) {
+      return res.json({ success: false, comingSoon: true, message: "Virtual account issuance is coming soon." });
+    }
+    const account = await payProvider.createVirtualAccount(user);
+    user.virtualAccount = { enabled: true, ...account, provider: ACTIVE_PROVIDER, issuedAt: new Date() };
+    appendAudit(user, "virtual_account_issued", req, { provider: ACTIVE_PROVIDER });
+    await user.save();
+    res.json({ success: true, account: user.virtualAccount });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Failed to create virtual account" });
+  }
+});
+
+app.get("/api/pay/virtual-account", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("virtualAccount virtualAccountNumber virtualAccountBank name");
+    const va = user.virtualAccount?.enabled ? user.virtualAccount : (user.virtualAccountNumber ? { accountNumber: user.virtualAccountNumber, bankName: user.virtualAccountBank, accountName: user.name, enabled: true } : null);
+    res.json({ success: true, account: va, enabled: VIRTUAL_ACCOUNT_ENABLED, comingSoon: !VIRTUAL_ACCOUNT_ENABLED });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch virtual account" });
+  }
+});
+
+app.get("/api/pay/kyc", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("kyc bvnVerified ninVerified phone limits dailyUsage");
+    upgradeKycLimits(user);
+    const tier = getKycTier(user);
+    res.json({ success: true, tier, tierLabel: ["None","Phone Verified","BVN Verified","Full KYC"][tier] || "None", bvnVerified: user.kyc?.bvnVerified || user.bvnVerified || false, ninVerified: user.kyc?.ninVerified || user.ninVerified || false, limits: user.limits, dailyUsage: user.dailyUsage, nextStep: tier === 0 ? "Add your phone number" : tier === 1 ? "Verify BVN to increase limits" : tier === 2 ? "Submit NIN for full KYC" : "Fully verified" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch KYC status" });
+  }
+});
+
+app.get("/api/pay/ledger", auth, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const type = req.query.type;
+    const user = await User.findById(req.user.id).select("walletTransactions walletBalance");
+    let txs = (user.walletTransactions || []).slice().reverse();
+    if (type === "credit") txs = txs.filter(t => t.type === "credit");
+    if (type === "debit") txs = txs.filter(t => t.type === "debit");
+    const total = txs.length;
+    const data = txs.slice((page - 1) * limit, page * limit);
+    res.json({ success: true, transactions: data, total, page, pages: Math.ceil(total / limit), balance: user.walletBalance || 0 });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch ledger" });
+  }
+});
+
+app.get("/api/pay/limits", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("limits dailyUsage kyc bvnVerified ninVerified phone");
+    upgradeKycLimits(user);
+    resetDailyUsageIfNeeded(user);
+    res.json({ success: true, limits: user.limits, usage: user.dailyUsage });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch limits" });
+  }
+});
+
+app.get("/api/pay/audit", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("auditLog");
+    const log = (user.auditLog || []).slice().reverse().slice(0, 50);
+    res.json({ success: true, log });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch audit log" });
+  }
+});
+
+app.post("/api/pay/webhook/deposit", async (req, res) => {
+  if (!VIRTUAL_ACCOUNT_ENABLED) return res.json({ received: true, processed: false, reason: "virtual accounts disabled" });
+  res.json({ received: true });
+});
+
+app.post("/api/admin/pay/credit", adminOnly, async (req, res) => {
+  try {
+    const { userId, amount, description, reference } = req.body;
+    if (!userId || !amount) return res.status(400).json({ error: "userId and amount required" });
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ref = reference || "ADMIN-" + Date.now();
+    user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    user.walletTransactions.push({ type: "credit", amount: Number(amount), description: description || "Manual credit by admin", reference: ref, channel: "admin", status: "completed", meta: { adminId: req.user?.id } });
+    recordUsage(user, "deposit", amount);
+    appendAudit(user, "admin_credit", req, { amount, ref });
+    await user.save();
+    res.json({ success: true, reference: ref, newBalance: user.walletBalance });
+  } catch (err) {
+    res.status(500).json({ error: "Credit failed" });
+  }
+});
+
+app.get("/api/admin/pay/transactions", adminOnly, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 50);
+    const type = req.query.type;
+    const userId = req.query.userId;
+    const query = userId ? { _id: userId } : {};
+    const users = await User.find(query).select("name email walletBalance walletTransactions").lean();
+    let allTxs = [];
+    for (const u of users) {
+      for (const tx of (u.walletTransactions || [])) {
+        if (type && tx.type !== type) continue;
+        allTxs.push({ ...tx, userName: u.name, userEmail: u.email, userId: u._id });
+      }
+    }
+    allTxs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const total = allTxs.length;
+    const data = allTxs.slice((page - 1) * limit, page * limit);
+    res.json({ success: true, transactions: data, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch transactions" });
+  }
+});
+
+app.put("/api/admin/pay/limits/:userId", adminOnly, async (req, res) => {
+  try {
+    const { dailyDeposit, dailyWithdrawal, dailyTransfer, singleTx } = req.body;
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user.limits) user.limits = {};
+    if (dailyDeposit) user.limits.dailyDeposit = Number(dailyDeposit);
+    if (dailyWithdrawal) user.limits.dailyWithdrawal = Number(dailyWithdrawal);
+    if (dailyTransfer) user.limits.dailyTransfer = Number(dailyTransfer);
+    if (singleTx) user.limits.singleTx = Number(singleTx);
+    appendAudit(user, "limits_updated", req, { limits: user.limits });
+    await user.save();
+    res.json({ success: true, limits: user.limits });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update limits" });
+  }
+});
+
+app.put("/api/admin/pay/kyc/:userId", adminOnly, async (req, res) => {
+  try {
+    const { tier, status, note } = req.body;
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user.kyc) user.kyc = {};
+    if (tier >= 2) { user.kyc.bvnVerified = true; user.bvnVerified = true; }
+    if (tier >= 3) { user.kyc.ninVerified = true; user.ninVerified = true; }
+    user.kyc.tier = tier; user.kyc.status = status || "approved"; user.kyc.reviewedAt = new Date(); user.kyc.reviewNote = note || "";
+    upgradeKycLimits(user);
+    appendAudit(user, "kyc_updated", req, { tier, status });
+    await user.save();
+    res.json({ success: true, kyc: user.kyc, limits: user.limits });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update KYC" });
+  }
 });
