@@ -929,39 +929,78 @@ const requestPinReset = async () => {
         {/* WITHDRAW TAB */}
         {tab === "Withdraw" && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Withdraw to Bank</h2>
-            <div style={{ background: "#0a1a2a", border: "1px solid #3b82f6", borderRadius: "12px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
-              <p style={{ fontSize: "28px", margin: "0 0 8px" }}>🏦</p>
-              <p style={{ color: "#3b82f6", fontWeight: "700", fontSize: "16px", margin: "0 0 8px" }}>Bank Withdrawals Coming Soon</p>
-              <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0, lineHeight: "1.6" }}>We're completing our business registration to enable secure bank withdrawals. In the meantime, you can use your wallet balance to shop, pay for orders, and transfer to other TechMart users.</p>
+            <div style={{background:"linear-gradient(135deg,#0d1117,#161b27)",border:"1px solid rgba(249,115,22,0.25)",borderRadius:"16px",padding:"20px",marginBottom:"16px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"10px"}}>
+                <span style={{fontSize:"32px"}}>🏦</span>
+                <div>
+                  <h2 style={{color:"#fff",fontSize:"18px",fontWeight:"900",margin:"0 0 4px"}}>Transfer to Any Nigerian Bank</h2>
+                  <p style={{color:"rgba(255,255,255,0.55)",fontSize:"12px",margin:0}}>Withdraw from your TechMart wallet to any bank in Nigeria</p>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                {["⚡ Instant transfer","🏦 All Nigerian banks","🔒 PIN secured","💸 Min ₦500"].map(f=>(
+                  <span key={f} style={{padding:"4px 10px",borderRadius:"999px",background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.2)",color:"rgba(255,255,255,0.7)",fontSize:"11px",fontWeight:"600"}}>{f}</span>
+                ))}
+              </div>
             </div>
-
-            <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px" }}>
-              <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>Available: ₦{(dashboard?.balance || 0).toLocaleString()}</p>
-              <input placeholder="Amount (N) — minimum N500" type="number" value={withdrawForm.amount} onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})} style={inp} />
-              <select value={withdrawForm.bankCode} onChange={e => setWithdrawForm({...withdrawForm, bankCode: e.target.value, accountName: ""})} style={{ ...inp, appearance: "none" }}>
-                <option value="">Select Bank</option>
-                {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+            <div style={{background:"var(--bg-card)",border:"1px solid #2a2a2a",borderRadius:"14px",padding:"20px"}}>
+              <div style={{background:"rgba(249,115,22,0.06)",border:"1px solid rgba(249,115,22,0.15)",borderRadius:"10px",padding:"12px 16px",marginBottom:"16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{color:"var(--text-muted)",fontSize:"13px"}}>Available Balance</span>
+                <span style={{color:"#f97316",fontWeight:"800",fontSize:"16px"}}>₦{(dashboard?.balance || 0).toLocaleString()}</span>
+              </div>
+              <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Amount to Withdraw</label>
+              <input placeholder="Minimum ₦500" type="number" value={withdrawForm.amount} onChange={e=>setWithdrawForm({...withdrawForm,amount:e.target.value})} style={{...inp,marginBottom:"8px"}} />
+              <div style={{display:"flex",gap:"6px",marginBottom:"16px",flexWrap:"wrap"}}>
+                {[500,1000,2000,5000,10000].map(a=>(
+                  <button key={a} onClick={()=>setWithdrawForm({...withdrawForm,amount:String(a)})} style={{padding:"6px 12px",borderRadius:"999px",border:"1px solid #333",background:withdrawForm.amount==String(a)?"#f97316":"transparent",color:withdrawForm.amount==String(a)?"#fff":"var(--text-muted)",cursor:"pointer",fontSize:"12px",fontWeight:"600"}}>₦{a.toLocaleString()}</button>
+                ))}
+              </div>
+              <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Select Bank</label>
+              <select value={withdrawForm.bankCode} onChange={e=>setWithdrawForm({...withdrawForm,bankCode:e.target.value,accountName:""})} style={{...inp,appearance:"none",marginBottom:"14px"}}>
+                <option value="">— Choose your bank —</option>
+                {banks.map(b=><option key={b.code} value={b.code}>{b.name}</option>)}
               </select>
-              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-                <input placeholder="Account Number" value={withdrawForm.accountNumber} onChange={e => setWithdrawForm({...withdrawForm, accountNumber: e.target.value, accountName: ""})} style={{ ...inp, marginBottom: 0, flex: 1 }} maxLength={10} />
-                <button onClick={verifyAccount} disabled={verifyingAccount || !withdrawForm.accountNumber || !withdrawForm.bankCode} style={{ padding: "12px 14px", background: "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "600", flexShrink: 0 }}>
-                  {verifyingAccount ? "..." : "Verify"}
+              <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Account Number</label>
+              <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
+                <input placeholder="10-digit account number" value={withdrawForm.accountNumber} onChange={e=>setWithdrawForm({...withdrawForm,accountNumber:e.target.value,accountName:""})} style={{...inp,marginBottom:0,flex:1,fontFamily:"monospace",letterSpacing:"2px",fontSize:"16px"}} maxLength={10} />
+                <button onClick={verifyAccount} disabled={verifyingAccount||withdrawForm.accountNumber.length!==10||!withdrawForm.bankCode} style={{padding:"12px 16px",background:withdrawForm.accountNumber.length===10&&withdrawForm.bankCode?"linear-gradient(135deg,#6366f1,#4f46e5)":"#1a1a1a",color:withdrawForm.accountNumber.length===10&&withdrawForm.bankCode?"#fff":"#555",border:"none",borderRadius:"10px",cursor:withdrawForm.accountNumber.length===10&&withdrawForm.bankCode?"pointer":"not-allowed",fontSize:"13px",fontWeight:"700",flexShrink:0}}>
+                  {verifyingAccount?"⏳":"Verify"}
                 </button>
               </div>
               {withdrawForm.accountName && (
-                <div style={{ background: "#0d0f1e", border: "1px solid #4f46e5", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px" }}>
-                  <p style={{ color: "#818cf8", fontWeight: "700", fontSize: "14px", margin: 0 }}>{withdrawForm.accountName}</p>
+                <div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:"10px",padding:"12px 16px",marginBottom:"14px",display:"flex",alignItems:"center",gap:"10px"}}>
+                  <span style={{fontSize:"20px"}}>✅</span>
+                  <div>
+                    <p style={{color:"#22c55e",fontWeight:"800",fontSize:"15px",margin:0}}>{withdrawForm.accountName}</p>
+                    <p style={{color:"var(--text-muted)",fontSize:"11px",margin:"2px 0 0"}}>Account verified — ready to withdraw</p>
+                  </div>
                 </div>
               )}
-              <button onClick={() => requirePin(withdraw)} disabled={withdrawLoading || !withdrawForm.accountName} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "15px", opacity: !withdrawForm.accountName ? 0.6 : 1 }}>
-                {withdrawLoading ? "Processing..." : `Withdraw ₦${Number(withdrawForm.amount || 0).toLocaleString()}`}
+              {withdrawForm.accountName && Number(withdrawForm.amount)>=500 && (
+                <div style={{background:"#0d0f1e",border:"1px solid #333",borderRadius:"10px",padding:"14px 16px",marginBottom:"14px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"8px"}}>
+                    <span style={{color:"var(--text-muted)",fontSize:"13px"}}>You send</span>
+                    <span style={{color:"#fff",fontWeight:"700",fontSize:"14px"}}>₦{Number(withdrawForm.amount).toLocaleString()}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"8px"}}>
+                    <span style={{color:"var(--text-muted)",fontSize:"13px"}}>Recipient</span>
+                    <span style={{color:"#fff",fontWeight:"700",fontSize:"13px"}}>{withdrawForm.accountName}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",paddingTop:"8px",borderTop:"1px solid #222"}}>
+                    <span style={{color:"var(--text-muted)",fontSize:"13px"}}>Arrival</span>
+                    <span style={{color:"#22c55e",fontWeight:"700",fontSize:"13px"}}>⚡ 1–2 minutes</span>
+                  </div>
+                </div>
+              )}
+              <button onClick={()=>requirePin(withdraw)} disabled={withdrawLoading||!withdrawForm.accountName||Number(withdrawForm.amount)<500} style={{width:"100%",padding:"16px",background:(withdrawForm.accountName&&Number(withdrawForm.amount)>=500)?"linear-gradient(135deg,#f97316,#dc2626)":"#1a1a1a",color:(withdrawForm.accountName&&Number(withdrawForm.amount)>=500)?"#fff":"#555",border:"none",borderRadius:"12px",cursor:(withdrawForm.accountName&&Number(withdrawForm.amount)>=500)?"pointer":"not-allowed",fontWeight:"800",fontSize:"16px",transition:"background 0.2s"}}>
+                {withdrawLoading?"⏳ Processing...":(withdrawForm.accountName&&Number(withdrawForm.amount)>=500)?`🏦 Withdraw ₦${Number(withdrawForm.amount).toLocaleString()} to Bank`:"Enter amount and verify account"}
               </button>
+              <p style={{color:"var(--text-muted)",fontSize:"11px",textAlign:"center",margin:"10px 0 0"}}>🔐 Your wallet PIN is required to confirm this transfer</p>
             </div>
           </div>
         )}
 
-        {/* SAVINGS VAULT TAB */}
+                {/* SAVINGS VAULT TAB */}
         {tab === "Savings" && (
           <div>
             <h2 style={{ color: "var(--text-primary)", marginBottom: "4px" }}>🏦 Savings Vault</h2>
