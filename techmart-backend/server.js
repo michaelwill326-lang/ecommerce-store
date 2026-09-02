@@ -82,7 +82,7 @@ const providers = {
       const { data } = await axios.post(
         "https://api.flutterwave.com/v3/virtual-account-numbers",
         { email: user.email, is_permanent: true, bvn: user.bvn || "00000000000", tx_ref: "VA-" + user._id, firstname: user.name.split(" ")[0], lastname: user.name.split(" ").slice(1).join(" ") || user.name, narration: "TechMart Pay — " + user.name },
-        { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
+        { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } }
       );
       return { accountNumber: data.data.account_number, bankName: data.data.bank_name, providerRef: data.data.order_ref };
     }
@@ -3093,7 +3093,7 @@ app.post("/api/pay/withdraw", auth, async (req, res) => {
     const flwRes = await axios.post(
       "https://api.flutterwave.com/v3/transfers",
       { account_bank: bankCode, account_number: accountNumber, amount: Number(amount), currency: "NGN", reference, narration: `TechMart Pay — ${user.name}`, debit_currency: "NGN" },
-      { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
+      { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } }
     );
     if (flwRes.data.status !== "success") return res.status(400).json({ error: flwRes.data.message || "Transfer failed" });
     user.walletBalance = (user.walletBalance || 0) - Number(amount);
@@ -3109,8 +3109,8 @@ app.post("/api/pay/withdraw", auth, async (req, res) => {
 // 4. Get Nigerian Banks List
 app.get("/api/pay/banks", async (req, res) => {
   try {
-    if (process.env.FLW_SECRET_KEY) {
-      const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } });
+    if (process.env.FLUTTERWAVE_SECRET_KEY) {
+      const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } });
       return res.json((response.data.data || []).map(b => ({ name: b.name, code: b.code })));
     }
     const response = await axios.get("https://api.paystack.co/bank?currency=NGN&use_cursor=false", { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
@@ -3124,8 +3124,8 @@ app.get("/api/pay/banks", async (req, res) => {
 app.post("/api/pay/verify-account", auth, async (req, res) => {
   try {
     const { accountNumber, bankCode } = req.body;
-    if (process.env.FLW_SECRET_KEY) {
-      const response = await axios.post("https://api.flutterwave.com/v3/accounts/resolve", { account_number: accountNumber, account_bank: bankCode }, { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } });
+    if (process.env.FLUTTERWAVE_SECRET_KEY) {
+      const response = await axios.post("https://api.flutterwave.com/v3/accounts/resolve", { account_number: accountNumber, account_bank: bankCode }, { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } });
       return res.json({ success: true, accountName: response.data.data.account_name });
     }
     const response = await axios.get(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
