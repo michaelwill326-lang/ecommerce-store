@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 require("dotenv").config();
 
 const express = require("express");
@@ -1060,7 +1061,6 @@ app.post("/api/auth/signup", async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ error: "User already exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const crypto = require("crypto");
     const newReferralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
     const user = await User.create({ name, email, password: hashedPassword, phone: req.body.phone || "", referralCode: newReferralCode });
     const token = jwt.sign(
@@ -1087,7 +1087,6 @@ app.post("/api/auth/signup", async (req, res) => {
       console.log("Welcome email failed:", e.message);
     }
 
-    const crypto = require("crypto");
     const verifyToken = crypto.randomBytes(32).toString("hex");
     await User.findByIdAndUpdate(user._id, { emailVerificationToken: verifyToken, emailVerificationExpires: new Date(Date.now() + 24*60*60*1000) });
     try { const { sendEmailVerification } = require("./utils/email"); await sendEmailVerification(user, verifyToken); } catch(e) { console.error("Verify email failed:", e.message); }
@@ -1119,7 +1118,6 @@ app.post("/api/auth/resend-verification", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: "Account not found" });
     if (user.emailVerified) return res.status(400).json({ error: "Email already verified" });
-    const crypto = require("crypto");
     const verifyToken = crypto.randomBytes(32).toString("hex");
     await User.findByIdAndUpdate(user._id, { emailVerificationToken: verifyToken, emailVerificationExpires: new Date(Date.now() + 24*60*60*1000) });
     const { sendEmailVerification } = require("./utils/email");
@@ -5278,7 +5276,6 @@ app.post("/api/paystack/init", async (req, res) => {
 app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     // 1. VERIFY SIGNATURE
-    const crypto = require("crypto");
     const hash = crypto
       .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
       .update(req.body)
@@ -6347,7 +6344,6 @@ app.post("/api/auth/verify-otp", async (req, res) => {
       return res.status(400).json({ error: "Invalid OTP" });
     }
 
-    const crypto = require("crypto");
     const deviceToken = crypto.randomBytes(32).toString("hex");
     const updatedTokens = [...(user.deviceTokens || []), deviceToken].slice(-5);
     await User.findByIdAndUpdate(user._id, { otpCode: null, otpExpires: null, deviceTokens: updatedTokens });
