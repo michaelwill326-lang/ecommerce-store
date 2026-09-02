@@ -3091,49 +3091,31 @@ app.post("/api/pay/withdraw", auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
-    // Create transfer recipient on Paystack
-    const recipientRes = await axios.post(
-      "https://api.paystack.co/transferrecipient",
-      { type: "nuban", name: accountName, account_number: accountNumber, bank_code: bankCode, currency: "NGN" },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    const reference = "WTH-FLW-" + Date.now();
+    const flwRes = await axios.post(
+      "https://api.flutterwave.com/v3/transfers",
+      { account_bank: bankCode, account_number: accountNumber, amount: Number(amount), currency: "NGN", reference, narration: `TechMart Pay — ${user.name}`, debit_currency: "NGN" },
+      { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } }
     );
-    const recipientCode = recipientRes.data.data.recipient_code;
-
-    // Initiate transfer
-    const reference = "WTH-" + Date.now();
-    await axios.post(
-      "https://api.paystack.co/transfer",
-      { source: "balance", amount: Number(amount) * 100, recipient: recipientCode, reason: `TechMart withdrawal by ${user.name}`, reference },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-    );
-
-    // Debit wallet
+    if (flwRes.data.status !== "success") return res.status(400).json({ error: flwRes.data.message || "Transfer failed" });
     user.walletBalance = (user.walletBalance || 0) - Number(amount);
-    user.walletTransactions.push({
-      type: "debit",
-      amount: Number(amount),
-      description: `Withdrawal to ${accountName} (${accountNumber})`,
-      reference
-    });
+    user.walletTransactions.push({ type:"debit", amount:Number(amount), description:`Bank transfer to ${accountName} (${accountNumber})`, reference, channel:"withdrawal", status:"completed", meta:{ provider:"flutterwave", bankCode, accountNumber, accountName } });
     await user.save();
-
-    res.json({ success: true, reference, message: `N${Number(amount).toLocaleString()} withdrawal initiated. Arrives in 1-2 minutes.` });
+    res.json({ success:true, reference, message:`₦${Number(amount).toLocaleString()} is on its way to ${accountName}. Arrives in 1–2 minutes.` });
   } catch (err) {
     console.error("Withdrawal error:", err.response?.data || err.message);
-    const msg = err.response?.data?.code === "transfer_unavailable"
-      ? "Bank withdrawals require a registered business account. This feature is coming soon!"
-      : "Withdrawal failed. Please try again.";
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: err.response?.data?.message || "Withdrawal failed. Please try again." });
   }
 });
 
 // 4. Get Nigerian Banks List
 app.get("/api/pay/banks", async (req, res) => {
   try {
-    const response = await axios.get(
-      "https://api.paystack.co/bank?currency=NGN&use_cursor=false",
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-    );
+    if (process.env.FLW_SECRET_KEY) {
+      const response = await axios.get("https://api.flutterwave.com/v3/banks/NG", { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } });
+      return res.json((response.data.data || []).map(b => ({ name: b.name, code: b.code })));
+    }
+    const response = await axios.get("https://api.paystack.co/bank?currency=NGN&use_cursor=false", { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
     res.json(response.data.data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch banks" });
@@ -3144,13 +3126,14 @@ app.get("/api/pay/banks", async (req, res) => {
 app.post("/api/pay/verify-account", auth, async (req, res) => {
   try {
     const { accountNumber, bankCode } = req.body;
-    const response = await axios.get(
-      `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-    );
+    if (process.env.FLW_SECRET_KEY) {
+      const response = await axios.post("https://api.flutterwave.com/v3/accounts/resolve", { account_number: accountNumber, account_bank: bankCode }, { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } });
+      return res.json({ success: true, accountName: response.data.data.account_name });
+    }
+    const response = await axios.get(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
     res.json({ success: true, accountName: response.data.data.account_name });
   } catch (err) {
-    res.status(500).json({ error: "Could not verify account" });
+    res.status(500).json({ error: "Could not verify account. Check the number and bank." });
   }
 });
 
