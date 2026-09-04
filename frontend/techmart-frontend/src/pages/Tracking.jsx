@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
+import EscrowProtectedCard from "../components/EscrowProtectedCard";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
@@ -74,6 +75,35 @@ const styles = {
   trackingNum: { color: "#3b82f6", fontSize: "13px", fontWeight: "600", margin: "auto 0" },
 };
 
+function getOrderItemImage(item) {
+  const candidates = [
+    item?.images?.[0],
+    item?.image,
+    item?.product?.images?.[0],
+    item?.product?.image,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+
+    if (candidate && typeof candidate === "object") {
+      const url =
+        candidate.url ||
+        candidate.secure_url ||
+        candidate.src ||
+        candidate.path;
+
+      if (typeof url === "string" && url.trim()) {
+        return url.trim();
+      }
+    }
+  }
+
+  return "https://placehold.co/120x120?text=No+Image";
+}
+
 export default function Tracking() {
   const showToast = useToast();
   const { addToCart } = useContext(CartContext);
@@ -90,8 +120,20 @@ export default function Tracking() {
   const [pullDistance, setPullDistance] = useState(0);
   const [pulling, setPulling] = useState(false);
 
-  const token = sessionStorage.getItem("token");
-  const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
+  const token =
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token");
+
+  const user = (() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("user") ||
+        sessionStorage.getItem("user")
+      );
+    } catch {
+      return null;
+    }
+  })();
 
   useEffect(() => {
     if (token && user) {
@@ -263,50 +305,76 @@ export default function Tracking() {
                 )}
               </div>
 
-              {/* TIMELINE */}
+              {/* ESCROW PROTECTION */}
+              <EscrowProtectedCard order={order} />
+
+              {/* ORDER PROGRESS */}
               {order.status !== "Cancelled" && (
                 <div style={styles.timeline}>
                   <h3 style={styles.timelineTitle}>Order Progress</h3>
+
                   <div style={styles.steps}>
                     {STEPS.map((step, i) => {
                       const currentIndex = getStatusIndex(order.status);
                       const isCompleted = currentIndex >= i;
                       const isCurrent = currentIndex === i;
+
                       return (
                         <div key={step.label} style={styles.stepWrap}>
                           <div style={styles.stepLeft}>
-                            <div style={{
-                              ...styles.stepCircle,
-                              background: isCompleted
-                                ? "linear-gradient(135deg, #f97316, #dc2626)"
-                                : "#222",
-                              border: isCurrent
-                                ? "2px solid #f97316"
-                                : isCompleted
-                                ? "none"
-                                : "2px solid #333",
-                              transform: isCurrent ? "scale(1.2)" : "scale(1)",
-                            }}>
-                              <span style={{ fontSize: "16px" }}>{step.icon}</span>
+                            <div
+                              style={{
+                                ...styles.stepCircle,
+                                background: isCompleted
+                                  ? "linear-gradient(135deg, #f97316, #dc2626)"
+                                  : "var(--bg-secondary)",
+                                border: isCurrent
+                                  ? "2px solid #f97316"
+                                  : isCompleted
+                                  ? "none"
+                                  : "2px solid var(--border-color)",
+                                transform: isCurrent
+                                  ? "scale(1.08)"
+                                  : "scale(1)",
+                              }}
+                            >
+                              <span style={{ fontSize: "16px" }}>
+                                {step.icon}
+                              </span>
                             </div>
+
                             {i < STEPS.length - 1 && (
-                              <div style={{
-                                ...styles.stepLine,
-                                background: currentIndex > i ? "#f97316" : "#222",
-                              }} />
+                              <div
+                                style={{
+                                  ...styles.stepLine,
+                                  background:
+                                    currentIndex > i
+                                      ? "#f97316"
+                                      : "var(--border-color)",
+                                }}
+                              />
                             )}
                           </div>
+
                           <div style={styles.stepRight}>
-                            <p style={{
-                              ...styles.stepLabel,
-                              color: isCompleted ? "#fff" : "#555",
-                              fontWeight: isCurrent ? "800" : "600",
-                            }}>
+                            <p
+                              style={{
+                                ...styles.stepLabel,
+                                color: isCompleted
+                                  ? "var(--text-primary)"
+                                  : "var(--text-muted)",
+                                fontWeight: isCurrent ? "800" : "600",
+                              }}
+                            >
                               {step.label}
+
                               {isCurrent && (
-                                <span style={styles.currentBadge}>Current</span>
+                                <span style={styles.currentBadge}>
+                                  Current
+                                </span>
                               )}
                             </p>
+
                             <p style={styles.stepDesc}>{step.desc}</p>
                           </div>
                         </div>
@@ -330,7 +398,7 @@ export default function Tracking() {
                     const reason = window.prompt("Reason for cancellation (optional):");
                     if (reason === null) return;
                     try {
-                      const token = sessionStorage.getItem("token");
+                      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
                       const res = await fetch(`${API}/api/orders/${order._id}/cancel`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -358,7 +426,7 @@ export default function Tracking() {
                     if (!reason) return;
                     const description = prompt("Additional details (optional):");
                     try {
-                      const token = sessionStorage.getItem("token");
+                      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
                       const res = await fetch(`${API}/api/returns`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -383,7 +451,7 @@ export default function Tracking() {
                   <button onClick={async () => {
                     if (!window.confirm("Confirm you have received this order? This will release payment to the seller.")) return;
                     try {
-                      const token = sessionStorage.getItem("token");
+                      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
                       const res = await fetch(`${API}/api/orders/${order._id}/confirm-delivery`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
@@ -413,9 +481,15 @@ export default function Tracking() {
                   {order.items.map((item, i) => (
                     <div key={i} style={styles.itemRow}>
                       <img
-                        src={item.images?.[0] || "https://placehold.co/60x60?text=No+Image"}
-                        alt={item.name}
-                        onError={(e) => { e.target.src = "https://placehold.co/60x60?text=No+Image"; }}
+                        src={getOrderItemImage(item)}
+                        alt={item.name || "Order item"}
+                        onError={(e) => {
+                          if (!e.currentTarget.dataset.fallback) {
+                            e.currentTarget.dataset.fallback = "1";
+                            e.currentTarget.src =
+                              "https://placehold.co/120x120?text=No+Image";
+                          }
+                        }}
                         style={styles.itemImg}
                       />
                       <div style={styles.itemDetails}>
@@ -430,7 +504,7 @@ export default function Tracking() {
                   {/* Reorder Button */}
                   {order.status === "Delivered" && (
                     <button onClick={() => {
-                      if (!sessionStorage.getItem("token")) {
+                      if (!(localStorage.getItem("token") || sessionStorage.getItem("token"))) {
                         showToast("Please log in to buy these items again.", "error");
                         return;
                       }
@@ -550,37 +624,7 @@ export default function Tracking() {
                 </div>
               </div>
 
-              {/* MINI TIMELINE */}
-              {o.status !== "Cancelled" && (
-                <div style={styles.miniTimeline}>
-                  {STEPS.map((step, i) => {
-                    const currentIndex = getStatusIndex(o.status);
-                    const isCompleted = currentIndex >= i;
-                    return (
-                      <div key={step.label} style={styles.miniStep}>
-                        <div style={{
-                          ...styles.miniDot,
-                          background: isCompleted ? "#f97316" : "#222",
-                          border: isCompleted ? "none" : "2px solid #333",
-                        }} />
-                        {i < STEPS.length - 1 && (
-                          <div style={{
-                            ...styles.miniLine,
-                            background: currentIndex > i ? "#f97316" : "#222",
-                          }} />
-                        )}
-                        <p style={{
-                          ...styles.miniLabel,
-                          color: isCompleted ? "#fff" : "#555",
-                        }}>
-                          {step.icon}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
+              {/* COMPACT ORDER ACTIONS */}
               <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                 <button
                   onClick={() => {
