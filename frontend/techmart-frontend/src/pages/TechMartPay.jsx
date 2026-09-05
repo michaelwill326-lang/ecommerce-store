@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { BeneficiariesTab, RecurringTab, QRTab, AjoTab, CashbackTab } from "../components/PayTabs";
-import QRCode from "qrcode";
 import { useToast } from "../App";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
@@ -90,6 +89,7 @@ export default function TechMartPay() {
   const [showNewPinEye, setShowNewPinEye] = useState(false);
   const [showConfirmNewPinEye, setShowConfirmNewPinEye] = useState(false);
   const [showPinInputEye, setShowPinInputEye] = useState(false);
+
             {/* Bank Transfer promo */}
             <div onClick={() => setTab("Withdraw")} style={{ marginBottom:"12px",background:"linear-gradient(135deg,#0d1117,#161b27)",border:"1px solid rgba(249,115,22,0.25)",borderRadius:"14px",padding:"16px 18px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px" }}>
               <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
@@ -113,6 +113,7 @@ export default function TechMartPay() {
                 <span>📄 Download Monthly Statement</span><span style={{flexShrink:0}}>↓</span>
               </a>
             </div>
+
 
 
   const [pinSet, setPinSet] = useState(false);
@@ -163,7 +164,7 @@ const [otpTimer, setOtpTimer] = useState(600);
   const generateQr = async (userId) => {
     try {
       const url = `${window.location.origin}/pay/user/${userId}`;
-      const dataUrl = await QRCode.toDataURL(url, { width: 200, margin: 2, color: { dark: "#f97316", light: "#0a0a0a" } });
+      const dataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
       setQrDataUrl(dataUrl);
     } catch (err) {
       console.error("QR generation failed:", err);
