@@ -8369,3 +8369,230 @@ app.put("/api/admin/pay/kyc/:userId", adminOnly, async (req, res) => {
     res.status(500).json({ error: "Failed to update KYC" });
   }
 });
+
+/* =========================================================================
+   TECHMART PAY NEW FEATURES — BACKEND ROUTES
+   ========================================================================= */
+
+// Ajo Group Schema
+const ajoGroupSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  creatorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  members: [{ userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, name: String, position: Number, hasPaid: { type: Boolean, default: false }, paidAt: Date }],
+  contributionAmount: { type: Number, required: true },
+  frequency: { type: String, enum: ["weekly","monthly"], default: "monthly" },
+  maxMembers: { type: Number, default: 10 },
+  currentRound: { type: Number, default: 1 },
+  currentRecipient: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  status: { type: String, enum: ["open","active","completed","cancelled"], default: "open" },
+  nextPayoutDate: { type: Date },
+  inviteCode: { type: String, unique: true },
+  totalPot: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+});
+const AjoGroup = mongoose.models.AjoGroup || mongoose.model("AjoGroup", ajoGroupSchema);
+
+// Beneficiaries
+app.get("/api/pay/beneficiaries", auth, async (req, res) => {
+  try { const user = await User.findById(req.user.id).select("beneficiaries"); res.json({ success: true, beneficiaries: user.beneficiaries || [] }); }
+  catch (err) { res.status(500).json({ error: "Failed to fetch beneficiaries" }); }
+});
+app.post("/api/pay/beneficiaries", auth, async (req, res) => {
+  try {
+    const { nickname, accountNumber, accountName, bankCode, bankName } = req.body;
+    if (!accountNumber || !accountName || !bankCode) return res.status(400).json({ error: "Account details required" });
+    const user = await User.findById(req.user.id);
+    if (!user.beneficiaries) user.beneficiaries = [];
+    const exists = user.beneficiaries.find(b => b.accountNumber === accountNumber && b.bankCode === bankCode);
+    if (exists) return res.json({ success: true, beneficiaries: user.beneficiaries });
+    user.beneficiaries.push({ nickname: nickname || accountName, accountNumber, accountName, bankCode, bankName: bankName || bankCode });
+    await user.save();
+    res.json({ success: true, beneficiaries: user.beneficiaries });
+  } catch (err) { res.status(500).json({ error: "Failed to save beneficiary" }); }
+});
+app.delete("/api/pay/beneficiaries/:id", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    user.beneficiaries = (user.beneficiaries || []).filter(b => b._id.toString() !== req.params.id);
+    await user.save(); res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: "Failed to delete" }); }
+});
+
+// Scheduled/Recurring Payments
+app.get("/api/pay/scheduled", auth, async (req, res) => {
+  try { const user = await User.findById(req.user.id).select("scheduledPayments"); res.json({ success: true, scheduled: user.scheduledPayments || [] }); }
+  catch (err) { res.status(500).json({ error: "Failed to fetch" }); }
+});
+app.post("/api/pay/scheduled", auth, async (req, res) => {
+  try {
+    const { title, type, amount, bankCode, accountNumber, accountName, frequency, startDate } = req.body;
+    if (!title || !amount || !frequency) return res.status(400).json({ error: "Title, amount and frequency required" });
+    const user = await User.findById(req.user.id);
+    if (!user.scheduledPayments) user.scheduledPayments = [];
+    user.scheduledPayments.push({ title, type: type || "bank_transfer", amount: Number(amount), bankCode, accountNumber, accountName, frequency, nextRunDate: startDate ? new Date(startDate) : new Date(), active: true });
+    await user.save(); res.json({ success: true, scheduled: user.scheduledPayments });
+  } catch (err) { res.status(500).json({ error: "Failed to create" }); }
+});
+app.put("/api/pay/scheduled/:id/toggle", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const sp = (user.scheduledPayments || []).find(s => s._id.toString() === req.params.id);
+    if (!sp) return res.status(404).json({ error: "Not found" });
+    sp.active = !sp.active; await user.save(); res.json({ success: true, active: sp.active });
+  } catch (err) { res.status(500).json({ error: "Failed to toggle" }); }
+});
+app.delete("/api/pay/scheduled/:id", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    user.scheduledPayments = (user.scheduledPayments || []).filter(s => s._id.toString() !== req.params.id);
+    await user.save(); res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: "Failed to delete" }); }
+});
+
+// Transaction Disputes
+app.post("/api/pay/dispute", auth, async (req, res) => {
+  try {
+    const { reference, reason, description } = req.body;
+    if (!reference || !reason) return res.status(400).json({ error: "Reference and reason required" });
+    const user = await User.findById(req.user.id);
+    const tx = (user.walletTransactions || []).find(t => t.reference === reference);
+    if (!tx) return res.status(404).json({ error: "Transaction not found" });
+    if (!user.walletDisputes) user.walletDisputes = [];
+    const existing = user.walletDisputes.find(d => d.reference === reference && d.status === "open");
+    if (existing) return res.status(400).json({ error: "Dispute already exists for this transaction" });
+    user.walletDisputes.push({ reference, reason, description, status: "open" });
+    await user.save(); res.json({ success: true, message: "Dispute raised. Our team will review within 24–48 hours." });
+  } catch (err) { res.status(500).json({ error: "Failed to raise dispute" }); }
+});
+app.get("/api/pay/disputes", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("walletDisputes walletTransactions");
+    const disputes = (user.walletDisputes || []).map(d => {
+      const tx = (user.walletTransactions || []).find(t => t.reference === d.reference);
+      return { ...d.toObject(), transaction: tx };
+    });
+    res.json({ success: true, disputes: disputes.reverse() });
+  } catch (err) { res.status(500).json({ error: "Failed to fetch disputes" }); }
+});
+
+// QR Code
+app.get("/api/pay/qr", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("name _id");
+    const qrData = JSON.stringify({ type: "techmart_pay", userId: user._id, name: user.name, ts: Date.now() });
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+    res.json({ success: true, qrUrl, qrData, name: user.name, userId: user._id });
+  } catch (err) { res.status(500).json({ error: "Failed to generate QR" }); }
+});
+
+// Wallet Statement
+app.get("/api/pay/statement", auth, async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const user = await User.findById(req.user.id).select("walletTransactions walletBalance name email");
+    const now = new Date(); const m = parseInt(month) || now.getMonth() + 1; const y = parseInt(year) || now.getFullYear();
+    const txs = (user.walletTransactions || []).filter(tx => { const d = new Date(tx.createdAt); return d.getMonth() + 1 === m && d.getFullYear() === y; });
+    const totalIn = txs.filter(t=>t.type==="credit").reduce((s,t)=>s+t.amount,0);
+    const totalOut = txs.filter(t=>t.type==="debit").reduce((s,t)=>s+t.amount,0);
+    const monthName = new Date(y, m-1).toLocaleString("en-NG",{month:"long"});
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TechMart Statement</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:32px;color:#111}h1{color:#f97316}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#f97316;color:#fff;padding:10px;text-align:left}td{padding:10px;border-bottom:1px solid #eee}.credit{color:#16a34a;font-weight:700}.debit{color:#dc2626;font-weight:700}.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:20px 0}.card{background:#f9f9f9;border-radius:8px;padding:16px}.label{font-size:12px;color:#666}.value{font-size:20px;font-weight:900;margin-top:4px}</style></head><body><h1>TechMart Pay</h1><p><strong>Name:</strong> ${user.name}</p><p><strong>Email:</strong> ${user.email}</p><p><strong>Period:</strong> ${monthName} ${y}</p><p><strong>Generated:</strong> ${new Date().toLocaleString("en-NG",{timeZone:"Africa/Lagos"})}</p><div class="grid"><div class="card"><div class="label">Money In</div><div class="value" style="color:#16a34a">₦${totalIn.toLocaleString()}</div></div><div class="card"><div class="label">Money Out</div><div class="value" style="color:#dc2626">₦${totalOut.toLocaleString()}</div></div><div class="card"><div class="label">Balance</div><div class="value">₦${(user.walletBalance||0).toLocaleString()}</div></div></div><table><thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Amount</th></tr></thead><tbody>${txs.reverse().map(tx=>`<tr><td>${new Date(tx.createdAt).toLocaleDateString("en-NG")}</td><td>${tx.description||"-"}</td><td style="font-size:11px;color:#888">${tx.reference||"-"}</td><td class="${tx.type}">${tx.type==="credit"?"+":"-"}₦${tx.amount.toLocaleString()}</td></tr>`).join("")}${txs.length===0?'<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">No transactions this period</td></tr>':""}</tbody></table><p style="margin-top:24px;font-size:12px;color:#888">Auto-generated by TechMart Pay.</p></body></html>`;
+    res.setHeader("Content-Type","text/html");
+    res.setHeader("Content-Disposition",`attachment; filename="TechMart-Statement-${monthName}-${y}.html"`);
+    res.send(html);
+  } catch (err) { res.status(500).json({ error: "Failed to generate statement" }); }
+});
+
+// Cashback
+app.get("/api/pay/cashback", auth, async (req, res) => {
+  try { const user = await User.findById(req.user.id).select("cashbackBalance cashbackEarned"); res.json({ success: true, balance: user.cashbackBalance||0, totalEarned: user.cashbackEarned||0 }); }
+  catch (err) { res.status(500).json({ error: "Failed to fetch cashback" }); }
+});
+app.post("/api/pay/cashback/redeem", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const cashback = user.cashbackBalance || 0;
+    if (cashback < 100) return res.status(400).json({ error: "Minimum cashback to redeem is ₦100" });
+    user.walletBalance = (user.walletBalance || 0) + cashback;
+    user.cashbackBalance = 0;
+    user.walletTransactions.push({ type:"credit", amount:cashback, description:"Cashback redeemed to wallet", reference:"CB-"+Date.now(), channel:"cashback", status:"completed" });
+    await user.save(); res.json({ success: true, message: `₦${cashback.toLocaleString()} cashback added to your wallet` });
+  } catch (err) { res.status(500).json({ error: "Failed to redeem" }); }
+});
+
+// USSD Code
+app.get("/api/pay/ussd-code", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("name _id");
+    const userCode = Buffer.from(user._id.toString()).toString("base64").slice(0,8).toUpperCase();
+    res.json({ success:true, userCode, instructions:"Dial the code below to fund your TechMart wallet (USSD top-up coming soon after bank partnership).", codes:{ GTBank:`*737*50*AMOUNT*${userCode}#`, Access:`*901*AMOUNT*${userCode}#`, Zenith:`*966*AMOUNT*${userCode}#`, UBA:`*919*AMOUNT*${userCode}#` }, note:"USSD will go live after telco partnership is complete." });
+  } catch (err) { res.status(500).json({ error: "Failed" }); }
+});
+
+// Ajo Group Routes
+app.post("/api/pay/ajo/create", auth, async (req, res) => {
+  try {
+    const { name, description, contributionAmount, frequency, maxMembers } = req.body;
+    if (!name || !contributionAmount) return res.status(400).json({ error: "Name and amount required" });
+    const user = await User.findById(req.user.id);
+    const inviteCode = Math.random().toString(36).substring(2,8).toUpperCase();
+    const group = await AjoGroup.create({ name, description, creatorId:req.user.id, contributionAmount:Number(contributionAmount), frequency:frequency||"monthly", maxMembers:Math.min(Number(maxMembers)||10,20), inviteCode, members:[{userId:req.user.id,name:user.name,position:1,hasPaid:false}], nextPayoutDate:new Date(Date.now()+30*24*60*60*1000) });
+    if (!user.ajoGroups) user.ajoGroups = [];
+    user.ajoGroups.push(group._id); await user.save();
+    res.json({ success:true, group, inviteCode });
+  } catch (err) { res.status(500).json({ error: "Failed to create group" }); }
+});
+app.post("/api/pay/ajo/join", auth, async (req, res) => {
+  try {
+    const { inviteCode } = req.body;
+    if (!inviteCode) return res.status(400).json({ error: "Invite code required" });
+    const group = await AjoGroup.findOne({ inviteCode: inviteCode.toUpperCase() });
+    if (!group) return res.status(404).json({ error: "Group not found" });
+    if (group.status !== "open") return res.status(400).json({ error: "Group is no longer accepting members" });
+    if (group.members.length >= group.maxMembers) return res.status(400).json({ error: "Group is full" });
+    if (group.members.find(m => m.userId.toString() === req.user.id)) return res.status(400).json({ error: "Already a member" });
+    const user = await User.findById(req.user.id);
+    group.members.push({ userId:req.user.id, name:user.name, position:group.members.length+1, hasPaid:false });
+    if (group.members.length === group.maxMembers) group.status = "active";
+    await group.save();
+    if (!user.ajoGroups) user.ajoGroups = [];
+    user.ajoGroups.push(group._id); await user.save();
+    res.json({ success:true, group });
+  } catch (err) { res.status(500).json({ error: "Failed to join" }); }
+});
+app.get("/api/pay/ajo", auth, async (req, res) => {
+  try { const groups = await AjoGroup.find({ "members.userId": req.user.id }).lean(); res.json({ success:true, groups }); }
+  catch (err) { res.status(500).json({ error: "Failed to fetch" }); }
+});
+app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
+  try {
+    const group = await AjoGroup.findById(req.params.groupId);
+    if (!group) return res.status(404).json({ error: "Group not found" });
+    const member = group.members.find(m => m.userId.toString() === req.user.id);
+    if (!member) return res.status(403).json({ error: "Not a member" });
+    if (member.hasPaid) return res.status(400).json({ error: "Already contributed this round" });
+    const user = await User.findById(req.user.id);
+    if (user.walletBalance < group.contributionAmount) return res.status(400).json({ error: "Insufficient wallet balance" });
+    user.walletBalance -= group.contributionAmount;
+    user.walletTransactions.push({ type:"debit", amount:group.contributionAmount, description:`Ajo contribution: ${group.name}`, reference:"AJO-"+Date.now(), channel:"ajo", status:"completed" });
+    member.hasPaid = true; member.paidAt = new Date();
+    group.totalPot = (group.totalPot||0) + group.contributionAmount;
+    await Promise.all([user.save(), group.save()]);
+    const allPaid = group.members.every(m=>m.hasPaid);
+    if (allPaid && group.currentRecipient) {
+      const recipient = await User.findById(group.currentRecipient);
+      if (recipient) {
+        recipient.walletBalance = (recipient.walletBalance||0) + group.totalPot;
+        recipient.walletTransactions.push({ type:"credit", amount:group.totalPot, description:`Ajo payout: ${group.name}`, reference:"AJO-PAYOUT-"+Date.now(), channel:"ajo", status:"completed" });
+        await recipient.save();
+        group.members.forEach(m=>{m.hasPaid=false;m.paidAt=null;}); group.totalPot=0; group.currentRound=(group.currentRound||1)+1;
+        const nextIdx = group.currentRound % group.members.length; group.currentRecipient = group.members[nextIdx]?.userId;
+        group.nextPayoutDate = new Date(Date.now()+(group.frequency==="weekly"?7:30)*24*60*60*1000);
+        await group.save();
+      }
+    }
+    res.json({ success:true, message:`₦${group.contributionAmount.toLocaleString()} contributed to ${group.name}`, allPaid });
+  } catch (err) { res.status(500).json({ error: "Contribution failed" }); }
+});
+
+/* END NEW FEATURES */

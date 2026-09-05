@@ -4,6 +4,7 @@ import { TransactionSkeleton, SkeletonBlock } from "../components/Skeleton";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
+import { BeneficiariesTab, RecurringTab, QRTab, AjoTab, CashbackTab } from "../components/PayTabs";
 import QRCode from "qrcode";
 import { useToast } from "../App";
 
@@ -102,9 +103,14 @@ export default function TechMartPay() {
             </div>
 
             {/* My Account */}
-            <div style={{ marginBottom:"16px" }}>
+            <div style={{ marginBottom:"12px" }}>
               <a href="/pay/account" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:"12px",color:"#a5b4fc",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
                 <span>📊 My Account — Ledger, KYC & Limits</span><span style={{flexShrink:0}}>→</span>
+              </a>
+            </div>
+            <div style={{ marginBottom:"16px" }}>
+              <a href={`${API}/api/pay/statement?month=${new Date().getMonth()+1}&year=${new Date().getFullYear()}`} target="_blank" rel="noopener noreferrer" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)",borderRadius:"12px",color:"#86efac",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
+                <span>📄 Download Monthly Statement</span><span style={{flexShrink:0}}>↓</span>
               </a>
             </div>
 
@@ -764,6 +770,11 @@ const requestPinReset = async () => {
             { icon: "➕", label: "Add Money", tab: "Add Money" },
             { icon: "📤", label: "Send", tab: "Send Money" },
             { icon: "🏦", label: "Withdraw", tab: "Withdraw" },
+            { icon: "⭐", label: "Saved", tab: "Saved" },
+            { icon: "🔁", label: "Recurring", tab: "Recurring" },
+            { icon: "📱", label: "QR Pay", tab: "QR" },
+            { icon: "🤝", label: "Ajo", tab: "Ajo" },
+            { icon: "💰", label: "Cashback", tab: "Cashback" },
             { icon: "🆔", label: "My QR", tab: "QR" },
             { icon: "📱", label: "Airtime", tab: "Airtime" },
             { icon: "📶", label: "Data", tab: "Data" },
