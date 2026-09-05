@@ -90,31 +90,6 @@ export default function TechMartPay() {
   const [showConfirmNewPinEye, setShowConfirmNewPinEye] = useState(false);
   const [showPinInputEye, setShowPinInputEye] = useState(false);
 
-            {/* Bank Transfer promo */}
-            <div onClick={() => setTab("Withdraw")} style={{ marginBottom:"12px",background:"linear-gradient(135deg,#0d1117,#161b27)",border:"1px solid rgba(249,115,22,0.25)",borderRadius:"14px",padding:"16px 18px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px" }}>
-              <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
-                <span style={{ fontSize:"28px" }}>🏦</span>
-                <div>
-                  <p style={{ color:"#fff",fontWeight:"800",fontSize:"14px",margin:"0 0 2px" }}>Transfer to Nigerian Bank</p>
-                  <p style={{ color:"rgba(255,255,255,0.5)",fontSize:"12px",margin:0 }}>Send money to any bank account instantly</p>
-                </div>
-              </div>
-              <span style={{ color:"#f97316",fontWeight:"800",fontSize:"18px",flexShrink:0 }}>→</span>
-            </div>
-
-            {/* My Account */}
-            <div style={{ marginBottom:"12px" }}>
-              <a href="/pay/account" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:"12px",color:"#a5b4fc",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
-                <span>📊 My Account — Ledger, KYC & Limits</span><span style={{flexShrink:0}}>→</span>
-              </a>
-            </div>
-            <div style={{ marginBottom:"16px" }}>
-              <a href={`${API}/api/pay/statement?month=${new Date().getMonth()+1}&year=${new Date().getFullYear()}`} target="_blank" rel="noopener noreferrer" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)",borderRadius:"12px",color:"#86efac",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
-                <span>📄 Download Monthly Statement</span><span style={{flexShrink:0}}>↓</span>
-              </a>
-            </div>
-
-
 
   const [pinSet, setPinSet] = useState(false);
 
@@ -846,6 +821,32 @@ const requestPinReset = async () => {
                 </div>
               </div>
             )}
+
+            {/* Bank Transfer promo */}
+            <div onClick={() => setTab("Withdraw")} style={{ marginBottom:"12px",background:"linear-gradient(135deg,#0d1117,#161b27)",border:"1px solid rgba(249,115,22,0.25)",borderRadius:"14px",padding:"16px 18px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px" }}>
+              <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
+                <span style={{ fontSize:"28px" }}>🏦</span>
+                <div>
+                  <p style={{ color:"#fff",fontWeight:"800",fontSize:"14px",margin:"0 0 2px" }}>Transfer to Nigerian Bank</p>
+                  <p style={{ color:"rgba(255,255,255,0.5)",fontSize:"12px",margin:0 }}>Send money to any bank account instantly</p>
+                </div>
+              </div>
+              <span style={{ color:"#f97316",fontWeight:"800",fontSize:"18px",flexShrink:0 }}>→</span>
+            </div>
+
+            {/* My Account */}
+            <div style={{ marginBottom:"12px" }}>
+              <a href="/pay/account" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:"12px",color:"#a5b4fc",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
+                <span>📊 My Account — Ledger, KYC & Limits</span><span style={{flexShrink:0}}>→</span>
+              </a>
+            </div>
+
+            {/* Download Statement */}
+            <div style={{ marginBottom:"16px" }}>
+              <a href={`${API}/api/pay/statement?month=${new Date().getMonth()+1}&year=${new Date().getFullYear()}`} target="_blank" rel="noopener noreferrer" style={{ display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",padding:"14px 16px",background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)",borderRadius:"12px",color:"#86efac",textDecoration:"none",fontWeight:"700",fontSize:"14px" }}>
+                <span>📄 Download Monthly Statement</span><span style={{flexShrink:0}}>↓</span>
+              </a>
+            </div>
 
             {pinSet && (
               <div style={{ marginBottom: "16px" }}>
