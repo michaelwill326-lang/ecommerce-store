@@ -23,6 +23,7 @@ export default function TechMartPay() {
   const [msg, setMsg] = useState({ text: "", type: "" });
   const toast = useToast();
   const [banks, setBanks] = useState([]);
+  const [bankSearch, setBankSearch] = useState("");
 
   // Send money state
   const [sendForm, setSendForm] = useState({ recipientEmail: "", amount: "", note: "" });
@@ -969,10 +970,20 @@ const requestPinReset = async () => {
                 ))}
               </div>
               <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Select Bank</label>
-              <select value={withdrawForm.bankCode} onChange={e=>setWithdrawForm({...withdrawForm,bankCode:e.target.value,accountName:""})} style={{...inp,appearance:"none",marginBottom:"14px"}}>
-                <option value="">— Choose your bank —</option>
-                {banks.map(b=><option key={b.code} value={b.code}>{b.name}</option>)}
-              </select>
+              <div style={{position:"relative",marginBottom:"14px"}}>
+                <input placeholder="🔍 Search bank name..." value={bankSearch} onChange={e=>setBankSearch(e.target.value)} style={{...inp,marginBottom:"6px"}} />
+                {bankSearch && (
+                  <div style={{background:"#111",border:"1px solid #2a2a2a",borderRadius:"10px",maxHeight:"200px",overflowY:"auto",marginBottom:"6px"}}>
+                    {banks.filter(b=>b.name.toLowerCase().includes(bankSearch.toLowerCase())).slice(0,8).map(b=>(
+                      <div key={b.code} onClick={()=>{setWithdrawForm({...withdrawForm,bankCode:b.code,accountName:""});setBankSearch(b.name);}} style={{padding:"12px 14px",cursor:"pointer",color:"#fff",fontSize:"14px",borderBottom:"1px solid #1a1a1a",fontWeight:withdrawForm.bankCode===b.code?"700":"400",background:withdrawForm.bankCode===b.code?"rgba(249,115,22,0.1)":"transparent"}}>
+                        {b.name}
+                      </div>
+                    ))}
+                    {banks.filter(b=>b.name.toLowerCase().includes(bankSearch.toLowerCase())).length===0&&<div style={{padding:"12px 14px",color:"#555",fontSize:"13px"}}>No banks found</div>}
+                  </div>
+                )}
+                {withdrawForm.bankCode&&<div style={{background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:"8px",padding:"8px 12px",fontSize:"13px",color:"#a5b4fc",fontWeight:"600"}}>✓ {banks.find(b=>b.code===withdrawForm.bankCode)?.name||withdrawForm.bankCode}</div>}
+              </div>
               <label style={{fontSize:"12px",color:"var(--text-muted)",fontWeight:"600",display:"block",marginBottom:"6px"}}>Account Number</label>
               <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
                 <input placeholder="10-digit account number" value={withdrawForm.accountNumber} onChange={e=>setWithdrawForm({...withdrawForm,accountNumber:e.target.value,accountName:""})} style={{...inp,marginBottom:0,flex:1,fontFamily:"monospace",letterSpacing:"2px",fontSize:"16px"}} maxLength={10} />
@@ -1668,6 +1679,12 @@ const requestPinReset = async () => {
           </div>
         </div>
       )}
+
+      {tab === "Saved" && <BeneficiariesTab API={API} headers={headers} withdrawForm={withdrawForm} setWithdrawForm={setWithdrawForm} setTab={setTab} />}
+        {tab === "Recurring" && <RecurringTab API={API} headers={headers} />}
+        {tab === "QR" && <QRTab API={API} headers={headers} />}
+        {tab === "Ajo" && <AjoTab API={API} headers={headers} requirePin={requirePin} />}
+        {tab === "Cashback" && <CashbackTab API={API} headers={headers} onRedeem={fetchDashboard} />}
 
       {showSetPin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
