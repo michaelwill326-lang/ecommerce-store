@@ -20,6 +20,8 @@ import BottomNav from "./components/BottomNav";
 import CompareBar from "./components/CompareBar";
 import Compare from "./pages/Compare";
 import RequireAuth from "./utils/RequireAuth";
+import RequireAdmin from "./utils/RequireAdmin";
+import RequireSeller from "./utils/RequireSeller";
 import LiveNotification from "./components/LiveNotification";
 
 // Eagerly loaded (above the fold)
@@ -288,7 +290,7 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/tracking" element={<Tracking />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -335,7 +337,7 @@ export default function App() {
           />
           <Route path="/seller/login" element={<SellerLogin />} />
           <Route path="/pay/account" element={<RequireAuth><PayAccount /></RequireAuth>} />
-          <Route path="/seller/dashboard" element={<SellerDashboard />} />
+          <Route path="/seller/dashboard" element={<RequireSeller><SellerDashboard /></RequireSeller>} />
           <Route path="*" element={<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:"16px"}}><p style={{fontSize:"48px",margin:0}}>404</p><p style={{color:"var(--text-muted)"}}>Page not found</p><a href="/home" style={{padding:"10px 24px",background:"#f97316",color:"#fff",borderRadius:"8px",textDecoration:"none",fontWeight:"700"}}>Go Home</a></div>} />
         </Routes>
         </Suspense>

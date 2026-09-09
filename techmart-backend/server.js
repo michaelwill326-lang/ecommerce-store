@@ -7,7 +7,34 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const xss = require("xss");
-const tokenBlacklist = new Set(); // In-memory JWT blacklist
+// MongoDB-backed JWT blacklist with TTL — survives restarts and scales across instances.
+const InvalidatedTokenSchema = new mongoose.Schema({
+  token: { type: String, required: true, unique: true, index: true },
+  expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } }
+});
+const InvalidatedToken = mongoose.models.InvalidatedToken ||
+  mongoose.model("InvalidatedToken", InvalidatedTokenSchema);
+
+const tokenBlacklist = {
+  async has(token) {
+    try {
+      return !!(await InvalidatedToken.exists({ token }));
+    } catch {
+      return false;
+    }
+  },
+  async add(token) {
+    try {
+      const decoded = jwt.decode(token);
+      const expiresAt = decoded && decoded.exp
+        ? new Date(decoded.exp * 1000)
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await InvalidatedToken.updateOne({ token }, { token, expiresAt }, { upsert: true });
+    } catch (err) {
+      console.error("Blacklist write failed:", err.message);
+    }
+  }
+};
 
 // Sanitize user input to prevent XSS
 const sanitize = (str) => {
@@ -1003,10 +1030,10 @@ function generateReferralCode(name) {
 /* ===========================
    🔐 AUTH MIDDLEWARE
 =========================== */
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
-  if (token && tokenBlacklist.has(token)) return res.status(401).json({ error: "Token has been invalidated. Please log in again." });
   if (!token) return res.status(401).json({ error: "No token" });
+  if (await tokenBlacklist.has(token)) return res.status(401).json({ error: "Token has been invalidated. Please log in again." });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
@@ -1018,7 +1045,7 @@ function auth(req, res, next) {
 async function adminOnly(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token" });
-  if (tokenBlacklist.has(token)) return res.status(401).json({ error: "Token has been invalidated" });
+  if (await tokenBlacklist.has(token)) return res.status(401).json({ error: "Token has been invalidated" });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== "admin") return res.status(403).json({ error: "Admin only" });
@@ -1246,12 +1273,10 @@ app.post("/api/auth/reset-password", async (req, res) => {
 /* ===========================
    🚪 LOGOUT
 =========================== */
-app.post("/api/auth/logout", auth, (req, res) => {
+app.post("/api/auth/logout", auth, async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (token) {
-    tokenBlacklist.add(token);
-    // Auto-clean after 7 days (token expiry)
-    setTimeout(() => tokenBlacklist.delete(token), 7 * 24 * 60 * 60 * 1000);
+    await tokenBlacklist.add(token);
   }
   res.json({ success: true, message: "Logged out successfully" });
 });
@@ -6451,9 +6476,10 @@ app.put("/api/admin/returns/:id", adminOnly, async (req, res) => {
 app.post("/api/ai/assistant", auth, async (req, res) => {
   try {
     const { message, history = [], context = {} } = req.body;
-    const user = await User.findById(req.user.id);
-    const isAdmin = user.role === "admin";
-    const isSeller = user.role === "seller";
+    const isSeller = req.user.role === "seller";
+    const user = isSeller ? await Seller.findById(req.user.id).lean() : await User.findById(req.user.id);
+    if (!user) return res.status(401).json({ error: "Account not found" });
+    const isAdmin = !isSeller && user.role === "admin";
 
     // 1. Classify intent with full context
     const classifyRes = await groq.chat.completions.create({
@@ -7095,7 +7121,8 @@ async function executeTool(toolName, toolArgs, user) {
 app.post("/api/ai/agent", auth, async (req, res) => {
   try {
     const { message, history = [] } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = req.user.role === "seller" ? await Seller.findById(req.user.id).lean() : await User.findById(req.user.id);
+    if (!user) return res.status(401).json({ error: "Account not found" });
     const prefs = user.aiPreferences || {};
 
     // Build system prompt with user context
@@ -7207,7 +7234,8 @@ Speak naturally like a smart Nigerian assistant.`;
 app.post("/api/ai/agent/stream", auth, async (req, res) => {
   try {
     const { message, history = [] } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = req.user.role === "seller" ? await Seller.findById(req.user.id).lean() : await User.findById(req.user.id);
+    if (!user) return res.status(401).json({ error: "Account not found" });
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -8051,7 +8079,7 @@ server.listen(PORT, () => {
 // --- ADMIN FILE UPLOAD ROUTE INTEGRATION ---
 // Product model already imported above
 
-app.post("/api/admin/products/add", adminUploader.array("images", 5), async (req, res) => {
+app.post("/api/admin/products/add", adminOnly, adminUploader.array("images", 5), async (req, res) => {
   try {
     let imageUrls = [];
     if (req.files && req.files.length > 0) {
