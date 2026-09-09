@@ -8217,6 +8217,73 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Ajo Group Routes
+app.post("/api/pay/ajo/create", auth, async (req, res) => {
+  try {
+    const { name, description, contributionAmount, frequency, maxMembers } = req.body;
+    if (!name || !contributionAmount) return res.status(400).json({ error: "Name and amount required" });
+    const user = await User.findById(req.user.id);
+    const inviteCode = Math.random().toString(36).substring(2,8).toUpperCase();
+    const group = await AjoGroup.create({ name, description, creatorId:req.user.id, contributionAmount:Number(contributionAmount), frequency:frequency||"monthly", maxMembers:Math.min(Number(maxMembers)||10,20), inviteCode, members:[{userId:req.user.id,name:user.name,position:1,hasPaid:false}], nextPayoutDate:new Date(Date.now()+30*24*60*60*1000) });
+    if (!user.ajoGroups) user.ajoGroups = [];
+    user.ajoGroups.push(group._id); await user.save();
+    res.json({ success:true, group, inviteCode });
+  } catch (err) { res.status(500).json({ error: "Failed to create group" }); }
+});
+app.post("/api/pay/ajo/join", auth, async (req, res) => {
+  try {
+    const { inviteCode } = req.body;
+    if (!inviteCode) return res.status(400).json({ error: "Invite code required" });
+    const group = await AjoGroup.findOne({ inviteCode: inviteCode.toUpperCase() });
+    if (!group) return res.status(404).json({ error: "Group not found" });
+    if (group.status !== "open") return res.status(400).json({ error: "Group is no longer accepting members" });
+    if (group.members.length >= group.maxMembers) return res.status(400).json({ error: "Group is full" });
+    if (group.members.find(m => m.userId.toString() === req.user.id)) return res.status(400).json({ error: "Already a member" });
+    const user = await User.findById(req.user.id);
+    group.members.push({ userId:req.user.id, name:user.name, position:group.members.length+1, hasPaid:false });
+    if (group.members.length === group.maxMembers) group.status = "active";
+    await group.save();
+    if (!user.ajoGroups) user.ajoGroups = [];
+    user.ajoGroups.push(group._id); await user.save();
+    res.json({ success:true, group });
+  } catch (err) { res.status(500).json({ error: "Failed to join" }); }
+});
+app.get("/api/pay/ajo", auth, async (req, res) => {
+  try { const groups = await AjoGroup.find({ "members.userId": req.user.id }).lean(); res.json({ success:true, groups }); }
+  catch (err) { res.status(500).json({ error: "Failed to fetch" }); }
+});
+app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
+  try {
+    const group = await AjoGroup.findById(req.params.groupId);
+    if (!group) return res.status(404).json({ error: "Group not found" });
+    const member = group.members.find(m => m.userId.toString() === req.user.id);
+    if (!member) return res.status(403).json({ error: "Not a member" });
+    if (member.hasPaid) return res.status(400).json({ error: "Already contributed this round" });
+    const user = await User.findById(req.user.id);
+    if (user.walletBalance < group.contributionAmount) return res.status(400).json({ error: "Insufficient wallet balance" });
+    user.walletBalance -= group.contributionAmount;
+    user.walletTransactions.push({ type:"debit", amount:group.contributionAmount, description:`Ajo contribution: ${group.name}`, reference:"AJO-"+Date.now(), channel:"ajo", status:"completed" });
+    member.hasPaid = true; member.paidAt = new Date();
+    group.totalPot = (group.totalPot||0) + group.contributionAmount;
+    await Promise.all([user.save(), group.save()]);
+    const allPaid = group.members.every(m=>m.hasPaid);
+    if (allPaid && group.currentRecipient) {
+      const recipient = await User.findById(group.currentRecipient);
+      if (recipient) {
+        recipient.walletBalance = (recipient.walletBalance||0) + group.totalPot;
+        recipient.walletTransactions.push({ type:"credit", amount:group.totalPot, description:`Ajo payout: ${group.name}`, reference:"AJO-PAYOUT-"+Date.now(), channel:"ajo", status:"completed" });
+        await recipient.save();
+        group.members.forEach(m=>{m.hasPaid=false;m.paidAt=null;}); group.totalPot=0; group.currentRound=(group.currentRound||1)+1;
+        const nextIdx = group.currentRound % group.members.length; group.currentRecipient = group.members[nextIdx]?.userId;
+        group.nextPayoutDate = new Date(Date.now()+(group.frequency==="weekly"?7:30)*24*60*60*1000);
+        await group.save();
+      }
+    }
+    res.json({ success:true, message:`₦${group.contributionAmount.toLocaleString()} contributed to ${group.name}`, allPaid });
+  } catch (err) { res.status(500).json({ error: "Contribution failed" }); }
+});
+
+
 // 404 handler for unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
@@ -8555,72 +8622,6 @@ app.get("/api/pay/ussd-code", auth, async (req, res) => {
     const userCode = Buffer.from(user._id.toString()).toString("base64").slice(0,8).toUpperCase();
     res.json({ success:true, userCode, instructions:"Dial the code below to fund your TechMart wallet (USSD top-up coming soon after bank partnership).", codes:{ GTBank:`*737*50*AMOUNT*${userCode}#`, Access:`*901*AMOUNT*${userCode}#`, Zenith:`*966*AMOUNT*${userCode}#`, UBA:`*919*AMOUNT*${userCode}#` }, note:"USSD will go live after telco partnership is complete." });
   } catch (err) { res.status(500).json({ error: "Failed" }); }
-});
-
-// Ajo Group Routes
-app.post("/api/pay/ajo/create", auth, async (req, res) => {
-  try {
-    const { name, description, contributionAmount, frequency, maxMembers } = req.body;
-    if (!name || !contributionAmount) return res.status(400).json({ error: "Name and amount required" });
-    const user = await User.findById(req.user.id);
-    const inviteCode = Math.random().toString(36).substring(2,8).toUpperCase();
-    const group = await AjoGroup.create({ name, description, creatorId:req.user.id, contributionAmount:Number(contributionAmount), frequency:frequency||"monthly", maxMembers:Math.min(Number(maxMembers)||10,20), inviteCode, members:[{userId:req.user.id,name:user.name,position:1,hasPaid:false}], nextPayoutDate:new Date(Date.now()+30*24*60*60*1000) });
-    if (!user.ajoGroups) user.ajoGroups = [];
-    user.ajoGroups.push(group._id); await user.save();
-    res.json({ success:true, group, inviteCode });
-  } catch (err) { res.status(500).json({ error: "Failed to create group" }); }
-});
-app.post("/api/pay/ajo/join", auth, async (req, res) => {
-  try {
-    const { inviteCode } = req.body;
-    if (!inviteCode) return res.status(400).json({ error: "Invite code required" });
-    const group = await AjoGroup.findOne({ inviteCode: inviteCode.toUpperCase() });
-    if (!group) return res.status(404).json({ error: "Group not found" });
-    if (group.status !== "open") return res.status(400).json({ error: "Group is no longer accepting members" });
-    if (group.members.length >= group.maxMembers) return res.status(400).json({ error: "Group is full" });
-    if (group.members.find(m => m.userId.toString() === req.user.id)) return res.status(400).json({ error: "Already a member" });
-    const user = await User.findById(req.user.id);
-    group.members.push({ userId:req.user.id, name:user.name, position:group.members.length+1, hasPaid:false });
-    if (group.members.length === group.maxMembers) group.status = "active";
-    await group.save();
-    if (!user.ajoGroups) user.ajoGroups = [];
-    user.ajoGroups.push(group._id); await user.save();
-    res.json({ success:true, group });
-  } catch (err) { res.status(500).json({ error: "Failed to join" }); }
-});
-app.get("/api/pay/ajo", auth, async (req, res) => {
-  try { const groups = await AjoGroup.find({ "members.userId": req.user.id }).lean(); res.json({ success:true, groups }); }
-  catch (err) { res.status(500).json({ error: "Failed to fetch" }); }
-});
-app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
-  try {
-    const group = await AjoGroup.findById(req.params.groupId);
-    if (!group) return res.status(404).json({ error: "Group not found" });
-    const member = group.members.find(m => m.userId.toString() === req.user.id);
-    if (!member) return res.status(403).json({ error: "Not a member" });
-    if (member.hasPaid) return res.status(400).json({ error: "Already contributed this round" });
-    const user = await User.findById(req.user.id);
-    if (user.walletBalance < group.contributionAmount) return res.status(400).json({ error: "Insufficient wallet balance" });
-    user.walletBalance -= group.contributionAmount;
-    user.walletTransactions.push({ type:"debit", amount:group.contributionAmount, description:`Ajo contribution: ${group.name}`, reference:"AJO-"+Date.now(), channel:"ajo", status:"completed" });
-    member.hasPaid = true; member.paidAt = new Date();
-    group.totalPot = (group.totalPot||0) + group.contributionAmount;
-    await Promise.all([user.save(), group.save()]);
-    const allPaid = group.members.every(m=>m.hasPaid);
-    if (allPaid && group.currentRecipient) {
-      const recipient = await User.findById(group.currentRecipient);
-      if (recipient) {
-        recipient.walletBalance = (recipient.walletBalance||0) + group.totalPot;
-        recipient.walletTransactions.push({ type:"credit", amount:group.totalPot, description:`Ajo payout: ${group.name}`, reference:"AJO-PAYOUT-"+Date.now(), channel:"ajo", status:"completed" });
-        await recipient.save();
-        group.members.forEach(m=>{m.hasPaid=false;m.paidAt=null;}); group.totalPot=0; group.currentRound=(group.currentRound||1)+1;
-        const nextIdx = group.currentRound % group.members.length; group.currentRecipient = group.members[nextIdx]?.userId;
-        group.nextPayoutDate = new Date(Date.now()+(group.frequency==="weekly"?7:30)*24*60*60*1000);
-        await group.save();
-      }
-    }
-    res.json({ success:true, message:`₦${group.contributionAmount.toLocaleString()} contributed to ${group.name}`, allPaid });
-  } catch (err) { res.status(500).json({ error: "Contribution failed" }); }
 });
 
 /* END NEW FEATURES */
