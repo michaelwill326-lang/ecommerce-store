@@ -54,6 +54,7 @@ const PayLink = lazy(() => import("./pages/PayLink"));
 const Referral = lazy(() => import("./pages/Referral"));
 const SellerLogin = lazy(() => import("./pages/seller/SellerLogin"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
+const PhoneChecker = lazy(() => import("./pages/PhoneChecker"));
 
 function ToastProvider({ children }) {
   useInactivityLogout(20);
@@ -316,6 +317,7 @@ export default function App() {
             }
           />
           <Route path="/ai-search" element={<AISearch />} />
+          <Route path="/phone-checker" element={<RequireAuth><PhoneChecker /></RequireAuth>} />
           <Route
             path="/pay"
             element={
