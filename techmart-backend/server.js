@@ -8858,3 +8858,57 @@ Rules:
 });
 
 /* END NEW FEATURES */
+
+/* ===========================
+   📱 PHONE CHECKER
+=========================== */
+app.post("/api/phone-checker/imei", auth, async (req, res) => {
+  try {
+    const { imei } = req.body;
+    if (!imei || !/^\d{15}$/.test(imei.trim())) return res.status(400).json({ error: "Please enter a valid 15-digit IMEI number" });
+    const digits = imei.trim().split("").map(Number);
+    let sum = 0;
+    for (let i = 0; i < 15; i++) { let d = digits[i]; if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; } sum += d; }
+    if (sum % 10 !== 0) return res.status(400).json({ error: "Invalid IMEI checksum. Please double-check the number." });
+    const imeiRes = await axios.get("https://api.imeicheck.com/v1/checks", {
+      params: { imei: imei.trim(), serviceId: 12 },
+      headers: { Authorization: "Bearer " + process.env.IMEICHECK_API_KEY, "Content-Type": "application/json" },
+      timeout: 10000
+    }).catch(() => null);
+    const imeiData = imeiRes?.data || null;
+    const groqRes = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: "You are TechMart phone verification AI for the Nigerian market. Always respond in JSON only, no markdown." },
+        { role: "user", content: "IMEI: " + imei + "\nAPI data: " + JSON.stringify(imeiData) + '\n\nReturn ONLY this JSON:\n{"verdict":"CLEAN","riskLevel":"low","summary":"...","deviceInfo":{"brand":"","model":"","manufactureYear":""},"checks":[{"label":"IMEI Valid","status":"pass","detail":""},{"label":"Blacklist Status","status":"unknown","detail":""},{"label":"Stolen Report","status":"unknown","detail":""},{"label":"Network Lock","status":"unknown","detail":""}],"buyAdvice":"..."}' }
+      ],
+      max_tokens: 600, temperature: 0.2
+    });
+    const result = JSON.parse(groqRes.choices[0].message.content.trim().replace(/```json|```/g, "").trim());
+    res.json({ success: true, imei: imei.trim(), result, rawApiData: imeiData });
+  } catch (err) { console.error("IMEI check error:", err.message); res.status(500).json({ error: "IMEI check failed. Please try again." }); }
+});
+
+app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Please upload a phone photo" });
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: "techmart-phone-checks", resource_type: "image" },
+        (err, result) => err ? reject(err) : resolve(result)
+      );
+      stream.end(req.file.buffer);
+    });
+    const imageUrl = uploadResult.secure_url;
+    const groqRes = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [{ role: "user", content: [
+        { type: "image_url", image_url: { url: imageUrl } },
+        { type: "text", text: "You are TechMart phone condition AI for the Nigerian used-phone market. Inspect this phone image.\n\nReturn ONLY this JSON (no markdown):\n{\"overallCondition\":\"Good\",\"conditionScore\":75,\"verdict\":\"LIKELY ORIGINAL\",\"riskLevel\":\"low\",\"summary\":\"...\",\"checks\":[{\"label\":\"Screen Condition\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Body & Frame\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Signs of Repair\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Camera Area\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Ports & Buttons\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Overall Authenticity\",\"status\":\"pass\",\"detail\":\"\"}],\"redFlags\":[],\"buyAdvice\":\"...\"}" }
+      ]}],
+      max_tokens: 800, temperature: 0.2
+    }, { headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" } });
+    const result = JSON.parse(groqRes.data.choices[0].message.content.trim().replace(/```json|```/g, "").trim());
+    res.json({ success: true, imageUrl, result });
+  } catch (err) { console.error("Photo check error:", err.message); res.status(500).json({ error: "Photo analysis failed. Please try again." }); }
+});
