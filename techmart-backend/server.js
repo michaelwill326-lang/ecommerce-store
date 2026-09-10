@@ -8336,6 +8336,17 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       max_tokens: 600, temperature: 0.2
     });
 
+app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Please upload a phone photo" });
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: "techmart-phone-checks", resource_type: "image" },
+        (err, result) => err ? reject(err) : resolve(result)
+      );
+      stream.end(req.file.buffer);
+    });
+
 // 404 handler for unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
@@ -8890,16 +8901,6 @@ Rules:
   } catch (err) { console.error("IMEI check error:", err.message); res.status(500).json({ error: "IMEI check failed. Please try again." }); }
 });
 
-app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "Please upload a phone photo" });
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: "techmart-phone-checks", resource_type: "image" },
-        (err, result) => err ? reject(err) : resolve(result)
-      );
-      stream.end(req.file.buffer);
-    });
     const imageUrl = uploadResult.secure_url;
     const groqRes = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
       model: "meta-llama/llama-4-scout-17b-16e-instruct",
