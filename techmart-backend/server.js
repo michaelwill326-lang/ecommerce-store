@@ -8313,6 +8313,29 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
 });
 
 
+app.post("/api/phone-checker/imei", auth, async (req, res) => {
+  try {
+    const { imei } = req.body;
+    if (!imei || !/^\d{15}$/.test(imei.trim())) return res.status(400).json({ error: "Please enter a valid 15-digit IMEI number" });
+    const digits = imei.trim().split("").map(Number);
+    let sum = 0;
+    for (let i = 0; i < 15; i++) { let d = digits[i]; if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; } sum += d; }
+    if (sum % 10 !== 0) return res.status(400).json({ error: "Invalid IMEI checksum. Please double-check the number." });
+    const imeiRes = await axios.get("https://api.imeicheck.com/v1/checks", {
+      params: { imei: imei.trim(), serviceId: 12 },
+      headers: { Authorization: "Bearer " + process.env.IMEICHECK_API_KEY, "Content-Type": "application/json" },
+      timeout: 10000
+    }).catch(() => null);
+    const imeiData = imeiRes?.data || null;
+    const groqRes = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: "You are TechMart phone verification AI for the Nigerian market. Always respond in JSON only, no markdown." },
+        { role: "user", content: "IMEI: " + imei + "\nAPI data: " + JSON.stringify(imeiData) + '\n\nReturn ONLY this JSON:\n{"verdict":"CLEAN","riskLevel":"low","summary":"...","deviceInfo":{"brand":"","model":"","manufactureYear":""},"checks":[{"label":"IMEI Valid","status":"pass","detail":""},{"label":"Blacklist Status","status":"unknown","detail":""},{"label":"Stolen Report","status":"unknown","detail":""},{"label":"Network Lock","status":"unknown","detail":""}],"buyAdvice":"..."}' }
+      ],
+      max_tokens: 600, temperature: 0.2
+    });
+
 // 404 handler for unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
@@ -8862,28 +8885,6 @@ Rules:
 /* ===========================
    📱 PHONE CHECKER
 =========================== */
-app.post("/api/phone-checker/imei", auth, async (req, res) => {
-  try {
-    const { imei } = req.body;
-    if (!imei || !/^\d{15}$/.test(imei.trim())) return res.status(400).json({ error: "Please enter a valid 15-digit IMEI number" });
-    const digits = imei.trim().split("").map(Number);
-    let sum = 0;
-    for (let i = 0; i < 15; i++) { let d = digits[i]; if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; } sum += d; }
-    if (sum % 10 !== 0) return res.status(400).json({ error: "Invalid IMEI checksum. Please double-check the number." });
-    const imeiRes = await axios.get("https://api.imeicheck.com/v1/checks", {
-      params: { imei: imei.trim(), serviceId: 12 },
-      headers: { Authorization: "Bearer " + process.env.IMEICHECK_API_KEY, "Content-Type": "application/json" },
-      timeout: 10000
-    }).catch(() => null);
-    const imeiData = imeiRes?.data || null;
-    const groqRes = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: "You are TechMart phone verification AI for the Nigerian market. Always respond in JSON only, no markdown." },
-        { role: "user", content: "IMEI: " + imei + "\nAPI data: " + JSON.stringify(imeiData) + '\n\nReturn ONLY this JSON:\n{"verdict":"CLEAN","riskLevel":"low","summary":"...","deviceInfo":{"brand":"","model":"","manufactureYear":""},"checks":[{"label":"IMEI Valid","status":"pass","detail":""},{"label":"Blacklist Status","status":"unknown","detail":""},{"label":"Stolen Report","status":"unknown","detail":""},{"label":"Network Lock","status":"unknown","detail":""}],"buyAdvice":"..."}' }
-      ],
-      max_tokens: 600, temperature: 0.2
-    });
     const result = JSON.parse(groqRes.choices[0].message.content.trim().replace(/```json|```/g, "").trim());
     res.json({ success: true, imei: imei.trim(), result, rawApiData: imeiData });
   } catch (err) { console.error("IMEI check error:", err.message); res.status(500).json({ error: "IMEI check failed. Please try again." }); }
