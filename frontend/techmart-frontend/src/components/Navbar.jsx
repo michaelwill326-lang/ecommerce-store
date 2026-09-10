@@ -291,6 +291,7 @@ export default function Navbar() {
           <div style={styles.desktopLinks}>
             <Link to="/" style={linkStyle("/")}>Home</Link>
             <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
+            <Link to="/phone-checker" style={linkStyle("/phone-checker")}>📱 Phone Check</Link>
             <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "#f97316" : "#22c55e", fontWeight: "700" }}>Pay</Link>
 
             {user?.role === "admin" && (
@@ -393,6 +394,10 @@ export default function Navbar() {
 
           <Link to="/tracking" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
             📦 My Orders
+          </Link>
+
+          <Link to="/phone-checker" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
+            📱 Phone Checker
           </Link>
 
           <Link to="/wishlist" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
