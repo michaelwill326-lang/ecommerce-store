@@ -148,7 +148,7 @@ export default function Chatbot() {
       if (usageData.limitReached) {
         setTyping(false);
         setShowProBanner(true);
-        addMessage(`⚠️ You've used all ${aiStatus.limit} free AI messages today. Upgrade to AI Pro for ₦500/month for unlimited messages! 🚀`, "bot");
+        addMessage(`⚠️ You've used all ${aiStatus.limit} free AI messages today. Upgrade to AI Pro for ₦2,000/month for unlimited messages! 🚀`, "bot");
         return;
       }
       setAiStatus(prev => ({ ...prev, dailyUsage: usageData.usage, remaining: usageData.remaining }));

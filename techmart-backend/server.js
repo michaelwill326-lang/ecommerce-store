@@ -49,6 +49,7 @@ const rateLimit = require("express-rate-limit");
 const { Server } = require("socket.io");
 const Groq = require("groq-sdk");
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const PHONE_CHECKER_MODEL = "qwen/qwen3.6-27b";
 
 const { sendOrderConfirmation, sendWelcomeEmail, sendShippingUpdate, sendPasswordResetEmail, sendAdminOrderNotification, sendLowStockAlert, sendOTPEmail, sendAbandonedCartEmail, sendPinChangedEmail } = require("./utils/email");
 const cron = require("node-cron");
@@ -65,6 +66,16 @@ cloudinary.config({
 // Multer memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+
+const phoneCheckUpload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+  }
+});
 
 // Strong password security rule
 function isStrongPassword(password) {
@@ -574,6 +585,8 @@ const User = mongoose.model(
     aiProExpiry: { type: Date, default: null },
     aiDailyUsage: { type: Number, default: 0 },
     aiUsageDate: { type: String, default: null },
+    phoneCheckDailyUsage: { type: Number, default: 0 },
+    phoneCheckUsageDate: { type: String, default: null },
     loyaltyPoints: { type: Number, default: 0 },
 
     // ===========================
@@ -2392,15 +2405,15 @@ app.get("/api/ai/pro/status", auth, async (req, res) => {
   }
 });
 
-// 🤖 AI Pro — Upgrade (₦500/month from wallet)
+// 🤖 AI Pro — Upgrade (₦2,000/month from wallet)
 app.post("/api/ai/pro/upgrade", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if ((user.walletBalance || 0) < 500) return res.status(400).json({ error: "Insufficient wallet balance. AI Pro costs ₦500/month." });
+    if ((user.walletBalance || 0) < 2000) return res.status(400).json({ error: "Insufficient wallet balance. AI Pro costs ₦2,000/month." });
 
-    user.walletBalance -= 500;
+    user.walletBalance -= 2000;
     user.walletTransactions.push({
-      type: "debit", amount: 500,
+      type: "debit", amount: 2000,
       description: "TechMart AI Pro subscription — 1 month",
       reference: "AIPRO-" + Date.now()
     });
@@ -7405,7 +7418,10 @@ app.post("/api/orders/checkout-escrow", auth, async (req, res) => {
       });
     }
 
-    const totalAmount = Number(amount);
+    const totalAmount = validatedItems.reduce(
+      (sum, item) => sum + (Number(item.price) * Number(item.quantity)),
+      0
+    );
 
     // BNPL must have a valid installment count.
     const installmentCount = Number(installments || 2);
@@ -7465,6 +7481,19 @@ app.post("/api/orders/checkout-escrow", auth, async (req, res) => {
           `Insufficient wallet balance. You need ₦${walletCharge.toLocaleString()} ` +
           `but have ₦${(user.walletBalance || 0).toLocaleString()}`
       });
+    }
+
+    // Final stock check immediately before charging the wallet.
+    for (const item of validatedItems) {
+      const currentProduct = await Product.findById(item.productId)
+        .select("name stock");
+
+      if (!currentProduct || currentProduct.stock < item.quantity) {
+        return res.status(409).json({
+          error:
+            `"${item.name}" is no longer available in the requested quantity`
+        });
+      }
     }
 
     // Deduct wallet amount exactly once.
@@ -8622,6 +8651,210 @@ app.get("/api/pay/ussd-code", auth, async (req, res) => {
     const userCode = Buffer.from(user._id.toString()).toString("base64").slice(0,8).toUpperCase();
     res.json({ success:true, userCode, instructions:"Dial the code below to fund your TechMart wallet (USSD top-up coming soon after bank partnership).", codes:{ GTBank:`*737*50*AMOUNT*${userCode}#`, Access:`*901*AMOUNT*${userCode}#`, Zenith:`*966*AMOUNT*${userCode}#`, UBA:`*919*AMOUNT*${userCode}#` }, note:"USSD will go live after telco partnership is complete." });
   } catch (err) { res.status(500).json({ error: "Failed" }); }
+});
+
+
+/* ===========================
+   📱 AI PHONE CHECKER
+=========================== */
+app.post("/api/ai/phone-check", auth, phoneCheckUpload.array("images", 3), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "At least one phone image is required" });
+    }
+
+    const user = await User.findById(req.user.id).select(
+      "aiPro aiProExpiry phoneCheckDailyUsage phoneCheckUsageDate"
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const isProActive =
+      user.aiPro === true &&
+      user.aiProExpiry &&
+      new Date(user.aiProExpiry) > new Date();
+
+    if (user.phoneCheckUsageDate !== today) {
+      user.phoneCheckDailyUsage = 0;
+      user.phoneCheckUsageDate = today;
+    }
+
+    if (!isProActive && (user.phoneCheckDailyUsage || 0) >= 1) {
+      return res.status(429).json({
+        error: "Free users can check one phone per day. Upgrade to AI Pro for unlimited phone checks.",
+        code: "PHONE_CHECK_DAILY_LIMIT"
+      });
+    }
+
+    // Upload inspection images to Cloudinary.
+    const imageUrls = [];
+
+    for (const file of req.files) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: "techmart/phone-checks",
+            resource_type: "image"
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(file.buffer);
+      });
+
+      imageUrls.push(result.secure_url);
+    }
+
+    const imageContent = imageUrls.map((url) => ({
+      type: "image_url",
+      image_url: { url }
+    }));
+
+    const completion = await groq.chat.completions.create({
+      model: PHONE_CHECKER_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `You are TechMart's AI Phone Checker.
+
+Assess the visible evidence in the supplied phone photos.
+
+Your assessment is NOT proof of authenticity. Photos alone cannot establish whether a phone is genuine, refurbished, stolen, or counterfeit.
+
+Return ONLY valid JSON with exactly these fields:
+{
+  "assessment": "likely_genuine|likely_refurbished|suspicious|uncertain",
+  "confidence": 0,
+  "device": {
+    "brand": "",
+    "model": "",
+    "visible_serial_or_imei": ""
+  },
+  "reasons": [],
+  "red_flags": [],
+  "recommendation": ""
+}
+
+Rules:
+- confidence must be an integer from 0 to 100.
+- Never invent an IMEI, serial number, model, or other detail that is not visibly supported.
+- If text is unreadable, use an empty string.
+- Treat visible inconsistencies as evidence only, not proof of counterfeit.
+- If the photos are insufficient, use "uncertain".
+- Do not claim to verify stolen or blacklisted status. That requires a separate authorized IMEI service.`
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Inspect these phone photos and return the required JSON assessment."
+            },
+            ...imageContent
+          ]
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 1200,
+      response_format: { type: "json_object" }
+    });
+
+    let assessment;
+
+    try {
+      assessment = JSON.parse(completion.choices[0].message.content);
+    } catch {
+      return res.status(502).json({
+        error: "AI returned an invalid phone assessment"
+      });
+    }
+
+    const allowedAssessments = [
+      "likely_genuine",
+      "likely_refurbished",
+      "suspicious",
+      "uncertain"
+    ];
+
+    const validAssessment =
+      assessment &&
+      allowedAssessments.includes(assessment.assessment) &&
+      Number.isInteger(assessment.confidence) &&
+      assessment.confidence >= 0 &&
+      assessment.confidence <= 100 &&
+      assessment.device &&
+      typeof assessment.device.brand === "string" &&
+      typeof assessment.device.model === "string" &&
+      typeof assessment.device.visible_serial_or_imei === "string" &&
+      Array.isArray(assessment.reasons) &&
+      Array.isArray(assessment.red_flags) &&
+      typeof assessment.recommendation === "string";
+
+    if (!validAssessment) {
+      return res.status(502).json({
+        error: "AI returned an invalid phone assessment"
+      });
+    }
+
+    // Atomically claim the daily free phone check after a successful AI assessment.
+    if (!isProActive) {
+      const usageUser = await User.findOneAndUpdate(
+        {
+          _id: req.user.id,
+          $or: [
+            { phoneCheckUsageDate: { $ne: today } },
+            {
+              phoneCheckUsageDate: today,
+              phoneCheckDailyUsage: { $lt: 1 }
+            }
+          ]
+        },
+        [
+          {
+            $set: {
+              phoneCheckDailyUsage: {
+                $cond: [
+                  { $ne: ["$phoneCheckUsageDate", today] },
+                  1,
+                  { $add: [{ $ifNull: ["$phoneCheckDailyUsage", 0] }, 1] }
+                ]
+              },
+              phoneCheckUsageDate: today
+            }
+          }
+        ],
+        { new: true }
+      );
+
+      if (!usageUser) {
+        return res.status(429).json({
+          error: "Free users can check one phone per day. Upgrade to AI Pro for unlimited phone checks.",
+          code: "PHONE_CHECK_DAILY_LIMIT"
+        });
+      }
+
+      user.phoneCheckDailyUsage = usageUser.phoneCheckDailyUsage;
+      user.phoneCheckUsageDate = usageUser.phoneCheckUsageDate;
+    }
+
+    res.json({
+      success: true,
+      assessment,
+      imageUrls,
+      usage: {
+        isPro: isProActive,
+        dailyUsed: user.phoneCheckDailyUsage || 0,
+        dailyLimit: isProActive ? null : 1
+      }
+    });
+  } catch (err) {
+    console.error("Phone checker upload error:", err.message);
+    res.status(500).json({ error: "Phone checker failed" });
+  }
 });
 
 /* END NEW FEATURES */
