@@ -8367,7 +8367,7 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       max_tokens: 800, temperature: 0.2
     }, { headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" } });
     let photoRaw = groqPhotoRes.data.choices[0].message.content.trim();
-    // Strip <think>...</think> reasoning block if present
+    // Strip Qwen think...</think> reasoning block if present
     photoRaw = photoRaw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     photoRaw = photoRaw.replace(/```json|```/g, "").trim();
     const photoResult = JSON.parse(photoRaw);
