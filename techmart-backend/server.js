@@ -8339,7 +8339,10 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       ],
       max_tokens: 600, temperature: 0.2
     });
-    const imeiResult = JSON.parse(groqImeiRes.choices[0].message.content.trim().replace(/```json|```/g, "").trim());
+    let imeiRaw = groqImeiRes.choices[0].message.content.trim();
+    imeiRaw = imeiRaw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    imeiRaw = imeiRaw.replace(/```json|```/g, "").trim();
+    const imeiResult = JSON.parse(imeiRaw);
     res.json({ success: true, imei: imei.trim(), result: imeiResult, rawApiData: imeiData });
   } catch (err) { console.error("IMEI check error:", err.message); res.status(500).json({ error: "IMEI check failed. Please try again." }); }
 });
@@ -8363,7 +8366,11 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       ]}],
       max_tokens: 800, temperature: 0.2
     }, { headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" } });
-    const photoResult = JSON.parse(groqPhotoRes.data.choices[0].message.content.trim().replace(/```json|```/g, "").trim());
+    let photoRaw = groqPhotoRes.data.choices[0].message.content.trim();
+    // Strip <think>...</think> reasoning block if present
+    photoRaw = photoRaw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    photoRaw = photoRaw.replace(/```json|```/g, "").trim();
+    const photoResult = JSON.parse(photoRaw);
     res.json({ success: true, imageUrl: photoUrl, result: photoResult });
   } catch (err) { console.error("Photo check error:", err.message); res.status(500).json({ error: "Photo analysis failed. Please try again." }); }
 });
