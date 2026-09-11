@@ -8358,6 +8358,7 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       stream.end(req.file.buffer);
     });
     const photoUrl = uploadResult.secure_url;
+    console.log("PHOTO_ROUTE_HIT: starting photo analysis");
     const groqPhotoRes = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
       model: "qwen/qwen3.6-27b",
       messages: [{ role: "user", content: [
