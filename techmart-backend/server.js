@@ -1910,7 +1910,7 @@ Common fraud patterns to detect:
 Respond ONLY with valid JSON, no markdown.`;
 
     const completion = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.1-8b-instant",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 200,
       temperature: 0.1
@@ -4157,7 +4157,7 @@ ${catalogContext}`
     ];
 
     const completion = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.1-8b-instant",
       messages: messagesPayload,
       temperature: 0.7,
       max_tokens: 500
@@ -4181,7 +4181,7 @@ app.post("/api/ai/search", async (req, res) => {
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
@@ -4238,7 +4238,7 @@ app.post("/api/ai/recommendations", async (req, res) => {
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
@@ -4280,7 +4280,7 @@ app.post("/api/ai/bundles", async (req, res) => {
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
@@ -4321,7 +4321,7 @@ app.post("/api/ai/generate-description", async (req, res) => {
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
@@ -4360,7 +4360,7 @@ app.get("/api/ai/review-summary/:productId", async (req, res) => {
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
@@ -5826,7 +5826,7 @@ app.post("/api/products/:id/review", auth, async (req, res) => {
     try {
       const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
       const sentimentRes = await groq.chat.completions.create({
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
@@ -6496,7 +6496,7 @@ app.post("/api/ai/assistant", auth, async (req, res) => {
 
     // 1. Classify intent with full context
     const classifyRes = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.1-8b-instant",
       messages: [{
         role: "system",
         content: `You are an intent classifier for TechMart, a Nigerian e-commerce platform.
@@ -6702,7 +6702,7 @@ Current message: ${message}`
       case "generate_description": {
         const name = params.productName || "this product";
         const descRes = await groq.chat.completions.create({
-          model: "llama3-70b-8192",
+          model: "llama-3.1-8b-instant",
           messages: [{ role: "user", content: `Write a compelling 2-3 sentence product description for "${name}" ${params.category ? "in the " + params.category + " category" : ""} for a Nigerian e-commerce store. Focus on key features and value. Be concise and persuasive.` }],
           max_tokens: 150, temperature: 0.7
         });
@@ -6733,7 +6733,7 @@ Current message: ${message}`
         if (!products.length) { responseData.message = "All products have descriptions."; break; }
         const descriptions = await Promise.all(products.map(async p => {
           const r = await groq.chat.completions.create({
-            model: "llama3-70b-8192",
+            model: "llama-3.1-8b-instant",
             messages: [{ role: "user", content: `Write a 2-sentence product description for "${p.name}" (${p.category}) for a Nigerian electronics store.` }],
             max_tokens: 100, temperature: 0.7
           });
@@ -6804,7 +6804,7 @@ Current message: ${message}`
         const products = await Product.find({ stock: { $gt: 0 } }).select("name price category").limit(20);
         const catalog = products.map(p => p.name + " (" + "N" + p.price?.toLocaleString() + ") - " + p.category).join(", ");
         const chatRes = await groq.chat.completions.create({
-          model: "llama3-70b-8192",
+          model: "llama-3.1-8b-instant",
           messages: [
             { role: "system", content: `You are TechMart AI for ${user.name}. Wallet: N${(user.walletBalance||0).toLocaleString()}. Role: ${user.role}. Products: ${catalog}. TechMart was founded by Jamiu Sanni with a vision to build Africa's leading e-commerce platform, connecting buyers and sellers globally. 
 TECHMART FAQ KNOWLEDGE:
@@ -7075,7 +7075,7 @@ async function executeTool(toolName, toolArgs, user) {
 
     case "generate_product_description": {
       const res = await groq.chat.completions.create({
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: `Write a compelling 2-3 sentence product description for "${toolArgs.productName}" ${toolArgs.category ? "in the " + toolArgs.category + " category" : ""} for a Nigerian e-commerce store. Be concise and persuasive.` }],
         max_tokens: 150, temperature: 0.7
       });
@@ -7173,7 +7173,7 @@ Speak naturally like a smart Nigerian assistant.`;
     while (iterations < MAX_ITERATIONS) {
       iterations++;
       const response = await groq.chat.completions.create({
-        model: "llama3-70b-8192",
+        model: "llama-3.1-8b-instant",
         messages,
         tools: TECHMART_TOOLS,
         tool_choice: "auto",
@@ -7264,7 +7264,7 @@ If a user asks about any of these topics, answer confidently using the above inf
 Be helpful, concise and natural.`;
 
     const stream = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: systemPrompt },
         ...history.slice(-6).map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
@@ -7994,7 +7994,7 @@ Give exactly 3 tips numbered 1, 2, 3. Each tip should be 1-2 sentences. Focus on
         const groq = (await import("groq")).default;
         const groqClient = new groq({ apiKey: process.env.GROQ_API_KEY });
         const completion = await groqClient.chat.completions.create({
-          model: "llama3-70b-8192",
+          model: "llama-3.1-8b-instant",
           messages: [{ role: "user", content: prompt }],
           max_tokens: 300
         });
@@ -8332,7 +8332,7 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     }).catch(() => null);
     const imeiData = imeiRes?.data || null;
     const groqImeiRes = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: "You are TechMart phone verification AI for the Nigerian market. Always respond in JSON only, no markdown." },
         { role: "user", content: "IMEI: " + imei + "\nAPI data: " + JSON.stringify(imeiData) + "\n\nReturn ONLY this JSON:\n{\"verdict\":\"CLEAN\",\"riskLevel\":\"low\",\"summary\":\"...\",\"deviceInfo\":{\"brand\":\"\",\"model\":\"\",\"manufactureYear\":\"\"},\"checks\":[{\"label\":\"IMEI Valid\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Blacklist Status\",\"status\":\"unknown\",\"detail\":\"\"},{\"label\":\"Stolen Report\",\"status\":\"unknown\",\"detail\":\"\"},{\"label\":\"Network Lock\",\"status\":\"unknown\",\"detail\":\"\"}],\"buyAdvice\":\"...\"}" }
