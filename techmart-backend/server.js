@@ -8366,14 +8366,15 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       ]}],
       max_tokens: 800, temperature: 0.2
     }, { headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" } });
-    let photoRaw = groqPhotoRes.data.choices[0].message.content.trim();
-    const photoThinkEnd = photoRaw.lastIndexOf("</think>");
-    if (photoThinkEnd !== -1) photoRaw = photoRaw.slice(photoThinkEnd + 8).trim();
-    photoRaw = photoRaw.replace(/```json|```/g, "").trim();
-    const photoJsonStart = photoRaw.indexOf("{");
-    const photoJsonEnd = photoRaw.lastIndexOf("}");
-    if (photoJsonStart !== -1 && photoJsonEnd !== -1) photoRaw = photoRaw.slice(photoJsonStart, photoJsonEnd + 1);
-    const photoResult = JSON.parse(photoRaw);
+    let photoContent = groqPhotoRes.data.choices[0].message.content || "";
+    // Remove think blocks by splitting on </think>
+    if (photoContent.includes("</think>")) {
+      photoContent = photoContent.split("</think>").pop();
+    }
+    photoContent = photoContent.replace(/```json/g, "").replace(/```/g, "").trim();
+    const photoJsonS = photoContent.indexOf("{");
+    const photoJsonE = photoContent.lastIndexOf("}");
+    const photoResult = JSON.parse(photoContent.slice(photoJsonS, photoJsonE + 1));
     res.json({ success: true, imageUrl: photoUrl, result: photoResult });
   } catch (err) { console.error("Photo check error:", err.message); res.status(500).json({ error: "Photo analysis failed. Please try again." }); }
 });
