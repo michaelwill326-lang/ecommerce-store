@@ -8373,8 +8373,10 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       photoContent = photoContent.split("</think>").pop();
     }
     photoContent = photoContent.replace(/```json/g, "").replace(/```/g, "").trim();
+    console.log("PHOTO_CONTENT_AFTER_STRIP:", photoContent.substring(0, 200));
     const photoJsonS = photoContent.indexOf("{");
     const photoJsonE = photoContent.lastIndexOf("}");
+    console.log("PHOTO_JSON_BOUNDS:", photoJsonS, photoJsonE);
     const photoResult = JSON.parse(photoContent.slice(photoJsonS, photoJsonE + 1));
     res.json({ success: true, imageUrl: photoUrl, result: photoResult });
   } catch (err) { console.error("Photo check error:", err.message); res.status(500).json({ error: "Photo analysis failed. Please try again." }); }
