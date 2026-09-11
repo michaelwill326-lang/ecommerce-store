@@ -6801,7 +6801,7 @@ Current message: ${message}`
 
       case "general_chat":
       default: {
-        const products = await Product.find({ stock: { $gt: 0 } }).select("name price category").limit(20);
+        const products = await Product.find({ stock: { $gt: 0 } }).select("name price category");
         const catalog = products.map(p => p.name + " (" + "N" + p.price?.toLocaleString() + ") - " + p.category).join(", ");
         const chatRes = await groq.chat.completions.create({
           model: "openai/gpt-oss-20b",
