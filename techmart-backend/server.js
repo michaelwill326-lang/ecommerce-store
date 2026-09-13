@@ -8320,31 +8320,214 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
 app.post("/api/phone-checker/imei", auth, async (req, res) => {
   try {
     const { imei } = req.body;
-    if (!imei || !/^\d{15}$/.test(imei.trim())) return res.status(400).json({ error: "Please enter a valid 15-digit IMEI number" });
-    const digits = imei.trim().split("").map(Number);
+
+    if (!imei || !/^\d{15}$/.test(String(imei).trim())) {
+      return res.status(400).json({
+        error: "Please enter a valid 15-digit IMEI number"
+      });
+    }
+
+    const cleanImei = String(imei).trim();
+
+    // IMEI Luhn checksum validation
+    const digits = cleanImei.split("").map(Number);
     let sum = 0;
-    for (let i = 0; i < 15; i++) { let d = digits[i]; if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; } sum += d; }
-    if (sum % 10 !== 0) return res.status(400).json({ error: "Invalid IMEI checksum. Please double-check the number." });
-    const imeiRes = await axios.get("https://api.imeicheck.com/v1/checks", {
-      params: { imei: imei.trim(), serviceId: 12 },
-      headers: { Authorization: "Bearer " + process.env.IMEICHECK_API_KEY, "Content-Type": "application/json" },
-      timeout: 10000
-    }).catch(() => null);
-    const imeiData = imeiRes?.data || null;
-    const groqImeiRes = await groq.chat.completions.create({
-      model: "openai/gpt-oss-20b",
-      messages: [
-        { role: "system", content: "You are TechMart phone verification AI for the Nigerian market. Always respond in JSON only, no markdown." },
-        { role: "user", content: "IMEI: " + imei + "\nAPI data: " + JSON.stringify(imeiData) + "\n\nReturn ONLY this JSON:\n{\"verdict\":\"CLEAN\",\"riskLevel\":\"low\",\"summary\":\"...\",\"deviceInfo\":{\"brand\":\"\",\"model\":\"\",\"manufactureYear\":\"\"},\"checks\":[{\"label\":\"IMEI Valid\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Blacklist Status\",\"status\":\"unknown\",\"detail\":\"\"},{\"label\":\"Stolen Report\",\"status\":\"unknown\",\"detail\":\"\"},{\"label\":\"Network Lock\",\"status\":\"unknown\",\"detail\":\"\"}],\"buyAdvice\":\"...\"}" }
+
+    for (let i = 0; i < 15; i++) {
+      let d = digits[i];
+
+      if (i % 2 === 1) {
+        d *= 2;
+        if (d > 9) d -= 9;
+      }
+
+      sum += d;
+    }
+
+    if (sum % 10 !== 0) {
+      return res.status(400).json({
+        error: "Invalid IMEI checksum. Please double-check the number."
+      });
+    }
+
+    if (!process.env.IMEICHECK_API_KEY) {
+      console.error("IMEICHECK_API_KEY is missing");
+      return res.status(503).json({
+        error: "IMEI verification service is not configured.",
+        code: "IMEI_PROVIDER_NOT_CONFIGURED"
+      });
+    }
+
+    let imeiRes;
+
+    try {
+      imeiRes = await axios.post(
+        "https://api.imeicheck.net/v1/checks",
+        {
+          deviceId: cleanImei,
+          serviceId: 16
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
+            "Content-Type": "application/json"
+          },
+          timeout: 15000
+        }
+      );
+    } catch (providerErr) {
+      console.error(
+        "IMEICheck provider error:",
+        providerErr.response?.status ||
+        providerErr.code ||
+        providerErr.message
+      );
+
+      return res.status(502).json({
+        error: "IMEI verification service is currently unavailable. Please try again later.",
+        code: "IMEI_PROVIDER_UNAVAILABLE"
+      });
+    }
+
+    const apiData = imeiRes?.data;
+
+    if (!apiData) {
+      return res.status(502).json({
+        error: "IMEI verification service returned no data.",
+        code: "IMEI_NO_DATA"
+      });
+    }
+
+    console.log(
+      "IMEICheck response:",
+      JSON.stringify({
+        status: apiData.status,
+        service: apiData.service,
+        deviceId: apiData.deviceId,
+        propertyKeys: Object.keys(apiData.properties || {})
+      })
+    );
+
+    const properties = apiData.properties || {};
+
+    const blacklistRaw =
+      properties.blacklistStatus ??
+      properties.blackListStatus ??
+      properties.blacklist ??
+      properties.blackListed ??
+      properties.usaBlockStatus ??
+      properties.blockStatus ??
+      null;
+
+    const blacklistText = blacklistRaw == null
+      ? ""
+      : String(blacklistRaw).toLowerCase();
+
+    let blacklistStatus = "unknown";
+
+    if (
+      blacklistText.includes("clean") ||
+      blacklistText === "false" ||
+      blacklistText === "no"
+    ) {
+      blacklistStatus = "pass";
+    } else if (
+      blacklistText.includes("blacklist") ||
+      blacklistText.includes("blocked") ||
+      blacklistText === "true" ||
+      blacklistText === "yes"
+    ) {
+      blacklistStatus = "fail";
+    }
+
+    let verdict = "UNVERIFIED";
+    let riskLevel = "medium";
+
+    if (blacklistStatus === "pass") {
+      verdict = "CLEAN";
+      riskLevel = "low";
+    } else if (blacklistStatus === "fail") {
+      verdict = "BLACKLISTED";
+      riskLevel = "high";
+    }
+
+    const deviceName =
+      properties.deviceName ||
+      properties.modelDesc ||
+      properties.model ||
+      "Unknown";
+
+    const brand =
+      properties.brand ||
+      properties.manufacturer ||
+      "Unknown";
+
+    const manufactureYear =
+      properties.manufactureYear ||
+      properties.year ||
+      "Unknown";
+
+    const result = {
+      verdict,
+      riskLevel,
+      summary:
+        blacklistStatus === "pass"
+          ? "The IMEIcheck provider reports this IMEI as clean."
+          : blacklistStatus === "fail"
+            ? "The IMEIcheck provider reports this IMEI as blacklisted or blocked."
+            : "The IMEI was validated, but the provider did not return a definitive blacklist status.",
+      deviceInfo: {
+        brand,
+        model: deviceName,
+        manufactureYear
+      },
+      checks: [
+        {
+          label: "IMEI Valid",
+          status: "pass",
+          detail: "The IMEI passed the 15-digit format and checksum validation."
+        },
+        {
+          label: "Blacklist Status",
+          status: blacklistStatus,
+          detail:
+            blacklistRaw == null
+              ? "The provider did not return a definitive blacklist status."
+              : String(blacklistRaw)
+        },
+        {
+          label: "Stolen Report",
+          status: "unknown",
+          detail: "The current provider response did not contain a separate stolen-report field."
+        },
+        {
+          label: "Network Lock",
+          status: "unknown",
+          detail: "The current provider response did not contain a definitive network-lock result."
+        }
       ],
-      max_tokens: 600, temperature: 0.2
+      buyAdvice:
+        blacklistStatus === "fail"
+          ? "Do not purchase this device until the blacklist issue is resolved and independently verified."
+          : blacklistStatus === "pass"
+            ? "The provider reports the IMEI as clean. Still compare the IMEI shown on the device, SIM tray and packaging where applicable before payment."
+            : "Do not treat this result as a clean verification yet. The provider did not return enough information to confirm blacklist status."
+    };
+
+    return res.json({
+      success: true,
+      imei: cleanImei,
+      result,
+      rawApiData: apiData
     });
-    let imeiRaw = groqImeiRes.choices[0].message.content.trim();
-    imeiRaw = imeiRaw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-    imeiRaw = imeiRaw.replace(/```json|```/g, "").trim();
-    const imeiResult = JSON.parse(imeiRaw);
-    res.json({ success: true, imei: imei.trim(), result: imeiResult, rawApiData: imeiData });
-  } catch (err) { console.error("IMEI check error:", err.message); res.status(500).json({ error: "IMEI check failed. Please try again." }); }
+
+  } catch (err) {
+    console.error("IMEI check error:", err.message);
+
+    return res.status(500).json({
+      error: "IMEI check failed. Please try again."
+    });
+  }
 });
 
 app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, res) => {
