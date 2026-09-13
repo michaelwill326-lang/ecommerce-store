@@ -8548,19 +8548,31 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
         { type: "image_url", image_url: { url: photoUrl } },
         { type: "text", text: "/no-think You are TechMart phone condition AI for the Nigerian used-phone market. Inspect this phone image.\n\nReturn ONLY this JSON (no markdown):\n{\"overallCondition\":\"Good\",\"conditionScore\":75,\"verdict\":\"LIKELY ORIGINAL\",\"riskLevel\":\"low\",\"summary\":\"...\",\"checks\":[{\"label\":\"Screen Condition\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Body & Frame\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Signs of Repair\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Camera Area\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Ports & Buttons\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Overall Authenticity\",\"status\":\"pass\",\"detail\":\"\"}],\"redFlags\":[],\"buyAdvice\":\"...\"}" }
       ]}],
-      max_tokens: 800, temperature: 0.2
+      response_format: { type: "json_object" },
+      reasoning_format: "hidden",
+      max_completion_tokens: 800,
+      temperature: 0.2
     }, { headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" } });
     let photoContent = groqPhotoRes.data.choices[0].message.content || "";
-    // Remove think blocks by splitting on </think>
-    if (photoContent.includes("</think>")) {
-      photoContent = photoContent.split("</think>").pop();
-    }
     photoContent = photoContent.replace(/```json/g, "").replace(/```/g, "").trim();
+
     console.log("PHOTO_CONTENT_AFTER_STRIP:", photoContent.substring(0, 200));
+
     const photoJsonS = photoContent.indexOf("{");
     const photoJsonE = photoContent.lastIndexOf("}");
+
     console.log("PHOTO_JSON_BOUNDS:", photoJsonS, photoJsonE);
-    const photoResult = JSON.parse(photoContent.slice(photoJsonS, photoJsonE + 1));
+
+    if (photoJsonS === -1 || photoJsonE === -1 || photoJsonE <= photoJsonS) {
+      console.error("PHOTO_AI_NO_JSON:", photoContent.substring(0, 500));
+      return res.status(502).json({
+        error: "Photo AI returned an invalid analysis. Please try another clear phone photo."
+      });
+    }
+
+    const photoResult = JSON.parse(
+      photoContent.slice(photoJsonS, photoJsonE + 1)
+    );
     res.json({ success: true, imageUrl: photoUrl, result: photoResult });
   } catch (err) { console.error("Photo check error:", err.message); res.status(500).json({ error: "Photo analysis failed. Please try again." }); }
 });
