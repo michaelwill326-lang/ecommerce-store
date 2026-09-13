@@ -8574,7 +8574,13 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       photoContent.slice(photoJsonS, photoJsonE + 1)
     );
     res.json({ success: true, imageUrl: photoUrl, result: photoResult });
-  } catch (err) { console.error("Photo check error:", err.message); res.status(500).json({ error: "Photo analysis failed. Please try again." }); }
+  } catch (err) {
+    console.error("Photo check error:", err.message);
+    if (err.response?.data) {
+      console.error("PHOTO_GROQ_ERROR:", JSON.stringify(err.response.data));
+    }
+    res.status(500).json({ error: "Photo analysis failed. Please try again." });
+  }
 });
 
 // 404 handler for unknown routes
