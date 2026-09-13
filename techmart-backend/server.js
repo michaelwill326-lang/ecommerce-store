@@ -8383,6 +8383,13 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
         providerErr.message
       );
 
+      if (providerErr.response?.data) {
+        console.error(
+          "IMEICheck provider response:",
+          JSON.stringify(providerErr.response.data)
+        );
+      }
+
       return res.status(502).json({
         error: "IMEI verification service is currently unavailable. Please try again later.",
         code: "IMEI_PROVIDER_UNAVAILABLE"
