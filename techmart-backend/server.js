@@ -8546,10 +8546,10 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
       model: "qwen/qwen3.6-27b",
       messages: [{ role: "user", content: [
         { type: "image_url", image_url: { url: photoUrl } },
-        { type: "text", text: "/no-think You are TechMart phone condition AI for the Nigerian used-phone market. Inspect this phone image.\n\nReturn ONLY this JSON (no markdown):\n{\"overallCondition\":\"Good\",\"conditionScore\":75,\"verdict\":\"LIKELY ORIGINAL\",\"riskLevel\":\"low\",\"summary\":\"...\",\"checks\":[{\"label\":\"Screen Condition\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Body & Frame\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Signs of Repair\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Camera Area\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Ports & Buttons\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Overall Authenticity\",\"status\":\"pass\",\"detail\":\"\"}],\"redFlags\":[],\"buyAdvice\":\"...\"}" }
+        { type: "text", text: "You are TechMart phone condition AI for the Nigerian used-phone market. Inspect this phone image carefully. Return ONLY a valid JSON object. Do not use markdown, explanations, or thinking text.\n{\"overallCondition\":\"Good\",\"conditionScore\":75,\"verdict\":\"LIKELY ORIGINAL\",\"riskLevel\":\"low\",\"summary\":\"...\",\"checks\":[{\"label\":\"Screen Condition\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Body & Frame\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Signs of Repair\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Camera Area\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Ports & Buttons\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Overall Authenticity\",\"status\":\"pass\",\"detail\":\"\"}],\"redFlags\":[],\"buyAdvice\":\"...\"}" }
       ]}],
       response_format: { type: "json_object" },
-      reasoning_format: "hidden",
+      reasoning_effort: "none",
       max_completion_tokens: 800,
       temperature: 0.2
     }, { headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" } });
