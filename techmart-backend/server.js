@@ -8317,6 +8317,56 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
 /* ===========================
    📱 PHONE CHECKER
 =========================== */
+
+app.get("/api/phone-checker/services", auth, async (req, res) => {
+  try {
+    if (!process.env.IMEICHECK_API_KEY) {
+      return res.status(503).json({
+        error: "IMEI verification service is not configured."
+      });
+    }
+
+    const response = await axios.get(
+      "https://api.imeicheck.net/v1/services",
+      {
+        headers: {
+          Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
+          "Content-Type": "application/json"
+        },
+        timeout: 15000
+      }
+    );
+
+    console.log(
+      "IMEICheck services:",
+      JSON.stringify(response.data)
+    );
+
+    return res.json({
+      success: true,
+      services: response.data
+    });
+  } catch (err) {
+    console.error(
+      "IMEICheck services error:",
+      err.response?.status ||
+      err.code ||
+      err.message
+    );
+
+    if (err.response?.data) {
+      console.error(
+        "IMEICheck services response:",
+        JSON.stringify(err.response.data)
+      );
+    }
+
+    return res.status(502).json({
+      error: "Could not retrieve IMEI services."
+    });
+  }
+});
+
 app.post("/api/phone-checker/imei", auth, async (req, res) => {
   try {
     const { imei } = req.body;
