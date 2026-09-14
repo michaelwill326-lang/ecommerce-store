@@ -5,7 +5,7 @@ const API =
   "https://techmart-backend-ecbi.onrender.com";
 
 export const socket = io(API, {
-  transports: ["websocket"],
+  transports: ["polling", "websocket"],
   reconnection: true,
 });
 
