@@ -8318,55 +8318,6 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
    📱 PHONE CHECKER
 =========================== */
 
-app.get("/api/phone-checker/services", auth, async (req, res) => {
-  try {
-    if (!process.env.IMEICHECK_API_KEY) {
-      return res.status(503).json({
-        error: "IMEI verification service is not configured."
-      });
-    }
-
-    const response = await axios.get(
-      "https://api.imeicheck.net/v1/services",
-      {
-        headers: {
-          Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
-          "Content-Type": "application/json"
-        },
-        timeout: 15000
-      }
-    );
-
-    console.log(
-      "IMEICheck services:",
-      JSON.stringify(response.data)
-    );
-
-    return res.json({
-      success: true,
-      services: response.data
-    });
-  } catch (err) {
-    console.error(
-      "IMEICheck services error:",
-      err.response?.status ||
-      err.code ||
-      err.message
-    );
-
-    if (err.response?.data) {
-      console.error(
-        "IMEICheck services response:",
-        JSON.stringify(err.response.data)
-      );
-    }
-
-    return res.status(502).json({
-      error: "Could not retrieve IMEI services."
-    });
-  }
-});
-
 app.post("/api/phone-checker/imei", auth, async (req, res) => {
   try {
     const { imei } = req.body;
@@ -8394,188 +8345,61 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       sum += d;
     }
 
-    if (sum % 10 !== 0) {
+    const checksumValid = sum % 10 === 0;
+
+    if (!checksumValid) {
       return res.status(400).json({
         error: "Invalid IMEI checksum. Please double-check the number."
       });
     }
 
-    if (!process.env.IMEICHECK_API_KEY) {
-      console.error("IMEICHECK_API_KEY is missing");
-      return res.status(503).json({
-        error: "IMEI verification service is not configured.",
-        code: "IMEI_PROVIDER_NOT_CONFIGURED"
-      });
-    }
-
-    let imeiRes;
-
-    try {
-      imeiRes = await axios.post(
-        "https://api.imeicheck.net/v1/checks",
-        {
-          deviceId: cleanImei,
-          serviceId: 16
-        },
-        {
-          headers: {
-            Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
-            "Content-Type": "application/json"
-          },
-          timeout: 15000
-        }
-      );
-    } catch (providerErr) {
-      console.error(
-        "IMEICheck provider error:",
-        providerErr.response?.status ||
-        providerErr.code ||
-        providerErr.message
-      );
-
-      if (providerErr.response?.data) {
-        console.error(
-          "IMEICheck provider response:",
-          JSON.stringify(providerErr.response.data)
-        );
-      }
-
-      return res.status(502).json({
-        error: "IMEI verification service is currently unavailable. Please try again later.",
-        code: "IMEI_PROVIDER_UNAVAILABLE"
-      });
-    }
-
-    const apiData = imeiRes?.data;
-
-    if (!apiData) {
-      return res.status(502).json({
-        error: "IMEI verification service returned no data.",
-        code: "IMEI_NO_DATA"
-      });
-    }
-
-    console.log(
-      "IMEICheck response:",
-      JSON.stringify({
-        status: apiData.status,
-        service: apiData.service,
-        deviceId: apiData.deviceId,
-        propertyKeys: Object.keys(apiData.properties || {})
-      })
-    );
-
-    const properties = apiData.properties || {};
-
-    const blacklistRaw =
-      properties.blacklistStatus ??
-      properties.blackListStatus ??
-      properties.blacklist ??
-      properties.blackListed ??
-      properties.usaBlockStatus ??
-      properties.blockStatus ??
-      null;
-
-    const blacklistText = blacklistRaw == null
-      ? ""
-      : String(blacklistRaw).toLowerCase();
-
-    let blacklistStatus = "unknown";
-
-    if (
-      blacklistText.includes("clean") ||
-      blacklistText === "false" ||
-      blacklistText === "no"
-    ) {
-      blacklistStatus = "pass";
-    } else if (
-      blacklistText.includes("blacklist") ||
-      blacklistText.includes("blocked") ||
-      blacklistText === "true" ||
-      blacklistText === "yes"
-    ) {
-      blacklistStatus = "fail";
-    }
-
-    let verdict = "UNVERIFIED";
-    let riskLevel = "medium";
-
-    if (blacklistStatus === "pass") {
-      verdict = "CLEAN";
-      riskLevel = "low";
-    } else if (blacklistStatus === "fail") {
-      verdict = "BLACKLISTED";
-      riskLevel = "high";
-    }
-
-    const deviceName =
-      properties.deviceName ||
-      properties.modelDesc ||
-      properties.model ||
-      "Unknown";
-
-    const brand =
-      properties.brand ||
-      properties.manufacturer ||
-      "Unknown";
-
-    const manufactureYear =
-      properties.manufactureYear ||
-      properties.year ||
-      "Unknown";
+    // TAC = first 8 digits of the IMEI.
+    // TAC identifies the device type allocation, but does not prove
+    // ownership, authenticity, or blacklist status.
+    const tac = cleanImei.slice(0, 8);
 
     const result = {
-      verdict,
-      riskLevel,
+      verdict: "UNVERIFIED",
+      riskLevel: "medium",
       summary:
-        blacklistStatus === "pass"
-          ? "The IMEIcheck provider reports this IMEI as clean."
-          : blacklistStatus === "fail"
-            ? "The IMEIcheck provider reports this IMEI as blacklisted or blocked."
-            : "The IMEI was validated, but the provider did not return a definitive blacklist status.",
+        "This IMEI is structurally valid and passes the checksum test. Blacklist and stolen-device status could not be verified because a live blacklist database is not currently connected.",
       deviceInfo: {
-        brand,
-        model: deviceName,
-        manufactureYear
+        brand: "Unknown",
+        model: "Unknown",
+        manufactureYear: "Unknown",
+        tac
       },
       checks: [
         {
           label: "IMEI Valid",
           status: "pass",
-          detail: "The IMEI passed the 15-digit format and checksum validation."
+          detail: "The IMEI contains 15 digits and passes the Luhn checksum validation."
         },
         {
           label: "Blacklist Status",
-          status: blacklistStatus,
-          detail:
-            blacklistRaw == null
-              ? "The provider did not return a definitive blacklist status."
-              : String(blacklistRaw)
+          status: "unknown",
+          detail: "Blacklist status is not currently verified against a live blacklist database."
         },
         {
           label: "Stolen Report",
           status: "unknown",
-          detail: "The current provider response did not contain a separate stolen-report field."
+          detail: "A stolen-device database is not currently connected, so stolen status cannot be confirmed."
         },
         {
           label: "Network Lock",
           status: "unknown",
-          detail: "The current provider response did not contain a definitive network-lock result."
+          detail: "Network lock status cannot be determined from the IMEI checksum alone."
         }
       ],
       buyAdvice:
-        blacklistStatus === "fail"
-          ? "Do not purchase this device until the blacklist issue is resolved and independently verified."
-          : blacklistStatus === "pass"
-            ? "The provider reports the IMEI as clean. Still compare the IMEI shown on the device, SIM tray and packaging where applicable before payment."
-            : "Do not treat this result as a clean verification yet. The provider did not return enough information to confirm blacklist status."
+        "The IMEI is structurally valid, but this does not prove the phone is clean or not stolen. Before payment, compare the IMEI on the device with the box where applicable and independently verify blacklist status with a carrier, manufacturer, or authorized IMEI service."
     };
 
     return res.json({
       success: true,
       imei: cleanImei,
       result,
-      rawApiData: apiData
+      rawApiData: null
     });
 
   } catch (err) {
