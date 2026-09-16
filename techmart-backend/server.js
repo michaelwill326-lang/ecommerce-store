@@ -8424,7 +8424,7 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
     const photoUrl = uploadResult.secure_url;
     console.log("PHOTO_ROUTE_HIT: starting photo analysis");
     const groqPhotoRes = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
-      model: "qwen/qwen3.6-27b",
+      model: "qwen/qwen3.8-27b",
       messages: [{ role: "user", content: [
         { type: "image_url", image_url: { url: photoUrl } },
         { type: "text", text: "You are TechMart phone condition AI for the Nigerian used-phone market. Inspect this phone image carefully. Return ONLY a valid JSON object. Do not use markdown, explanations, or thinking text.\n{\"overallCondition\":\"Good\",\"conditionScore\":75,\"verdict\":\"LIKELY ORIGINAL\",\"riskLevel\":\"low\",\"summary\":\"...\",\"checks\":[{\"label\":\"Screen Condition\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Body & Frame\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Signs of Repair\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Camera Area\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Ports & Buttons\",\"status\":\"pass\",\"detail\":\"\"},{\"label\":\"Overall Authenticity\",\"status\":\"pass\",\"detail\":\"\"}],\"redFlags\":[],\"buyAdvice\":\"...\"}" }
