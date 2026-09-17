@@ -8323,7 +8323,7 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
 
   try {
     const { imei } = req.body;
-    console.log("IMEIAPI key configured:", Boolean(process.env.IMEIAPI_KEY));
+    console.log("IMEIAPI key configured:", Boolean(process.env.IMEICHECK_API_KEY));
 
     if (!imei || !/^\d{15}$/.test(String(imei).trim())) {
       return res.status(400).json({
@@ -8365,13 +8365,13 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     // This identifies the device model but does not verify blacklist status.
     let providerDevice = {};
 
-    if (process.env.IMEIAPI_KEY) {
+    if (process.env.IMEICHECK_API_KEY) {
       try {
         const providerResponse = await axios.get(
           `https://api.imeiapi.net/v1/device/${cleanImei}`,
           {
             headers: {
-              "X-Api-Key": process.env.IMEIAPI_KEY,
+              "X-Api-Key": process.env.IMEICHECK_API_KEY,
               Accept: "application/json"
             },
             timeout: 10000
