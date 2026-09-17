@@ -8319,8 +8319,11 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
 =========================== */
 
 app.post("/api/phone-checker/imei", auth, async (req, res) => {
+  console.log("PHONE CHECKER IMEI ROUTE HIT");
+
   try {
     const { imei } = req.body;
+    console.log("IMEIAPI key configured:", Boolean(process.env.IMEIAPI_KEY));
 
     if (!imei || !/^\d{15}$/.test(String(imei).trim())) {
       return res.status(400).json({
@@ -8361,8 +8364,6 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     // Optional device identification through IMEIAPI.
     // This identifies the device model but does not verify blacklist status.
     let providerDevice = {};
-
-    console.log("IMEIAPI key configured:", Boolean(process.env.IMEIAPI_KEY));
 
     if (process.env.IMEIAPI_KEY) {
       try {
