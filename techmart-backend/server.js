@@ -8362,6 +8362,8 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     // This identifies the device model but does not verify blacklist status.
     let providerDevice = {};
 
+    console.log("IMEIAPI key configured:", Boolean(process.env.IMEIAPI_KEY));
+
     if (process.env.IMEIAPI_KEY) {
       try {
         const providerResponse = await axios.get(
