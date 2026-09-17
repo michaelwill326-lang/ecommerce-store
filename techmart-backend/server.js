@@ -8364,10 +8364,12 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       summary:
         "This IMEI is structurally valid and passes the checksum test. Blacklist and stolen-device status could not be verified because a live blacklist database is not currently connected.",
       deviceInfo: {
-        brand: "Unknown",
-        model: "Unknown",
-        manufactureYear: "Unknown",
-        tac
+        brand: "Not available",
+        model: "Not available",
+        manufactureYear: "Cannot be determined from IMEI alone",
+        releaseYear: "Not available",
+        tac,
+        note: "A verified TAC/device database is required to identify the brand and model."
       },
       checks: [
         {

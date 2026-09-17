@@ -239,9 +239,22 @@ export default function PhoneChecker() {
               <div style={s.card}>
                 <h3 style={{ color: "#fff", margin: "0 0 16px", fontSize: "16px" }}>📱 Device Info</h3>
                 {Object.entries(result.deviceInfo).map(([k, v]) => v && (
-                  <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                    <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", textTransform: "capitalize" }}>{k.replace(/([A-Z])/g, " $1")}</span>
-                    <span style={{ color: "#fff", fontWeight: "600", fontSize: "14px" }}>{v}</span>
+                  <div
+                    key={k}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "16px",
+                      padding: "8px 0",
+                      borderBottom: "1px solid rgba(255,255,255,0.06)"
+                    }}
+                  >
+                    <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", textTransform: "capitalize", flexShrink: 0 }}>
+                      {k.replace(/([A-Z])/g, " $1")}
+                    </span>
+                    <span style={{ color: "#fff", fontWeight: "600", fontSize: "14px", textAlign: "right", overflowWrap: "anywhere" }}>
+                      {String(v)}
+                    </span>
                   </div>
                 ))}
               </div>
