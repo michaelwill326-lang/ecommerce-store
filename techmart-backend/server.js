@@ -8361,43 +8361,7 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     // ownership, authenticity, or blacklist status.
     const tac = cleanImei.slice(0, 8);
 
-    // Optional device identification through IMEIAPI.
-    // This identifies the device model but does not verify blacklist status.
-    let providerDevice = {};
-
-    if (process.env.IMEICHECK_API_KEY) {
-      try {
-        const providerResponse = await axios.get(
-          `https://api.imeiapi.net/v1/device/${cleanImei}`,
-          {
-            headers: {
-              "X-Api-Key": process.env.IMEICHECK_API_KEY,
-              Accept: "application/json"
-            },
-            timeout: 10000
-          }
-        );
-
-        const data = providerResponse.data || {};
-
-        providerDevice = {
-          brand: data.brand || data.manufacturer || data.device?.brand,
-          model: data.model || data.device?.model || data.deviceName,
-          releaseYear:
-            data.releaseYear ||
-            data.release_year ||
-            data.year ||
-            data.device?.releaseYear
-        };
-
-        console.log("IMEIAPI device lookup completed");
-      } catch (providerError) {
-        console.error(
-          "IMEIAPI lookup failed:",
-          providerError.response?.status || providerError.message
-        );
-      }
-    }
+    // Device identity cannot be determined from the IMEI checksum alone.
 
     const result = {
       verdict: "UNVERIFIED",
@@ -8405,14 +8369,12 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       summary:
         "This IMEI is structurally valid and passes the checksum test. Blacklist and stolen-device status could not be verified because a live blacklist database is not currently connected.",
       deviceInfo: {
-        brand: providerDevice.brand || "Not available",
-        model: providerDevice.model || "Not available",
+        brand: "Not available",
+        model: "Not available",
         manufactureYear: "Cannot be determined from IMEI alone",
-        releaseYear: providerDevice.releaseYear || "Not available",
+        releaseYear: "Not available",
         tac,
-        note: providerDevice.brand || providerDevice.model
-          ? "Brand and model supplied by the device identification provider. Blacklist and stolen status remain unverified."
-          : "A verified TAC/device database is required to identify the brand and model."
+        note: "A verified TAC/device database is required to identify the brand and model."
       },
       checks: [
         {
