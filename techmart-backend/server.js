@@ -2155,6 +2155,9 @@ app.post("/api/pay/vault/lock", auth, async (req, res) => {
     if (![7, 30, 90].includes(Number(lockDays))) return res.status(400).json({ error: "Choose 7, 30, or 90 days" });
 
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
+
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     // Calculate interest (5% monthly, pro-rated)
@@ -2605,6 +2608,9 @@ app.post("/api/giftcard/purchase", auth, async (req, res) => {
     if (!validAmounts.includes(Number(amount))) return res.status(400).json({ error: "Invalid gift card amount. Choose ₦2,000, ₦5,000, ₦10,000 or ₦20,000" });
 
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
+
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     // Deduct from wallet
@@ -3118,13 +3124,16 @@ app.post("/api/pay/verify-bvn", auth, async (req, res) => {
   }
 });
 
-app.post("/api/pay/withdraw", auth, async (req, res) => {
+app.post("/api/pay/withdraw", auth, pinLimiter, async (req, res) => {
   try {
-    const { amount, bankCode, accountNumber, accountName } = req.body;
+    const { amount, bankCode, accountNumber, accountName, pin } = req.body;
     if (!amount || !bankCode || !accountNumber || !accountName) return res.status(400).json({ error: "All fields are required" });
     if (Number(amount) < 500) return res.status(400).json({ error: "Minimum withdrawal is N500" });
 
     const user = await User.findById(req.user.id);
+    const pinCheck = await verifyWalletPin(user, pin);
+    if (!pinCheck.ok) return res.status(400).json({ error: pinCheck.error });
+
     if ((user.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
 
     const reference = "WTH-FLW-" + Date.now();
@@ -8319,11 +8328,8 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
 =========================== */
 
 app.post("/api/phone-checker/imei", auth, async (req, res) => {
-  console.log("PHONE CHECKER IMEI ROUTE HIT");
-
   try {
     const { imei } = req.body;
-    console.log("IMEIAPI key configured:", Boolean(process.env.IMEICHECK_API_KEY));
 
     if (!imei || !/^\d{15}$/.test(String(imei).trim())) {
       return res.status(400).json({
@@ -8348,65 +8354,181 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       sum += d;
     }
 
-    const checksumValid = sum % 10 === 0;
-
-    if (!checksumValid) {
+    if (sum % 10 !== 0) {
       return res.status(400).json({
         error: "Invalid IMEI checksum. Please double-check the number."
       });
     }
 
-    // TAC = first 8 digits of the IMEI.
-    // TAC identifies the device type allocation, but does not prove
-    // ownership, authenticity, or blacklist status.
-    const tac = cleanImei.slice(0, 8);
+    if (!process.env.IMEICHECK_API_KEY) {
+      console.error("IMEICHECK_API_KEY is missing");
+      return res.status(503).json({
+        error: "IMEI verification service is not configured.",
+        code: "IMEI_PROVIDER_NOT_CONFIGURED"
+      });
+    }
 
-    // Device identity cannot be determined from the IMEI checksum alone.
+    let imeiRes;
+
+    try {
+      imeiRes = await axios.post(
+        "https://api.imeicheck.net/v1/checks",
+        {
+          deviceId: cleanImei,
+          serviceId: 16
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
+            "Content-Type": "application/json"
+          },
+          timeout: 15000
+        }
+      );
+    } catch (providerErr) {
+      console.error(
+        "IMEICheck provider error:",
+        providerErr.response?.status ||
+        providerErr.code ||
+        providerErr.message
+      );
+
+      return res.status(502).json({
+        error: "IMEI verification service is currently unavailable. Please try again later.",
+        code: "IMEI_PROVIDER_UNAVAILABLE"
+      });
+    }
+
+    const apiData = imeiRes?.data;
+
+    if (!apiData) {
+      return res.status(502).json({
+        error: "IMEI verification service returned no data.",
+        code: "IMEI_NO_DATA"
+      });
+    }
+
+    console.log(
+      "IMEICheck response:",
+      JSON.stringify({
+        status: apiData.status,
+        service: apiData.service,
+        deviceId: apiData.deviceId,
+        propertyKeys: Object.keys(apiData.properties || {})
+      })
+    );
+
+    const properties = apiData.properties || {};
+
+    const blacklistRaw =
+      properties.blacklistStatus ??
+      properties.blackListStatus ??
+      properties.blacklist ??
+      properties.blackListed ??
+      properties.usaBlockStatus ??
+      properties.blockStatus ??
+      null;
+
+    const blacklistText = blacklistRaw == null
+      ? ""
+      : String(blacklistRaw).toLowerCase();
+
+    let blacklistStatus = "unknown";
+
+    if (
+      blacklistText.includes("clean") ||
+      blacklistText === "false" ||
+      blacklistText === "no"
+    ) {
+      blacklistStatus = "pass";
+    } else if (
+      blacklistText.includes("blacklist") ||
+      blacklistText.includes("blocked") ||
+      blacklistText === "true" ||
+      blacklistText === "yes"
+    ) {
+      blacklistStatus = "fail";
+    }
+
+    let verdict = "UNVERIFIED";
+    let riskLevel = "medium";
+
+    if (blacklistStatus === "pass") {
+      verdict = "CLEAN";
+      riskLevel = "low";
+    } else if (blacklistStatus === "fail") {
+      verdict = "BLACKLISTED";
+      riskLevel = "high";
+    }
+
+    const deviceName =
+      properties.deviceName ||
+      properties.modelDesc ||
+      properties.model ||
+      "Unknown";
+
+    const brand =
+      properties.brand ||
+      properties.manufacturer ||
+      "Unknown";
+
+    const manufactureYear =
+      properties.manufactureYear ||
+      properties.year ||
+      "Unknown";
 
     const result = {
-      verdict: "UNVERIFIED",
-      riskLevel: "medium",
+      verdict,
+      riskLevel,
       summary:
-        "This IMEI is structurally valid and passes the checksum test. Blacklist and stolen-device status could not be verified because a live blacklist database is not currently connected.",
+        blacklistStatus === "pass"
+          ? "The IMEIcheck provider reports this IMEI as clean."
+          : blacklistStatus === "fail"
+            ? "The IMEIcheck provider reports this IMEI as blacklisted or blocked."
+            : "The IMEI was validated, but the provider did not return a definitive blacklist status.",
       deviceInfo: {
-        brand: "Not available",
-        model: "Not available",
-        manufactureYear: "Cannot be determined from IMEI alone",
-        releaseYear: "Not available",
-        tac,
-        note: "A verified TAC/device database is required to identify the brand and model."
+        brand,
+        model: deviceName,
+        manufactureYear
       },
       checks: [
         {
           label: "IMEI Valid",
           status: "pass",
-          detail: "The IMEI contains 15 digits and passes the Luhn checksum validation."
+          detail: "The IMEI passed the 15-digit format and checksum validation."
         },
         {
           label: "Blacklist Status",
-          status: "unknown",
-          detail: "Blacklist status is not currently verified against a live blacklist database."
+          status: blacklistStatus,
+          detail:
+            blacklistRaw == null
+              ? "The provider did not return a definitive blacklist status."
+              : String(blacklistRaw)
         },
         {
           label: "Stolen Report",
           status: "unknown",
-          detail: "A stolen-device database is not currently connected, so stolen status cannot be confirmed."
+          detail: "The current provider response did not contain a separate stolen-report field."
         },
         {
           label: "Network Lock",
           status: "unknown",
-          detail: "Network lock status cannot be determined from the IMEI checksum alone."
+          detail: "The current provider response did not contain a definitive network-lock result."
         }
       ],
       buyAdvice:
-        "The IMEI is structurally valid, but this does not prove the phone is clean or not stolen. Before payment, compare the IMEI on the device with the box where applicable and independently verify blacklist status with a carrier, manufacturer, or authorized IMEI service."
+        blacklistStatus === "fail"
+          ? "Do not purchase this device until the blacklist issue is resolved and independently verified."
+          : blacklistStatus === "pass"
+            ? "The provider reports the IMEI as clean. Still compare the IMEI shown on the device, SIM tray and packaging where applicable before payment."
+            : "Do not treat this result as a clean verification yet. The provider did not return enough information to confirm blacklist status."
     };
 
     return res.json({
       success: true,
       imei: cleanImei,
       result,
-      rawApiData: null
+      rawApiData: apiData
     });
 
   } catch (err) {
