@@ -8379,61 +8379,64 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       });
     }
 
-    let imeiRes;
+    let blacklistData, deviceData;
 
     try {
-      imeiRes = await axios.post(
-        "https://api.imeicheck.net/v1/checks",
-        {
-          deviceId: cleanImei,
-          serviceId: 16
-        },
-        {
-          headers: {
-            Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
-            "Content-Type": "application/json"
-          },
-          timeout: 15000
-        }
-      );
-    } catch (providerErr) {
-      console.error(
-        "IMEICheck provider error:",
-        providerErr.response?.status ||
-        providerErr.code ||
-        providerErr.message
-      );
-      console.error(
-        "IMEICheck provider details:",
-        JSON.stringify(providerErr.response?.data || {})
-      );
+      const headers = {
+        Authorization: "Bearer " + process.env.IMEICHECK_API_KEY,
+        "Content-Type": "application/json"
+      };
 
+      const [blacklistRes, deviceRes] = await Promise.allSettled([
+        axios.post("https://api.imeicheck.net/v1/checks", { deviceId: cleanImei, serviceId: 16 }, { headers, timeout: 15000 }),
+        axios.post("https://api.imeicheck.net/v1/checks", { deviceId: cleanImei, serviceId: 22 }, { headers, timeout: 15000 })
+      ]);
+
+      if (blacklistRes.status === "fulfilled") {
+        blacklistData = blacklistRes.value?.data;
+      } else {
+        const err = blacklistRes.reason;
+        console.error("IMEICheck blacklist error:", err.response?.status || err.message);
+        console.error("IMEICheck blacklist details:", JSON.stringify(err.response?.data || {}));
+        return res.status(502).json({
+          error: "IMEI verification service is currently unavailable. Please try again later.",
+          code: "IMEI_PROVIDER_UNAVAILABLE"
+        });
+      }
+
+      if (deviceRes.status === "fulfilled") {
+        deviceData = deviceRes.value?.data;
+      } else {
+        console.warn("IMEICheck device info failed (non-fatal):", deviceRes.reason?.message);
+      }
+
+    } catch (providerErr) {
+      console.error("IMEICheck provider error:", providerErr.message);
       return res.status(502).json({
         error: "IMEI verification service is currently unavailable. Please try again later.",
         code: "IMEI_PROVIDER_UNAVAILABLE"
       });
     }
 
-    const apiData = imeiRes?.data;
-
-    if (!apiData) {
+    if (!blacklistData) {
       return res.status(502).json({
         error: "IMEI verification service returned no data.",
         code: "IMEI_NO_DATA"
       });
     }
 
-    console.log(
-      "IMEICheck response:",
-      JSON.stringify({
-        status: apiData.status,
-        service: apiData.service,
-        deviceId: apiData.deviceId,
-        propertyKeys: Object.keys(apiData.properties || {})
-      })
-    );
+    console.log("IMEICheck blacklist response:", JSON.stringify({
+      status: blacklistData.status,
+      deviceId: blacklistData.deviceId,
+      propertyKeys: Object.keys(blacklistData.properties || {})
+    }));
 
-    const properties = apiData.properties || {};
+    console.log("IMEICheck device response:", JSON.stringify({
+      status: deviceData?.status,
+      propertyKeys: Object.keys(deviceData?.properties || {})
+    }));
+
+    const properties = { ...( deviceData?.properties || {}), ...(blacklistData.properties || {}) };
 
     const blacklistRaw =
       properties.blacklistStatus ??
