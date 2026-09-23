@@ -8386,7 +8386,7 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
         "https://api.imeicheck.net/v1/checks",
         {
           deviceId: cleanImei,
-          serviceId: 1
+          serviceId: 12
         },
         {
           headers: {
