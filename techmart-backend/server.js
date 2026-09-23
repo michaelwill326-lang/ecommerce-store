@@ -8327,6 +8327,17 @@ app.post("/api/pay/ajo/:groupId/contribute", auth, async (req, res) => {
    📱 PHONE CHECKER
 =========================== */
 
+app.get("/api/phone-checker/imei-debug", auth, async (req, res) => {
+  const key = process.env.IMEICHECK_API_KEY;
+  if (!key) return res.json({ configured: false, message: "Key not set" });
+  try {
+    const r = await axios.get("https://api.imeicheck.net/v1/services", { headers: { Authorization: "Bearer " + key } });
+    return res.json({ configured: true, keyPrefix: key.slice(0,8)+"...", status: r.status, services: r.data });
+  } catch(e) {
+    return res.json({ configured: true, keyPrefix: key.slice(0,8)+"...", error: e.response?.status, details: e.response?.data });
+  }
+});
+
 app.post("/api/phone-checker/imei", auth, async (req, res) => {
   try {
     const { imei } = req.body;
