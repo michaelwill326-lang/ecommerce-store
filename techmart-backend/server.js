@@ -1806,6 +1806,30 @@ app.get("/api/admin/brevo-check", adminOnly, async (req, res) => {
   }
 });
 
+// Temporary JWT diagnostic (remove after testing)
+app.get("/api/admin/jwt-check", async (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.json({ ok: false, error: "NO_TOKEN" });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return res.json({
+      ok: true,
+      idPresent: !!decoded.id,
+      emailPresent: !!decoded.email,
+      role: decoded.role || null,
+      hasIat: typeof decoded.iat === "number",
+      hasExp: typeof decoded.exp === "number"
+    });
+  } catch (err) {
+    return res.json({
+      ok: false,
+      error: err.name || "JWT_ERROR",
+      message: err.message || "JWT verification failed"
+    });
+  }
+});
+
 // Create coupon (admin only)
 app.post("/api/admin/coupons", adminOnly, async (req, res) => {
   try {
