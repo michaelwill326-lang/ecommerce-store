@@ -1784,6 +1784,28 @@ app.post("/api/coupons/validate", async (req, res) => {
   }
 });
 
+// Temporary Brevo API key validation (admin only)
+app.get("/api/admin/brevo-check", adminOnly, async (req, res) => {
+  try {
+    if (!process.env.BREVO_API_KEY?.trim()) {
+      return res.json({ configured: false, valid: false });
+    }
+
+    await axios.get("https://api.brevo.com/v3/account", {
+      headers: { "api-key": process.env.BREVO_API_KEY.trim() },
+      timeout: 10000
+    });
+
+    return res.json({ configured: true, valid: true });
+  } catch (err) {
+    return res.status(200).json({
+      configured: !!process.env.BREVO_API_KEY?.trim(),
+      valid: false,
+      status: err.response?.status || null
+    });
+  }
+});
+
 // Create coupon (admin only)
 app.post("/api/admin/coupons", adminOnly, async (req, res) => {
   try {
