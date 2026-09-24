@@ -1784,52 +1784,6 @@ app.post("/api/coupons/validate", async (req, res) => {
   }
 });
 
-// Temporary Brevo API key validation (admin only)
-app.get("/api/admin/brevo-check", adminOnly, async (req, res) => {
-  try {
-    if (!process.env.BREVO_API_KEY?.trim()) {
-      return res.json({ configured: false, valid: false });
-    }
-
-    await axios.get("https://api.brevo.com/v3/account", {
-      headers: { "api-key": process.env.BREVO_API_KEY.trim() },
-      timeout: 10000
-    });
-
-    return res.json({ configured: true, valid: true });
-  } catch (err) {
-    return res.status(200).json({
-      configured: !!process.env.BREVO_API_KEY?.trim(),
-      valid: false,
-      status: err.response?.status || null
-    });
-  }
-});
-
-// Temporary JWT diagnostic (remove after testing)
-app.get("/api/admin/jwt-check", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.json({ ok: false, error: "NO_TOKEN" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return res.json({
-      ok: true,
-      idPresent: !!decoded.id,
-      emailPresent: !!decoded.email,
-      role: decoded.role || null,
-      hasIat: typeof decoded.iat === "number",
-      hasExp: typeof decoded.exp === "number"
-    });
-  } catch (err) {
-    return res.json({
-      ok: false,
-      error: err.name || "JWT_ERROR",
-      message: err.message || "JWT verification failed"
-    });
-  }
-});
-
 // Create coupon (admin only)
 app.post("/api/admin/coupons", adminOnly, async (req, res) => {
   try {
