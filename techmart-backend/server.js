@@ -7209,7 +7209,7 @@ async function executeTool(toolName, toolArgs, user) {
 app.post("/api/ai/agent", auth, async (req, res) => {
   try {
     const { message, history = [] } = req.body;
-    const user = req.user.role === "seller" ? await Seller.findById(req.user.id).lean() : await User.findById(req.user.id);
+    const user = req.user.role === "seller" ? await Seller.findById(req.user.id) : await User.findById(req.user.id);
     if (!user) return res.status(401).json({ error: "Account not found" });
     const prefs = user.aiPreferences || {};
 
@@ -7322,7 +7322,7 @@ Speak naturally like a smart Nigerian assistant.`;
 app.post("/api/ai/agent/stream", auth, async (req, res) => {
   try {
     const { message, history = [] } = req.body;
-    const user = req.user.role === "seller" ? await Seller.findById(req.user.id).lean() : await User.findById(req.user.id);
+    const user = req.user.role === "seller" ? await Seller.findById(req.user.id) : await User.findById(req.user.id);
     if (!user) return res.status(401).json({ error: "Account not found" });
 
     res.setHeader("Content-Type", "text/event-stream");
