@@ -11,7 +11,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
-const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow", "Intelligence", "Webhooks"];
+const TABS = ["Dashboard", "Orders", "Products", "Users", "Reviews", "Coupons", "Sellers", "Wallets", "Flash Sales", "Payouts", "Disputes", "AI Forecast", "Fraud", "Returns", "Escrow", "Intelligence", "Webhooks", "System Health"];
 
 const styles = {
   page: { maxWidth: "1200px", margin: "0 auto", padding: "32px 16px", minHeight: "100vh" },
@@ -55,6 +55,7 @@ export default function Admin() {
   const showToast = useToast();
   const navigate = useNavigate();
   const [tab, setTab] = useState("Dashboard");
+  const [systemServices, setSystemServices] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -109,7 +110,7 @@ export default function Admin() {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes, flashRes, payoutsRes, disputesRes] = await Promise.all([
+      const [analyticsRes, ordersRes, productsRes, usersRes, sentimentRes, pendingRes, flaggedRes, couponsRes, sellersRes, walletsRes, flashRes, payoutsRes, disputesRes, systemMonitorRes] = await Promise.all([
         axios.get(`${API}/api/admin/analytics`, { headers }),
         axios.get(`${API}/api/admin/orders`, { headers }),
         axios.get(`${API}/api/products`),
@@ -123,6 +124,7 @@ export default function Admin() {
         axios.get(`${API}/api/admin/flash-sales`, { headers }),
         axios.get(`${API}/api/admin/payouts`, { headers }),
         axios.get(`${API}/api/admin/disputes`, { headers }),
+        axios.get(`${API}/api/admin/system-monitor`, { headers }),
       ]);
       setAnalytics(analyticsRes.data);
       setOrders(ordersRes.data);
@@ -137,6 +139,7 @@ export default function Admin() {
       setFlashSales(flashRes?.data || []);
       setPayouts(payoutsRes?.data || []);
       setDisputes(disputesRes?.data || []);
+      setSystemServices(systemMonitorRes?.data?.services || []);
       setError("");
     } catch (err) {
       setError("Failed to load admin data");
@@ -1166,6 +1169,169 @@ ${url}`, "success");
             <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
               <p style={{ fontSize: "32px", margin: "0 0 12px" }}>🔄</p>
               <p>Click "Load Webhook Logs" to see recent Paystack webhook events</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "System Health" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+            <div>
+              <h2 style={{ color: "var(--text-primary)", margin: 0 }}>🖥️ System Health</h2>
+              <p style={{ color: "var(--text-muted)", marginTop: "6px" }}>
+                Live reliability status for TechMart background services
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await axios.get(`${API}/api/admin/system-monitor`, { headers });
+                  setSystemServices(res.data?.services || []);
+                  showToast("System health refreshed", "success");
+                } catch {
+                  showToast("Failed to refresh system health", "error");
+                }
+              }}
+              style={{ padding: "10px 20px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}
+            >
+              🔄 Refresh
+            </button>
+          </div>
+
+          <div style={styles.statsGrid}>
+            {[
+              {
+                label: "Healthy",
+                value: systemServices.filter(s => s.status === "healthy").length,
+                icon: "🟢",
+                color: "#22c55e"
+              },
+              {
+                label: "Degraded",
+                value: systemServices.filter(s => s.status === "degraded").length,
+                icon: "��",
+                color: "#eab308"
+              },
+              {
+                label: "Down",
+                value: systemServices.filter(s => s.status === "down").length,
+                icon: "🔴",
+                color: "#ef4444"
+              },
+              {
+                label: "Monitored Services",
+                value: systemServices.length,
+                icon: "🖥️",
+                color: "#3b82f6"
+              }
+            ].map((s) => (
+              <div key={s.label} style={styles.statCard}>
+                <span style={{ fontSize: "32px" }}>{s.icon}</span>
+                <div>
+                  <p style={{ ...styles.statValue, color: s.color }}>{s.value}</p>
+                  <p style={styles.statLabel}>{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.tableCard}>
+            <h3 style={styles.sectionTitle}>⚙️ Background Services</h3>
+
+            {systemServices.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                <p style={{ fontSize: "32px", margin: "0 0 12px" }}>🖥️</p>
+                <p>No monitoring records yet.</p>
+                <p style={{ fontSize: "13px" }}>
+                  Services appear here after their scheduled jobs run.
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      {["Service", "Status", "Response", "Last Checked", "Last Success", "Last Failure"].map(h => (
+                        <th key={h} style={styles.th}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {systemServices.map(service => (
+                      <tr key={service.service} style={styles.tr}>
+                        <td style={styles.td}>
+                          <strong>{service.service}</strong>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{
+                            ...styles.badge,
+                            background:
+                              service.status === "healthy"
+                                ? "#0a2a1a"
+                                : service.status === "degraded"
+                                ? "#2a210a"
+                                : "#2a0a0a",
+                            color:
+                              service.status === "healthy"
+                                ? "#22c55e"
+                                : service.status === "degraded"
+                                ? "#eab308"
+                                : "#ef4444"
+                          }}>
+                            {service.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          {service.responseTimeMs != null
+                            ? `${service.responseTimeMs} ms`
+                            : "—"}
+                        </td>
+                        <td style={styles.td}>
+                          {service.lastCheckedAt
+                            ? new Date(service.lastCheckedAt).toLocaleString("en-NG")
+                            : "—"}
+                        </td>
+                        <td style={styles.td}>
+                          {service.lastSuccessAt
+                            ? new Date(service.lastSuccessAt).toLocaleString("en-NG")
+                            : "—"}
+                        </td>
+                        <td style={styles.td}>
+                          {service.lastFailureAt
+                            ? new Date(service.lastFailureAt).toLocaleString("en-NG")
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {systemServices.some(s => s.lastError) && (
+            <div style={{ ...styles.tableCard, marginTop: "20px" }}>
+              <h3 style={styles.sectionTitle}>⚠️ Recent Service Errors</h3>
+              {systemServices
+                .filter(s => s.lastError)
+                .map(service => (
+                  <div
+                    key={service.service}
+                    style={{
+                      padding: "12px 14px",
+                      marginBottom: "8px",
+                      borderRadius: "8px",
+                      background: "#2a0a0a",
+                      border: "1px solid #5a1515"
+                    }}
+                  >
+                    <strong style={{ color: "#ef4444" }}>{service.service}</strong>
+                    <div style={{ color: "var(--text-muted)", marginTop: "4px", fontSize: "13px" }}>
+                      {service.lastError}
+                    </div>
+                  </div>
+                ))}
             </div>
           )}
         </div>
