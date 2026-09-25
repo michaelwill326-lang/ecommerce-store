@@ -819,6 +819,56 @@ const WebhookEvent = mongoose.model("WebhookEvent", new mongoose.Schema({
   processedAt: { type: Date, default: Date.now }
 }));
 
+// 📊 TechMart System Monitor
+const SystemMonitor = mongoose.model("SystemMonitor", new mongoose.Schema({
+  service: { type: String, required: true, unique: true, index: true },
+  status: {
+    type: String,
+    enum: ["healthy", "degraded", "down"],
+    default: "healthy"
+  },
+  lastCheckedAt: { type: Date, default: Date.now },
+  lastSuccessAt: { type: Date, default: null },
+  lastFailureAt: { type: Date, default: null },
+  lastError: { type: String, default: "" },
+  responseTimeMs: { type: Number, default: null },
+  metadata: { type: Object, default: {} }
+}));
+
+async function recordSystemStatus(service, status, details = {}) {
+  try {
+    const update = {
+      service,
+      status,
+      lastCheckedAt: new Date(),
+    };
+
+    if (status === "healthy") {
+      update.lastSuccessAt = new Date();
+      update.lastError = "";
+    } else {
+      update.lastFailureAt = new Date();
+      update.lastError = details.error || "";
+    }
+
+    if (details.responseTimeMs !== undefined) {
+      update.responseTimeMs = details.responseTimeMs;
+    }
+
+    if (details.metadata !== undefined) {
+      update.metadata = details.metadata;
+    }
+
+    await SystemMonitor.findOneAndUpdate(
+      { service },
+      { $set: update },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    console.error(`System monitor write failed for ${service}:`, err.message);
+  }
+}
+
 // 🚨 Product Report Schema
 const ProductReport = mongoose.model("ProductReport", new mongoose.Schema({
   productId: { type: String, required: true },
@@ -1304,6 +1354,22 @@ app.get("/api/health", (req, res) => {
 /* ===========================
    👤 USER PROFILE
 =========================== */
+app.get("/api/admin/system-monitor", adminOnly, async (req, res) => {
+  try {
+    const services = await SystemMonitor.find({})
+      .sort({ service: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      services
+    });
+  } catch (err) {
+    console.error("System monitor fetch failed:", err.message);
+    res.status(500).json({ error: "Failed to fetch system monitor" });
+  }
+});
+
 app.get("/api/users/me", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password -walletPin -otpCode -resetPasswordToken -fraudFlags -loginAttempts -lastLoginIP");
@@ -7869,6 +7935,7 @@ app.get("/api/admin/termii/debug", adminOnly, async (req, res) => {
 
 // ── BNPL Auto-Deduction Cron (runs daily at 9am)
 cron.schedule("0 9 * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     const today = new Date();
     const plans = await BNPLPlan.find({ status: "active" });
@@ -7910,13 +7977,23 @@ cron.schedule("0 9 * * *", async () => {
         }
       }
     }
+
+    await recordSystemStatus("bnpl-auto-deduction", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ BNPL cron error:", e.message);
+
+    await recordSystemStatus("bnpl-auto-deduction", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── Auto Seller Payout Cron (every Friday at 10am)
 cron.schedule("0 10 * * 5", async () => {
+  const monitorStartedAt = Date.now();
   try {
     console.log("💸 Running auto seller payout...");
     const sellers = await Seller.find({ walletBalance: { $gte: 1000 }, bankCode: { $ne: null }, accountNumber: { $ne: null } });
@@ -7945,39 +8022,69 @@ cron.schedule("0 10 * * 5", async () => {
         console.error(`❌ Auto payout failed for ${seller.name}:`, e.message);
       }
     }
+
+    await recordSystemStatus("auto-seller-payout", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ Auto payout cron error:", e.message);
+
+    await recordSystemStatus("auto-seller-payout", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── Sponsored Listing Expiry Cron (runs daily at midnight)
 cron.schedule("0 0 * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     const expired = await SponsoredListing.updateMany(
       { status: "active", expiresAt: { $lte: new Date() } },
       { $set: { status: "expired" } }
     );
     if (expired.modifiedCount > 0) console.log(`📢 ${expired.modifiedCount} sponsored listing(s) expired`);
+
+    await recordSystemStatus("sponsored-listing-expiry", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ Sponsored listing cron error:", e.message);
+
+    await recordSystemStatus("sponsored-listing-expiry", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── AI Pro Expiry Cron (runs daily at 1am)
 cron.schedule("0 1 * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     const expired = await User.updateMany(
       { aiPro: true, aiProExpiry: { $lte: new Date() } },
       { $set: { aiPro: false } }
     );
     if (expired.modifiedCount > 0) console.log(`🤖 ${expired.modifiedCount} AI Pro subscription(s) expired`);
+
+    await recordSystemStatus("ai-pro-expiry", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ AI Pro expiry cron error:", e.message);
+
+    await recordSystemStatus("ai-pro-expiry", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── AI Seller Coach Cron (every Friday at 6pm)
 cron.schedule("0 18 * * 5", async () => {
+  const monitorStartedAt = Date.now();
   try {
     console.log("🤖 Running AI Seller Coach...");
     const sellers = await Seller.find({ email: { $exists: true } }).select("name email _id");
@@ -8052,26 +8159,45 @@ Give exactly 3 tips numbered 1, 2, 3. Each tip should be 1-2 sentences. Focus on
         console.error(`❌ AI Coach failed for ${seller.email}:`, sellerErr.message);
       }
     }
+
+    await recordSystemStatus("ai-seller-coach", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ AI Seller Coach cron error:", e.message);
+
+    await recordSystemStatus("ai-seller-coach", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── Gift Card Expiry Cron (runs daily at midnight)
 cron.schedule("0 0 * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     const expired = await GiftCard.updateMany(
       { status: "active", expiresAt: { $lte: new Date() } },
       { $set: { status: "expired" } }
     );
     if (expired.modifiedCount > 0) console.log(`🎁 ${expired.modifiedCount} gift card(s) expired`);
+    await recordSystemStatus("gift-card-expiry", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ Gift card expiry cron error:", e.message);
+
+    await recordSystemStatus("gift-card-expiry", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── Savings Vault Maturity Cron (runs daily at 8am)
 cron.schedule("0 8 * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     const now = new Date();
     const maturedVaults = await SavingsVault.find({ status: "active", maturityDate: { $lte: now }, interestCredited: false });
@@ -8081,13 +8207,23 @@ cron.schedule("0 8 * * *", async () => {
       console.log(`🏦 Vault matured for user ${vault.userId}: ₦${vault.amount} + ₦${vault.expectedInterest} interest`);
     }
     console.log(`🏦 Vault maturity check: ${maturedVaults.length} vault(s) matured`);
+
+    await recordSystemStatus("savings-vault-maturity", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ Vault cron error:", e.message);
+
+    await recordSystemStatus("savings-vault-maturity", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
 // ── Abandoned Cart Recovery Cron (runs every 15 mins) ──
 cron.schedule("*/15 * * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const users = await User.find({
@@ -8106,8 +8242,16 @@ cron.schedule("*/15 * * * *", async () => {
         console.error("❌ Failed to send cart email to " + user.email + ":", e.message);
       }
     }
+    await recordSystemStatus("abandoned-cart-recovery", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ Abandoned cart cron error:", e.message);
+
+    await recordSystemStatus("abandoned-cart-recovery", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
