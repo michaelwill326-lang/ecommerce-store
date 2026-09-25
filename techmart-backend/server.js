@@ -8196,6 +8196,46 @@ cron.schedule("0 0 * * *", async () => {
 });
 
 // ── Savings Vault Maturity Cron (runs daily at 8am)
+// ── Auto Wallet Reconciliation Cron (daily at 3am)
+cron.schedule("0 3 * * *", async () => {
+  try {
+    console.log("🔄 Running auto wallet reconciliation...");
+    const response = await axios.get("https://api.paystack.co/transaction", {
+      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+      params: { perPage: 100, status: "success" }
+    });
+    const walletTxns = response.data.data.filter(t =>
+      t.reference.startsWith("WAL-") ||
+      t.metadata?.purpose === "wallet_funding"
+    );
+    let fixed = 0;
+    for (const txn of walletTxns) {
+      let user = null;
+      if (txn.metadata?.userId) user = await User.findById(txn.metadata.userId);
+      if (!user && txn.customer?.email) user = await User.findOne({ email: txn.customer.email.toLowerCase().trim() });
+      if (!user) continue;
+      const alreadyCredited = (user.walletTransactions || []).some(t => t.reference === txn.reference);
+      if (alreadyCredited) continue;
+      const amount = txn.amount / 100;
+      user.walletBalance = (user.walletBalance || 0) + amount;
+      user.walletTransactions = user.walletTransactions || [];
+      user.walletTransactions.push({
+        type: "credit",
+        amount,
+        description: "Wallet funded via Paystack (auto-reconciled)",
+        reference: txn.reference,
+        createdAt: new Date(txn.paid_at)
+      });
+      await user.save();
+      fixed++;
+      console.log(`✅ Auto-reconciled: ${user.email} +₦${amount} [${txn.reference}]`);
+    }
+    console.log(`🔄 Auto reconciliation done: ${fixed} transaction(s) fixed`);
+  } catch (e) {
+    console.error("❌ Auto reconciliation error:", e.message);
+  }
+});
+
 cron.schedule("0 8 * * *", async () => {
   const monitorStartedAt = Date.now();
   try {
@@ -8341,11 +8381,25 @@ app.post("/api/admin/reconcile-wallets", adminOnly, async (req, res) => {
       headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
       params: { perPage: 100, status: "success" }
     });
-    const walletTxns = response.data.data.filter(t => t.reference.startsWith("WAL-"));
+    // Match by WAL- prefix OR by wallet_funding metadata purpose
+    const walletTxns = response.data.data.filter(t =>
+      t.reference.startsWith("WAL-") ||
+      t.metadata?.purpose === "wallet_funding"
+    );
     const fixed = [];
     for (const txn of walletTxns) {
-      const user = await User.findOne({ email: txn.customer.email });
-      if (!user) continue;
+      // Try userId from metadata first, fall back to email
+      let user = null;
+      if (txn.metadata?.userId) {
+        user = await User.findById(txn.metadata.userId);
+      }
+      if (!user && txn.customer?.email) {
+        user = await User.findOne({ email: txn.customer.email.toLowerCase().trim() });
+      }
+      if (!user) {
+        console.warn("Reconcile: user not found for", txn.reference);
+        continue;
+      }
       const alreadyCredited = (user.walletTransactions || []).some(t => t.reference === txn.reference);
       if (alreadyCredited) continue;
       const amount = txn.amount / 100;
@@ -8360,6 +8414,7 @@ app.post("/api/admin/reconcile-wallets", adminOnly, async (req, res) => {
       });
       await user.save();
       fixed.push({ email: user.email, amount, reference: txn.reference });
+      console.log(`✅ Reconciled: ${user.email} +₦${amount} [${txn.reference}]`);
     }
     res.json({ success: true, checked: walletTxns.length, fixed: fixed.length, details: fixed });
   } catch (err) {
