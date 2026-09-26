@@ -4026,6 +4026,47 @@ app.post("/api/seller/payouts", sellerAuth, async (req, res) => {
   }
 });
 
+app.post("/api/seller/bank-details", sellerAuth, async (req, res) => {
+  try {
+    const { bankCode, bankName, accountNumber, accountName } = req.body;
+    if (!bankCode || !bankName || !accountNumber || !accountName) {
+      return res.status(400).json({ error: "All bank details are required" });
+    }
+    if (!/^d{10}$/.test(accountNumber)) {
+      return res.status(400).json({ error: "Account number must be exactly 10 digits" });
+    }
+    // Verify account with Paystack before saving
+    try {
+      const verify = await axios.get(
+        `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      );
+      const verifiedName = verify.data?.data?.account_name;
+      if (!verifiedName) return res.status(400).json({ error: "Could not verify account. Please check your details." });
+    } catch (e) {
+      return res.status(400).json({ error: "Account verification failed. Please check your bank details." });
+    }
+    const seller = await Seller.findByIdAndUpdate(
+      req.user.id,
+      { bankCode, bankName, accountNumber, accountName },
+      { new: true }
+    );
+    res.json({ success: true, message: "Bank details saved successfully", bank: { bankCode, bankName, accountNumber, accountName } });
+  } catch (err) {
+    console.error("Save bank details error:", err.message);
+    res.status(500).json({ error: "Failed to save bank details" });
+  }
+});
+
+app.get("/api/seller/bank-details", sellerAuth, async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.user.id).select("bankCode bankName accountNumber accountName");
+    res.json({ success: true, bank: { bankCode: seller.bankCode, bankName: seller.bankName, accountNumber: seller.accountNumber, accountName: seller.accountName } });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch bank details" });
+  }
+});
+
 app.get("/api/seller/payouts", sellerAuth, async (req, res) => {
   try {
     const payouts = await Payout.find({ sellerId: req.seller.id }).sort({ createdAt: -1 });
