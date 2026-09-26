@@ -15,8 +15,8 @@ export default function Landing() {
           <h1 style={{ color:"#fff", fontSize:"clamp(32px,7vw,64px)", fontWeight:"900", lineHeight:1.1, margin:"0 0 20px" }}>Shop Smart.<br /><span style={{ background:"linear-gradient(135deg,#f97316,#dc2626)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Pay Smarter.</span></h1>
           <p style={{ color:"rgba(255,255,255,0.6)", fontSize:"clamp(14px,2.5vw,18px)", lineHeight:1.7, margin:"0 0 36px", maxWidth:"560px", marginLeft:"auto", marginRight:"auto" }}>Nigeria's next-gen electronics marketplace with a built-in fintech wallet. Shop, send money, pay bills — all in one place.</p>
           <div style={{ display:"flex", gap:"12px", justifyContent:"center", flexWrap:"wrap" }}>
-            <Link to="/signup" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", borderRadius:"14px", background:"linear-gradient(135deg,#f97316,#dc2626)", color:"#fff", textDecoration:"none", fontWeight:"800", fontSize:"15px", boxShadow:"0 8px 24px rgba(249,115,22,0.35)" }}>🚀 Get Started Free</Link>
-            <Link to="/login" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", borderRadius:"14px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", color:"#fff", textDecoration:"none", fontWeight:"700", fontSize:"15px" }}>Sign In →</Link>
+            <Link to="/shop" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", borderRadius:"14px", background:"linear-gradient(135deg,#f97316,#dc2626)", color:"#fff", textDecoration:"none", fontWeight:"800", fontSize:"15px", boxShadow:"0 8px 24px rgba(249,115,22,0.35)" }}>🛍️ Shop Now</Link>
+            <Link to="/signup" style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"14px 32px", borderRadius:"14px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", color:"#fff", textDecoration:"none", fontWeight:"700", fontSize:"15px" }}>🚀 Get Started Free</Link>
           </div>
         </div>
       </div>
@@ -56,8 +56,11 @@ export default function Landing() {
         <p style={{ color:"#f97316", fontWeight:"900", fontSize:"20px", margin:"0 0 4px" }}>TechMart</p>
         <p style={{ color:"var(--text-muted)", fontSize:"13px", margin:"0 0 20px" }}>Built with ❤️ in Nigeria 🇳🇬</p>
         <div style={{ display:"flex", gap:"16px", justifyContent:"center", flexWrap:"wrap" }}>
+          <Link to="/shop" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Shop</Link>
           <Link to="/login" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Sign In</Link>
           <Link to="/signup" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Create Account</Link>
+          <Link to="/ai-search" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>AI Search</Link>
+          <Link to="/phone-checker" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Phone Checker</Link>
           <Link to="/policy" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Privacy Policy</Link>
         </div>
       </div>

@@ -271,6 +271,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/home" element={<RequireAuth><Home /></RequireAuth>} />
+          <Route path="/shop" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/cart" element={<Cart />} />
@@ -282,7 +283,7 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route path="/product/:id" element={<RequireAuth><ProductDetail /></RequireAuth>} />
+          <Route path="/product/:id" element={<ProductDetail />} />
           <Route
             path="/dashboard"
             element={
@@ -293,6 +294,7 @@ export default function App() {
           />
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/tracking" element={<Tracking />} />
+          <Route path="/orders" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/success" element={<Success />} />
@@ -317,7 +319,7 @@ export default function App() {
             }
           />
           <Route path="/ai-search" element={<AISearch />} />
-          <Route path="/phone-checker" element={<RequireAuth><PhoneChecker /></RequireAuth>} />
+          <Route path="/phone-checker" element={<PhoneChecker />} />
           <Route
             path="/pay"
             element={

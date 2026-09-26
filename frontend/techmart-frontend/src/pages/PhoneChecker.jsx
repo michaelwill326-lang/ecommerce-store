@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
@@ -63,6 +64,23 @@ function ScoreRing({ score }) {
 }
 
 export default function PhoneChecker() {
+  const navigate = useNavigate();
+  const token = sessionStorage.getItem("token");
+
+  if (!token) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ background: "#111", border: "1px solid #1f1f1f", borderRadius: "16px", padding: "40px 28px", maxWidth: "400px", width: "100%", textAlign: "center" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📱</div>
+          <h2 style={{ color: "#fff", fontWeight: "800", fontSize: "22px", margin: "0 0 8px" }}>Phone Checker</h2>
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", lineHeight: "1.6", margin: "0 0 24px" }}>Verify if a phone is stolen, blacklisted, or refurbished before you buy. Sign in to use this feature.</p>
+          <button onClick={() => navigate("/login")} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg,#6366f1,#4f46e5)", color: "#fff", border: "none", borderRadius: "12px", fontWeight: "700", fontSize: "15px", cursor: "pointer", marginBottom: "10px" }}>Sign In to Check</button>
+          <button onClick={() => navigate("/signup")} style={{ width: "100%", padding: "14px", background: "#1a1a1a", color: "rgba(255,255,255,0.6)", border: "none", borderRadius: "12px", fontWeight: "600", fontSize: "14px", cursor: "pointer" }}>Create Free Account</button>
+        </div>
+      </div>
+    );
+  }
+
   const [tab, setTab] = useState("photo");
   const [imei, setImei] = useState("");
   const [photo, setPhoto] = useState(null);
@@ -73,7 +91,6 @@ export default function PhoneChecker() {
   const [error, setError] = useState("");
   const fileRef = useRef();
 
-  const token = getToken();
   const headers = { Authorization: `Bearer ${token}` };
 
   const handlePhoto = (e) => {
