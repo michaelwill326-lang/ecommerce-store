@@ -8316,6 +8316,7 @@ cron.schedule("0 0 * * *", async () => {
 // ── Savings Vault Maturity Cron (runs daily at 8am)
 // ── Auto Wallet Reconciliation Cron (daily at 3am)
 cron.schedule("0 3 * * *", async () => {
+  const monitorStartedAt = Date.now();
   try {
     console.log("🔄 Running auto wallet reconciliation...");
     const response = await axios.get("https://api.paystack.co/transaction", {
@@ -8349,8 +8350,17 @@ cron.schedule("0 3 * * *", async () => {
       console.log(`✅ Auto-reconciled: ${user.email} +₦${amount} [${txn.reference}]`);
     }
     console.log(`🔄 Auto reconciliation done: ${fixed} transaction(s) fixed`);
+
+    await recordSystemStatus("auto-wallet-reconciliation", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
   } catch (e) {
     console.error("❌ Auto reconciliation error:", e.message);
+
+    await recordSystemStatus("auto-wallet-reconciliation", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
   }
 });
 
