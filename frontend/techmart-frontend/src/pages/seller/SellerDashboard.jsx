@@ -49,6 +49,11 @@ export default function SellerDashboard() {
       setData(dashRes.data);
       setAnalytics(analyticsRes.data);
       setPayouts(payoutsRes.data || []);
+      // Load saved bank details
+      try {
+        const bankRes = await axios.get(`${API}/api/seller/bank-details`, { headers });
+        if (bankRes.data?.bank?.accountName) setBankDetails(bankRes.data.bank);
+      } catch {}
       setDisputes(disputesRes.data || []);
       setMessages(messagesRes.data || []);
       setStorefront({
@@ -168,6 +173,11 @@ export default function SellerDashboard() {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [banks, setBanks] = useState([]);
   const [verifyingAccount, setVerifyingAccount] = useState(false);
+  const [bankDetails, setBankDetails] = useState(null);
+  const [bankForm, setBankForm] = useState({ bankCode: "", bankName: "", accountNumber: "", accountName: "" });
+  const [bankVerifying, setBankVerifying] = useState(false);
+  const [bankSaving, setBankSaving] = useState(false);
+  const [bankMsg, setBankMsg] = useState("");
 
   if (loading) return <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-primary)" }}>Loading...</div>;
 
@@ -615,22 +625,105 @@ export default function SellerDashboard() {
 
       {tab === "Payouts" && (
         <div>
-          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>Payout Requests</h2>
+          <h2 style={{ color: "var(--text-primary)", marginBottom: "16px" }}>💸 Payouts</h2>
+
+          {/* Bank Details Section */}
           <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
-            <h3 style={{ color: "#f97316", marginBottom: "16px" }}>Request Payout</h3>
-            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>Available: N{(analytics?.netRevenue || 0).toLocaleString()}</p>
-            <input placeholder="Amount (N)" type="number" value={newPayout.amount} onChange={e => setNewPayout({...newPayout, amount: e.target.value})} style={inp} />
-            <input placeholder="Bank Name" value={newPayout.bankName} onChange={e => setNewPayout({...newPayout, bankName: e.target.value})} style={inp} />
-            <input placeholder="Account Number" value={newPayout.accountNumber} onChange={e => setNewPayout({...newPayout, accountNumber: e.target.value})} style={inp} />
-            <input placeholder="Account Name" value={newPayout.accountName} onChange={e => setNewPayout({...newPayout, accountName: e.target.value})} style={inp} />
-            <button onClick={requestPayout} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Request Payout</button>
+            <h3 style={{ color: "#f97316", marginBottom: "4px", fontSize: "16px" }}>🏦 Payout Bank Account</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "16px" }}>This account receives your automatic weekly payouts every Friday.</p>
+            {bankDetails?.accountName ? (
+              <div style={{ background: "#0a2a1a", border: "1px solid #22c55e33", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
+                <p style={{ color: "#22c55e", fontWeight: "700", margin: "0 0 4px", fontSize: "15px" }}>✅ {bankDetails.accountName}</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 2px" }}>{bankDetails.bankName}</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>**** **** {bankDetails.accountNumber?.slice(-4)}</p>
+              </div>
+            ) : (
+              <div style={{ background: "#1a1a0a", border: "1px solid #f59e0b33", borderRadius: "10px", padding: "12px", marginBottom: "16px" }}>
+                <p style={{ color: "#f59e0b", fontSize: "13px", margin: 0 }}>⚠️ No bank account saved. Add one below to receive automatic payouts.</p>
+              </div>
+            )}
+            <select value={bankForm.bankCode} onChange={async e => {
+              const bank = banks.find(b => b.code === e.target.value);
+              setBankForm({ ...bankForm, bankCode: e.target.value, bankName: bank?.name || "", accountName: "", accountNumber: "" });
+            }} style={{ ...inp, marginBottom: "10px" }}>
+              <option value="">Select Bank</option>
+              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+            </select>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+              <input placeholder="Account Number (10 digits)" value={bankForm.accountNumber} maxLength={10} onChange={e => setBankForm({ ...bankForm, accountNumber: e.target.value.replace(/\D/g, ""), accountName: "" })} style={{ ...inp, marginBottom: 0, flex: 1 }} />
+              <button onClick={async () => {
+                if (!bankForm.bankCode || bankForm.accountNumber.length !== 10) return setBankMsg("Select a bank and enter 10-digit account number");
+                setBankVerifying(true); setBankMsg("");
+                try {
+                  const res = await axios.post(`${API}/api/pay/verify-account`, { accountNumber: bankForm.accountNumber, bankCode: bankForm.bankCode }, { headers });
+                  setBankForm(prev => ({ ...prev, accountName: res.data.accountName }));
+                  setBankMsg("✅ Account verified: " + res.data.accountName);
+                } catch { setBankMsg("❌ Could not verify account. Check details."); }
+                finally { setBankVerifying(false); }
+              }} disabled={bankVerifying || bankForm.accountNumber.length !== 10} style={{ padding: "12px 16px", background: "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap" }}>
+                {bankVerifying ? "Verifying..." : "Verify"}
+              </button>
+            </div>
+            {bankForm.accountName && (
+              <div style={{ background: "#0a2a1a", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px" }}>
+                <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ {bankForm.accountName}</p>
+              </div>
+            )}
+            {bankMsg && <p style={{ color: bankMsg.startsWith("✅") ? "#22c55e" : "#ef4444", fontSize: "13px", margin: "0 0 10px" }}>{bankMsg}</p>}
+            <button onClick={async () => {
+              if (!bankForm.accountName) return setBankMsg("Please verify your account first");
+              setBankSaving(true);
+              try {
+                await axios.post(`${API}/api/seller/bank-details`, bankForm, { headers });
+                setBankDetails({ ...bankForm });
+                setBankMsg("✅ Bank details saved successfully!");
+                setBankForm({ bankCode: "", bankName: "", accountNumber: "", accountName: "" });
+              } catch (e) { setBankMsg(e.response?.data?.error || "Failed to save bank details"); }
+              finally { setBankSaving(false); }
+            }} disabled={bankSaving || !bankForm.accountName} style={{ width: "100%", padding: "12px", background: bankForm.accountName ? "linear-gradient(135deg,#22c55e,#16a34a)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: bankForm.accountName ? "pointer" : "not-allowed", fontWeight: "700" }}>
+              {bankSaving ? "Saving..." : "💾 Save Bank Details"}
+            </button>
           </div>
+
+          {/* Payout Request Section */}
+          <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+            <h3 style={{ color: "#f97316", marginBottom: "4px", fontSize: "16px" }}>Request Manual Payout</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>Available: ₦{(analytics?.netRevenue || 0).toLocaleString()} · Auto-payout runs every Friday</p>
+            <input placeholder="Amount (₦)" type="number" value={newPayout.amount} onChange={e => setNewPayout({...newPayout, amount: e.target.value})} style={inp} />
+            {bankDetails?.accountName ? (
+              <div style={{ background: "#1a1a1a", borderRadius: "10px", padding: "12px 16px", marginBottom: "10px" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: "0 0 2px" }}>Paying to saved account:</p>
+                <p style={{ color: "var(--text-primary)", fontWeight: "600", fontSize: "14px", margin: 0 }}>{bankDetails.accountName} · {bankDetails.bankName}</p>
+              </div>
+            ) : (
+              <div style={{ background: "#1a1a0a", border: "1px solid #f59e0b33", borderRadius: "10px", padding: "12px", marginBottom: "10px" }}>
+                <p style={{ color: "#f59e0b", fontSize: "13px", margin: 0 }}>⚠️ Save a bank account above before requesting a payout</p>
+              </div>
+            )}
+            <button onClick={async () => {
+              if (!bankDetails?.accountName) return setMsg("Please save a bank account first");
+              if (!newPayout.amount) return setMsg("Enter an amount");
+              try {
+                const payload = { amount: newPayout.amount, bankName: bankDetails.bankName, accountNumber: bankDetails.accountNumber, accountName: bankDetails.accountName };
+                const res = await axios.post(`${API}/api/seller/payouts`, payload, { headers });
+                setPayouts([res.data.data, ...payouts]);
+                setNewPayout({ amount: "", bankName: "", accountNumber: "", accountName: "" });
+                setMsg("✅ Payout request submitted!");
+              } catch (err) { setMsg(err.response?.data?.error || "Failed to request payout"); }
+            }} disabled={!bankDetails?.accountName} style={{ width: "100%", padding: "12px", background: bankDetails?.accountName ? "linear-gradient(135deg,#f97316,#dc2626)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: bankDetails?.accountName ? "pointer" : "not-allowed", fontWeight: "700" }}>
+              Request Payout
+            </button>
+            {msg && <p style={{ color: msg.startsWith("✅") ? "#22c55e" : "#ef4444", fontSize: "13px", marginTop: "10px" }}>{msg}</p>}
+          </div>
+
+          {/* Payout History */}
+          <h3 style={{ color: "var(--text-primary)", marginBottom: "12px", fontSize: "15px" }}>Payout History</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {payouts.length === 0 ? <EmptyState icon="💸" title="No payout requests" subtitle="Request a payout from your seller wallet" /> : payouts.map(p => (
+            {payouts.length === 0 ? <EmptyState icon="��" title="No payout requests" subtitle="Request a payout from your seller wallet" /> : payouts.map(p => (
               <div key={p._id} style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>N{p.amount.toLocaleString()}</p>
+                    <p style={{ color: "var(--text-primary)", fontWeight: "700", margin: "0 0 4px" }}>₦{p.amount.toLocaleString()}</p>
                     <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 2px" }}>{p.bankName} — {p.accountNumber}</p>
                     <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>{new Date(p.createdAt).toLocaleDateString()}</p>
                   </div>
