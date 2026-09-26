@@ -4292,21 +4292,30 @@ app.post("/api/ai/search", async (req, res) => {
     if (!query) return res.status(400).json({ error: "Query is required" });
 
     const products = await Product.find({ stock: { $gt: 0 } });
-    const productList = products.map(p => `ID:${p._id} | ${p.name} | N${p.price} | ${p.category} | Stock:${p.stock} | ${p.description?.substring(0, 100)}`).join("\n");
 
-    const response = await axios.post(
+    // Step 1: Use AI to extract structured filters from the query
+    const filterResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         model: "openai/gpt-oss-20b",
         messages: [
           {
             role: "system",
-            content: `You are TechMart's AI search engine. Given a customer's natural language query and a list of products, return the IDs of the most relevant products (max 10). Only return a JSON array of IDs like: ["id1","id2"]. No explanation.`
+            content: `You are TechMart's search filter extractor for a Nigerian electronics marketplace.
+Extract search filters from the user query and return ONLY a valid JSON object with these fields:
+{
+  "keywords": ["keyword1", "keyword2"],
+  "maxPrice": null or number in Naira,
+  "minPrice": null or number in Naira,
+  "category": null or string,
+  "brand": null or string,
+  "condition": null or "New" or "Used" or "Refurbished",
+  "sortBy": "relevance" or "price_asc" or "price_desc" or "newest"
+}
+Nigerian price formats: "200k" = 200000, "1.5m" = 1500000, "#200,000" = 200000, "N200000" = 200000.
+Return ONLY the JSON object. No explanation.`
           },
-          {
-            role: "user",
-            content: `Query: "${query}"\n\nProducts:\n${productList}`
-          }
+          { role: "user", content: query }
         ],
         max_tokens: 200,
         temperature: 0.1
@@ -4314,17 +4323,85 @@ app.post("/api/ai/search", async (req, res) => {
       { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
     );
 
-    const text = response.data.choices[0].message.content.trim();
-    let ids = [];
+    let filters = {};
     try {
-      ids = JSON.parse(text);
-    } catch {
-      const match = text.match(/\[.*?\]/s);
-      if (match) ids = JSON.parse(match[0]);
+      const filterText = filterResponse.data.choices[0].message.content.trim();
+      const match = filterText.match(/\{[\s\S]*\}/);
+      if (match) filters = JSON.parse(match[0]);
+    } catch {}
+
+    // Step 2: Apply filters directly on MongoDB
+    const dbQuery = { stock: { $gt: 0 } };
+    if (filters.maxPrice) dbQuery.price = { ...( dbQuery.price || {}), $lte: filters.maxPrice };
+    if (filters.minPrice) dbQuery.price = { ...(dbQuery.price || {}), $gte: filters.minPrice };
+    if (filters.category) dbQuery.category = new RegExp(filters.category, "i");
+    if (filters.condition) dbQuery.condition = new RegExp(filters.condition, "i");
+    if (filters.brand) {
+      dbQuery.$or = [
+        { name: new RegExp(filters.brand, "i") },
+        { brand: new RegExp(filters.brand, "i") },
+        { description: new RegExp(filters.brand, "i") }
+      ];
+    }
+    if (filters.keywords?.length) {
+      const keywordRegex = filters.keywords.map(k => new RegExp(k, "i"));
+      if (!dbQuery.$or) {
+        dbQuery.$or = keywordRegex.flatMap(r => [{ name: r }, { description: r }, { category: r }]);
+      }
     }
 
-    const results = products.filter(p => ids.includes(p._id.toString()));
-    res.json({ success: true, query, results, total: results.length });
+    let results = await Product.find(dbQuery).limit(30);
+
+    // Step 3: If DB filters return nothing, fall back to AI ranking
+    if (!results.length) {
+      const productList = products.map(p =>
+        `ID:${p._id}|NAME:${p.name}|PRICE:${p.price}|CAT:${p.category}|COND:${p.condition || "New"}|DESC:${p.description?.substring(0, 80)}`
+      ).join("\n");
+
+      const rankResponse = await axios.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          model: "openai/gpt-oss-20b",
+          messages: [
+            {
+              role: "system",
+              content: `You are TechMart's AI search engine for a Nigerian electronics marketplace. Return IDs of the most relevant products as a JSON array: ["id1","id2"]. Max 10 results. No explanation.`
+            },
+            {
+              role: "user",
+              content: `Query: "${query}"\n\nProducts:\n${productList}`
+            }
+          ],
+          max_tokens: 300,
+          temperature: 0.1
+        },
+        { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" } }
+      );
+
+      const rankText = rankResponse.data.choices[0].message.content.trim();
+      let ids = [];
+      try { ids = JSON.parse(rankText); } catch { const m = rankText.match(/\[.*?\]/s); if (m) ids = JSON.parse(m[0]); }
+      results = products.filter(p => ids.includes(p._id.toString()));
+    }
+
+    // Step 4: Sort results
+    if (filters.sortBy === "price_asc") results.sort((a, b) => a.price - b.price);
+    else if (filters.sortBy === "price_desc") results.sort((a, b) => b.price - a.price);
+    else if (filters.sortBy === "newest") results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Step 5: Build facets for frontend filters
+    const allMatched = results;
+    const facets = {
+      categories: [...new Set(allMatched.map(p => p.category).filter(Boolean))],
+      brands: [...new Set(allMatched.map(p => p.brand || p.name?.split(" ")[0]).filter(Boolean))],
+      conditions: [...new Set(allMatched.map(p => p.condition || "New").filter(Boolean))],
+      priceRange: {
+        min: allMatched.length ? Math.min(...allMatched.map(p => p.price)) : 0,
+        max: allMatched.length ? Math.max(...allMatched.map(p => p.price)) : 0
+      }
+    };
+
+    res.json({ success: true, query, results, total: results.length, filters, facets });
   } catch (err) {
     console.error("AI search error:", err.message);
     res.status(500).json({ error: "AI search failed" });
