@@ -8857,12 +8857,22 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     const brand =
       properties.brand ||
       properties.manufacturer ||
-      "Unknown";
+      (/^iphone\b/i.test(deviceName) ? "Apple" :
+       /^ipad\b/i.test(deviceName) ? "Apple" :
+       /^redmi\b/i.test(deviceName) ? "Xiaomi" :
+       /^mi\b/i.test(deviceName) ? "Xiaomi" :
+       /^galaxy\b/i.test(deviceName) ? "Samsung" :
+       "Unknown");
 
     const manufactureYear =
       properties.manufactureYear ||
       properties.year ||
       "Unknown";
+
+    const estimatedPurchaseYear =
+      properties.estPurchaseDate
+        ? new Date(Number(properties.estPurchaseDate) * 1000).getUTCFullYear()
+        : "Unknown";
 
     const result = {
       verdict,
@@ -8877,8 +8887,14 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
         brand,
         model: deviceName,
         manufactureYear,
-        refurbished: properties.refurbished ?? "Unknown",
-        purchaseCountry: properties.purchaseCountry || "Unknown"
+        estimatedPurchaseYear,
+        refurbished:
+          typeof properties.refurbished === "boolean"
+            ? (properties.refurbished ? "Yes" : "No")
+            : "Unknown",
+        purchaseCountry: properties.purchaseCountry || "Unknown",
+        region: properties["apple/region"] || "Unknown",
+        network: properties.network || "Unknown"
       },
       checks: [
         {
