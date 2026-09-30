@@ -892,6 +892,14 @@ const Product = mongoose.model(
     vendorId: String,
     vendorName: String,
     category: String,
+    techmartVerified: { type: Boolean, default: false },
+    techmartVerifiedAt: { type: Date, default: null },
+    verificationChecks: {
+      sellerKyc: { type: Boolean, default: false },
+      imei: { type: Boolean, default: false },
+      aiDeviceCheck: { type: Boolean, default: false },
+      fraudCheck: { type: Boolean, default: false }
+    },
     condition: { type: String, default: "New" },
     variants: [{
       name: String,
@@ -1354,15 +1362,48 @@ app.get("/api/health", (req, res) => {
 /* ===========================
    👤 USER PROFILE
 =========================== */
+const SYSTEM_MONITOR_STALE_WINDOWS = {
+  "abandoned-cart-recovery": 30 * 60 * 1000,
+  "bnpl-auto-deduction": 26 * 60 * 60 * 1000,
+  "auto-wallet-reconciliation": 26 * 60 * 60 * 1000,
+  "sponsored-listing-expiry": 26 * 60 * 60 * 1000,
+  "ai-pro-expiry": 26 * 60 * 60 * 1000,
+  "gift-card-expiry": 26 * 60 * 60 * 1000,
+  "savings-vault-maturity": 26 * 60 * 60 * 1000,
+  "auto-seller-payout": 8 * 24 * 60 * 60 * 1000,
+  "ai-seller-coach": 8 * 24 * 60 * 60 * 1000
+};
+
 app.get("/api/admin/system-monitor", adminOnly, async (req, res) => {
   try {
     const services = await SystemMonitor.find({})
       .sort({ service: 1 })
       .lean();
 
+    const now = Date.now();
+
+    const evaluatedServices = services.map(service => {
+      const staleWindow = SYSTEM_MONITOR_STALE_WINDOWS[service.service];
+
+      if (
+        staleWindow &&
+        service.status === "healthy" &&
+        service.lastSuccessAt &&
+        now - new Date(service.lastSuccessAt).getTime() > staleWindow
+      ) {
+        return {
+          ...service,
+          status: "degraded",
+          lastError: "Service missed its expected execution window."
+        };
+      }
+
+      return service;
+    });
+
     res.json({
       success: true,
-      services
+      services: evaluatedServices
     });
   } catch (err) {
     console.error("System monitor fetch failed:", err.message);
@@ -1742,6 +1783,16 @@ const SellerSchema = new mongoose.Schema({
   storeColor: { type: String, default: "#f97316" },
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   verified: { type: Boolean, default: false },
+  techmartVerifiedAt: { type: Date, default: null },
+  verificationLevel: {
+    type: String,
+    enum: ["none", "seller", "trusted"],
+    default: "none"
+  },
+  verificationChecks: {
+    kyc: { type: Boolean, default: false },
+    fraudCheck: { type: Boolean, default: false }
+  },
   commission: { type: Number, default: 10 },
   totalSales: { type: Number, default: 0 },
   walletBalance: { type: Number, default: 0 },
@@ -3971,9 +4022,23 @@ app.put("/api/admin/sellers/:id/commission", adminOnly, async (req, res) => {
 app.put("/api/admin/sellers/:id/verify", adminOnly, async (req, res) => {
   try {
     const { verified } = req.body;
-    const seller = await Seller.findByIdAndUpdate(req.params.id, { verified: Boolean(verified) }, { new: true }).select("-password");
+    const isVerified = Boolean(verified);
+
+    const update = {
+      verified: isVerified,
+      techmartVerifiedAt: isVerified ? new Date() : null,
+      verificationLevel: isVerified ? "seller" : "none"
+    };
+
+    const seller = await Seller.findByIdAndUpdate(
+      req.params.id,
+      update,
+      { new: true }
+    ).select("-password");
+
     res.json({ success: true, data: seller });
   } catch (err) {
+    console.error("Seller verification update failed:", err.message);
     res.status(500).json({ error: "Failed to update verification" });
   }
 });
@@ -8703,28 +8768,14 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
         "Content-Type": "application/json"
       };
 
-      const [blacklistRes, deviceRes] = await Promise.allSettled([
-        axios.post("https://api.imeicheck.net/v1/checks", { deviceId: cleanImei, serviceId: 16 }, { headers, timeout: 15000 }),
-        axios.post("https://api.imeicheck.net/v1/checks", { deviceId: cleanImei, serviceId: 22 }, { headers, timeout: 15000 })
-      ]);
+      const providerRes = await axios.post(
+        "https://api.imeicheck.net/v1/checks",
+        { deviceId: cleanImei, serviceId: 12 },
+        { headers, timeout: 15000 }
+      );
 
-      if (blacklistRes.status === "fulfilled") {
-        blacklistData = blacklistRes.value?.data;
-      } else {
-        const err = blacklistRes.reason;
-        console.error("IMEICheck blacklist error:", err.response?.status || err.message);
-        console.error("IMEICheck blacklist details:", JSON.stringify(err.response?.data || {}));
-        return res.status(502).json({
-          error: "IMEI verification service is currently unavailable. Please try again later.",
-          code: "IMEI_PROVIDER_UNAVAILABLE"
-        });
-      }
-
-      if (deviceRes.status === "fulfilled") {
-        deviceData = deviceRes.value?.data;
-      } else {
-        console.warn("IMEICheck device info failed (non-fatal):", deviceRes.reason?.message);
-      }
+      blacklistData = providerRes.data;
+      deviceData = providerRes.data;
 
     } catch (providerErr) {
       console.error("IMEICheck provider error:", providerErr.message);
@@ -8755,6 +8806,7 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     const properties = { ...( deviceData?.properties || {}), ...(blacklistData.properties || {}) };
 
     const blacklistRaw =
+      properties.gsmaBlacklisted ??
       properties.blacklistStatus ??
       properties.blackListStatus ??
       properties.blacklist ??
@@ -8823,7 +8875,9 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       deviceInfo: {
         brand,
         model: deviceName,
-        manufactureYear
+        manufactureYear,
+        refurbished: properties.refurbished ?? "Unknown",
+        purchaseCountry: properties.purchaseCountry || "Unknown"
       },
       checks: [
         {
@@ -8840,14 +8894,34 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
               : String(blacklistRaw)
         },
         {
-          label: "Stolen Report",
-          status: "unknown",
-          detail: "The current provider response did not contain a separate stolen-report field."
+          label: "Lost Mode",
+          status:
+            properties.lostMode === true
+              ? "fail"
+              : properties.lostMode === false
+                ? "pass"
+                : "unknown",
+          detail:
+            properties.lostMode === true
+              ? "The provider reports that this device is currently in Lost Mode."
+              : properties.lostMode === false
+                ? "The provider reports that Lost Mode is not active."
+                : "The provider did not return a definitive Lost Mode result."
         },
         {
-          label: "Network Lock",
-          status: "unknown",
-          detail: "The current provider response did not contain a definitive network-lock result."
+          label: "Find My iPhone",
+          status:
+            properties.fmiOn === true
+              ? "fail"
+              : properties.fmiOn === false
+                ? "pass"
+                : "unknown",
+          detail:
+            properties.fmiOn === true
+              ? "The provider reports that Find My iPhone is enabled."
+              : properties.fmiOn === false
+                ? "The provider reports that Find My iPhone is disabled."
+                : "The provider did not return a definitive FMI result."
         }
       ],
       buyAdvice:
@@ -8862,7 +8936,7 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       success: true,
       imei: cleanImei,
       result,
-      rawApiData: apiData
+      rawApiData: blacklistData
     });
 
   } catch (err) {
