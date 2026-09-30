@@ -8797,7 +8797,6 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       deviceId: blacklistData.deviceId,
       propertyKeys: Object.keys(blacklistData.properties || {})
     }));
-    console.log("IMEICheck properties:", JSON.stringify(blacklistData.properties || {}));
     console.log("IMEICheck device response:", JSON.stringify({
       status: deviceData?.status,
       propertyKeys: Object.keys(deviceData?.properties || {})
@@ -8830,6 +8829,8 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
     } else if (
       blacklistText.includes("blacklist") ||
       blacklistText.includes("blocked") ||
+      blacklistText.includes("stolen") ||
+      blacklistText.includes("reported") ||
       blacklistText === "true" ||
       blacklistText === "yes"
     ) {
