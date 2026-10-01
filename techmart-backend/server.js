@@ -1375,7 +1375,7 @@ const SYSTEM_MONITOR_STALE_WINDOWS = {
 };
 
 // TEMPORARY: MongoDB transaction smoke test — remove after verification.
-app.post("/api/admin/transaction-test", adminOnly, async (req, res) => {
+app.post("/api/admin/transaction-test", auth, async (req, res) => {
   const session = await mongoose.startSession();
 
   try {
