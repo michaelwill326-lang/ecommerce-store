@@ -6463,26 +6463,54 @@ app.post("/api/orders/:orderId/confirm-delivery", auth, async (req, res) => {
     if (order.escrowStatus !== "holding") return res.status(400).json({ error: "No escrow funds to release" });
     if (order.buyerConfirmed) return res.status(400).json({ error: "Delivery already confirmed" });
 
-    // Find seller (checks both Seller model and User model with role=seller) and credit their wallet
-    const sellerId = order.items[0]?.vendorId;
-    const releaseAmount = Number(order.amount) || 0;
-    if (sellerId && releaseAmount > 0) {
-      let seller = await Seller.findById(sellerId).catch(() => null);
-      let isSellerModel = !!seller;
-      if (!seller) seller = await User.findById(sellerId).catch(() => null);
-      if (seller) {
-        seller.walletBalance = (seller.walletBalance || 0) + releaseAmount;
-        seller.walletTransactions = seller.walletTransactions || [];
-        seller.walletTransactions.push({
-          type: "credit",
-          amount: releaseAmount,
-          description: `Escrow released for order #${order.trackingNumber || order._id}`,
-          reference: "ESC-" + Date.now()
+    // Split escrow by seller so each seller receives only their own item value.
+    const sellerAmounts = new Map();
+
+    for (const item of order.items || []) {
+      const sellerId = item.vendorId?.toString();
+      const itemAmount =
+        Number(item.price || 0) * Number(item.quantity || 0);
+
+      if (!sellerId || itemAmount <= 0) {
+        return res.status(400).json({
+          error: "Escrow release failed: order contains an invalid seller or item amount"
         });
-        await seller.save();
-      } else {
-        console.warn(`⚠️ Escrow release: seller ${sellerId} not found in Seller or User model. Funds not credited.`);
       }
+
+      sellerAmounts.set(
+        sellerId,
+        (sellerAmounts.get(sellerId) || 0) + itemAmount
+      );
+    }
+
+    const allocatedAmount = [...sellerAmounts.values()]
+      .reduce((sum, value) => sum + value, 0);
+
+    if (Math.abs(allocatedAmount - Number(order.amount || 0)) > 0.01) {
+      return res.status(400).json({
+        error: "Escrow release failed: seller allocations do not match order amount"
+      });
+    }
+
+    for (const [sellerId, releaseAmount] of sellerAmounts) {
+      let seller = await Seller.findById(sellerId).catch(() => null);
+      if (!seller) seller = await User.findById(sellerId).catch(() => null);
+
+      if (!seller) {
+        return res.status(400).json({
+          error: `Escrow release failed: seller ${sellerId} was not found`
+        });
+      }
+
+      seller.walletBalance = (seller.walletBalance || 0) + releaseAmount;
+      seller.walletTransactions = seller.walletTransactions || [];
+      seller.walletTransactions.push({
+        type: "credit",
+        amount: releaseAmount,
+        description: `Escrow released for order #${order.trackingNumber || order._id}`,
+        reference: "ESC-" + Date.now()
+      });
+      await seller.save();
     }
 
     order.escrowStatus = "released";
@@ -7929,21 +7957,54 @@ app.post("/api/orders/:orderId/release-escrow", adminOnly, async (req, res) => {
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (order.escrowStatus !== "holding") return res.status(400).json({ error: "No escrow funds to release" });
 
-    // Credit seller wallet
-    const sellerId = order.items?.[0]?.vendorId;
-    if (sellerId) {
-      const seller = await User.findById(sellerId);
-      if (seller) {
-        seller.walletBalance = (seller.walletBalance || 0) + order.amount;
-        seller.walletTransactions = seller.walletTransactions || [];
-        seller.walletTransactions.push({
-          type: "credit",
-          amount: order.amount,
-          description: `Escrow released (admin) for order #${order.trackingNumber}`,
-          reference: "ESC-REL-" + Date.now()
+    // Split admin escrow release by seller.
+    const sellerAmounts = new Map();
+
+    for (const item of order.items || []) {
+      const sellerId = item.vendorId?.toString();
+      const itemAmount =
+        Number(item.price || 0) * Number(item.quantity || 0);
+
+      if (!sellerId || itemAmount <= 0) {
+        return res.status(400).json({
+          error: "Escrow release failed: invalid seller or item amount"
         });
-        await seller.save();
       }
+
+      sellerAmounts.set(
+        sellerId,
+        (sellerAmounts.get(sellerId) || 0) + itemAmount
+      );
+    }
+
+    const allocatedAmount = [...sellerAmounts.values()]
+      .reduce((sum, value) => sum + value, 0);
+
+    if (Math.abs(allocatedAmount - Number(order.amount || 0)) > 0.01) {
+      return res.status(400).json({
+        error: "Escrow release failed: seller allocations do not match order amount"
+      });
+    }
+
+    for (const [sellerId, releaseAmount] of sellerAmounts) {
+      let seller = await Seller.findById(sellerId).catch(() => null);
+      if (!seller) seller = await User.findById(sellerId).catch(() => null);
+
+      if (!seller) {
+        return res.status(400).json({
+          error: `Escrow release failed: seller ${sellerId} was not found`
+        });
+      }
+
+      seller.walletBalance = (seller.walletBalance || 0) + releaseAmount;
+      seller.walletTransactions = seller.walletTransactions || [];
+      seller.walletTransactions.push({
+        type: "credit",
+        amount: releaseAmount,
+        description: `Escrow released (admin) for order #${order.trackingNumber}`,
+        reference: "ESC-REL-" + Date.now()
+      });
+      await seller.save();
     }
 
     order.escrowStatus = "released";
@@ -8125,7 +8186,7 @@ cron.schedule("0 9 * * *", async () => {
     for (const plan of plans) {
       for (let i = 0; i < plan.payments.length; i++) {
         const payment = plan.payments[i];
-        if (payment.status !== "pending") continue;
+        if (!["pending", "overdue"].includes(payment.status)) continue;
         if (new Date(payment.dueDate) > today) continue;
 
         // Due — try to auto-deduct
