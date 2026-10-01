@@ -1374,6 +1374,39 @@ const SYSTEM_MONITOR_STALE_WINDOWS = {
   "ai-seller-coach": 8 * 24 * 60 * 60 * 1000
 };
 
+// TEMPORARY: MongoDB transaction smoke test — remove after verification.
+app.post("/api/admin/transaction-test", adminOnly, async (req, res) => {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      await mongoose.connection.db
+        .collection("__techmart_transaction_test")
+        .insertOne(
+          { test: true, createdAt: new Date() },
+          { session }
+        );
+    });
+
+    await mongoose.connection.db
+      .collection("__techmart_transaction_test")
+      .deleteMany({ test: true });
+
+    res.json({
+      success: true,
+      message: "TRANSACTION_TEST: PASS"
+    });
+  } catch (err) {
+    console.error("Transaction test failed:", err.message);
+    res.status(500).json({
+      success: false,
+      error: "TRANSACTION_TEST: FAIL"
+    });
+  } finally {
+    await session.endSession();
+  }
+});
+
 app.get("/api/admin/system-monitor", adminOnly, async (req, res) => {
   try {
     const services = await SystemMonitor.find({})
