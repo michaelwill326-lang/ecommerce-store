@@ -1836,6 +1836,11 @@ const PayoutSchema = new mongoose.Schema({
   accountNumber: String,
   accountName: String,
   reference: String,
+  payoutType: { type: String, enum: ["manual", "withdrawal", "auto_weekly"], default: "manual" },
+  transferStatus: { type: String, enum: ["pending", "processing", "success", "failed", "reversed"], default: "pending" },
+  transferCode: String,
+  transferId: String,
+  processedAt: Date,
   status: { type: String, enum: ["pending", "approved", "paid", "rejected"], default: "pending" },
   note: String,
   createdAt: { type: Date, default: Date.now }
@@ -5592,6 +5597,110 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
       reference: event.data?.reference
     });
 
+    // 💸 Automatic seller payout transfer events
+    if (["transfer.success", "transfer.failed", "transfer.reversed"].includes(event.event)) {
+      const reference = event.data?.reference;
+
+      if (!reference) {
+        console.warn("⚠️ Paystack transfer webhook missing reference");
+        return res.status(200).send("Transfer reference missing");
+      }
+
+      const payout = await Payout.findOne({
+        reference,
+        payoutType: "auto_weekly"
+      });
+
+      if (!payout) {
+        console.log(`ℹ️ No automatic payout found for transfer: ${reference}`);
+        return res.status(200).send("Transfer payout not found");
+      }
+
+      // Successful transfer: finalize the payout.
+      if (event.event === "transfer.success") {
+        await Payout.findOneAndUpdate(
+          {
+            _id: payout._id,
+            transferStatus: { $ne: "success" }
+          },
+          {
+            transferStatus: "success",
+            status: "paid",
+            transferCode: event.data?.transfer_code || payout.transferCode,
+            transferId: event.data?.id ? String(event.data.id) : payout.transferId,
+            processedAt: new Date(),
+            note: "Paystack transfer completed successfully"
+          }
+        );
+
+        console.log(`✅ Auto payout completed: ${reference}`);
+        return res.status(200).send("Transfer success processed");
+      }
+
+      // Failed/reversed transfer: return the reserved money exactly once.
+      const session = await mongoose.startSession();
+
+      try {
+        await session.withTransaction(async () => {
+          const currentPayout = await Payout.findOne({
+            _id: payout._id
+          }).session(session);
+
+          if (!currentPayout) return;
+
+          if (["success", "failed", "reversed"].includes(currentPayout.transferStatus)) {
+            return;
+          }
+
+          const seller = await Seller.findById(currentPayout.sellerId).session(session);
+
+          if (!seller) {
+            throw new Error(`Seller not found for payout ${reference}`);
+          }
+
+          const refundReference = `REFUND-${reference}`;
+
+          const alreadyRefunded = (seller.walletTransactions || []).some(
+            transaction => transaction.reference === refundReference
+          );
+
+          if (!alreadyRefunded) {
+            seller.walletBalance = (seller.walletBalance || 0) + currentPayout.amount;
+            seller.walletTransactions = seller.walletTransactions || [];
+            seller.walletTransactions.push({
+              type: "credit",
+              amount: currentPayout.amount,
+              description: `Auto weekly payout returned — ${reference}`,
+              reference: refundReference
+            });
+
+            await seller.save({ session });
+          }
+
+          currentPayout.transferStatus =
+            event.event === "transfer.reversed" ? "reversed" : "failed";
+          currentPayout.status = "rejected";
+          currentPayout.processedAt = new Date();
+          currentPayout.transferCode =
+            event.data?.transfer_code || currentPayout.transferCode;
+          currentPayout.transferId =
+            event.data?.id ? String(event.data.id) : currentPayout.transferId;
+          currentPayout.note =
+            event.event === "transfer.reversed"
+              ? "Paystack transfer reversed; funds returned to seller wallet"
+              : "Paystack transfer failed; funds returned to seller wallet";
+
+          await currentPayout.save({ session });
+        });
+
+        console.log(`↩️ Auto payout returned to seller: ${reference}`);
+      } finally {
+        await session.endSession();
+      }
+
+      return res.status(200).send("Transfer failure processed");
+    }
+
     if (!event || event.event !== "charge.success") {
       return res.status(200).send("Event ignored");
     }
@@ -8356,32 +8465,159 @@ cron.schedule("0 9 * * *", async () => {
 // ── Auto Seller Payout Cron (every Friday at 10am)
 cron.schedule("0 10 * * 5", async () => {
   const monitorStartedAt = Date.now();
+
   try {
     console.log("💸 Running auto seller payout...");
-    const sellers = await Seller.find({ walletBalance: { $gte: 1000 }, bankCode: { $ne: null }, accountNumber: { $ne: null } });
-    for (const seller of sellers) {
+
+    const now = new Date();
+    const payoutDate = now.toISOString().slice(0, 10);
+
+    const sellers = await Seller.find({
+      walletBalance: { $gte: 1000 },
+      bankCode: { $ne: null },
+      accountNumber: { $ne: null }
+    }).lean();
+
+    for (const candidate of sellers) {
       try {
-        const amount = seller.walletBalance;
-        const reference = "AUTO-PAY-" + Date.now();
-        // Create Paystack transfer recipient
-        const recipientRes = await axios.post(
-          "https://api.paystack.co/transferrecipient",
-          { type: "nuban", name: seller.accountName || seller.name, account_number: seller.accountNumber, bank_code: seller.bankCode, currency: "NGN" },
-          { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+        const reference = `AUTO-PAY-${candidate._id}-${payoutDate}`;
+
+        const existing = await Payout.findOne({
+          reference,
+          payoutType: "auto_weekly"
+        });
+
+        if (existing) {
+          console.log(`ℹ️ Auto payout already exists for ${candidate.name}: ${reference}`);
+          continue;
+        }
+
+        const session = await mongoose.startSession();
+        let payout;
+
+        try {
+          await session.withTransaction(async () => {
+            const seller = await Seller.findById(candidate._id).session(session);
+
+            if (!seller || seller.walletBalance < 1000) {
+              throw new Error("Seller no longer has enough available balance");
+            }
+
+            const amount = seller.walletBalance;
+
+            const updatedSeller = await Seller.findOneAndUpdate(
+              {
+                _id: seller._id,
+                walletBalance: amount
+              },
+              {
+                $inc: { walletBalance: -amount },
+                $push: {
+                  walletTransactions: {
+                    type: "debit",
+                    amount,
+                    description: `Auto weekly payout reserved — ${reference}`,
+                    reference
+                  }
+                }
+              },
+              { new: true, session }
+            );
+
+            if (!updatedSeller) {
+              throw new Error("Seller balance changed before payout reservation");
+            }
+
+            const created = await Payout.create([{
+              sellerId: seller._id,
+              sellerName: seller.name,
+              sellerEmail: seller.email,
+              storeName: seller.storeName,
+              amount,
+              bankCode: seller.bankCode,
+              bankName: seller.bankName,
+              accountNumber: seller.accountNumber,
+              accountName: seller.accountName,
+              reference,
+              payoutType: "auto_weekly",
+              transferStatus: "pending",
+              status: "pending",
+              note: "Weekly automatic seller payout"
+            }], { session });
+
+            payout = created[0];
+          });
+        } finally {
+          await session.endSession();
+        }
+
+        console.log(
+          `🔒 Reserved ₦${payout.amount} for ${payout.sellerName} — ${reference}`
         );
-        const recipientCode = recipientRes.data.data.recipient_code;
-        await axios.post(
-          "https://api.paystack.co/transfer",
-          { source: "balance", amount: amount * 100, recipient: recipientCode, reason: `TechMart weekly payout for ${seller.name}`, reference },
-          { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-        );
-        seller.walletBalance = 0;
-        seller.walletTransactions = seller.walletTransactions || [];
-        seller.walletTransactions.push({ type: "debit", amount, description: `Auto weekly payout — ${reference}`, reference });
-        await seller.save();
-        console.log(`✅ Auto payout ₦${amount} to ${seller.name}`);
+
+        try {
+          const recipientRes = await axios.post(
+            "https://api.paystack.co/transferrecipient",
+            {
+              type: "nuban",
+              name: payout.accountName || payout.sellerName,
+              account_number: payout.accountNumber,
+              bank_code: payout.bankCode,
+              currency: "NGN"
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+              }
+            }
+          );
+
+          const recipientCode = recipientRes.data.data.recipient_code;
+
+          const transferRes = await axios.post(
+            "https://api.paystack.co/transfer",
+            {
+              source: "balance",
+              amount: payout.amount * 100,
+              recipient: recipientCode,
+              reason: `TechMart weekly payout for ${payout.sellerName}`,
+              reference
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+              }
+            }
+          );
+
+          const transfer = transferRes.data.data;
+
+          await Payout.findByIdAndUpdate(payout._id, {
+            transferStatus: "processing",
+            transferCode: transfer?.transfer_code || null,
+            transferId: transfer?.id ? String(transfer.id) : null,
+            note: "Paystack transfer submitted; awaiting final webhook status"
+          });
+
+          console.log(
+            `⏳ Auto payout submitted ₦${payout.amount} to ${payout.sellerName} — ${reference}`
+          );
+        } catch (transferError) {
+          console.error(
+            `❌ Auto payout transfer failed for ${payout.sellerName}:`,
+            transferError.response?.data || transferError.message
+          );
+
+          await Payout.findByIdAndUpdate(payout._id, {
+            transferStatus: "processing",
+            note: `Paystack transfer requires reconciliation: ${transferError.message}`
+          });
+        }
       } catch (e) {
-        console.error(`❌ Auto payout failed for ${seller.name}:`, e.message);
+        console.error(
+          `❌ Auto payout preparation failed for ${candidate.name}:`,
+          e.message
+        );
       }
     }
 
