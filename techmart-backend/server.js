@@ -8196,6 +8196,82 @@ app.get("/api/admin/termii/debug", adminOnly, async (req, res) => {
 });
 
 
+// Atomically deduct a BNPL installment so concurrent cron runs cannot double-charge.
+async function deductBNPLInstallmentAtomically(planId, paymentIndex, today) {
+  const session = await mongoose.startSession();
+
+  try {
+    let result = null;
+
+    await session.withTransaction(async () => {
+      const plan = await BNPLPlan.findOne({
+        _id: planId,
+        status: "active"
+      }).session(session);
+
+      if (!plan) return;
+
+      const payment = plan.payments[paymentIndex];
+
+      if (!payment) return;
+
+      if (!["pending", "overdue"].includes(payment.status)) return;
+
+      if (new Date(payment.dueDate) > today) return;
+
+      const user = await User.findById(plan.userId).session(session);
+
+      if (!user) return;
+
+      if ((user.walletBalance || 0) < payment.amount) {
+        payment.status = "overdue";
+        await plan.save({ session });
+
+        result = {
+          status: "overdue",
+          amount: payment.amount,
+          userId: plan.userId
+        };
+        return;
+      }
+
+      user.walletBalance -= payment.amount;
+      user.walletTransactions = user.walletTransactions || [];
+      user.walletTransactions.push({
+        type: "debit",
+        amount: payment.amount,
+        description: `BNPL installment ${paymentIndex + 1}/${plan.installments} auto-deducted`,
+        reference: `BNPL-AUTO-${plan._id}-${paymentIndex}`
+      });
+
+      payment.paidAt = today;
+      payment.status = "paid";
+      plan.paidInstallments += 1;
+
+      if (plan.paidInstallments >= plan.installments) {
+        plan.status = "completed";
+      }
+
+      await user.save({ session });
+      await plan.save({ session });
+
+      result = {
+        status: "paid",
+        amount: payment.amount,
+        userId: plan.userId,
+        email: user.email,
+        name: user.name,
+        paidInstallments: plan.paidInstallments,
+        installments: plan.installments
+      };
+    });
+
+    return result;
+  } finally {
+    await session.endSession();
+  }
+}
+
 // ── BNPL Auto-Deduction Cron (runs daily at 9am)
 cron.schedule("0 9 * * *", async () => {
   const monitorStartedAt = Date.now();
@@ -8208,35 +8284,33 @@ cron.schedule("0 9 * * *", async () => {
         if (!["pending", "overdue"].includes(payment.status)) continue;
         if (new Date(payment.dueDate) > today) continue;
 
-        // Due — try to auto-deduct
-        const user = await User.findById(plan.userId);
-        if (!user) continue;
+        // Due — atomically try to auto-deduct
+        const result = await deductBNPLInstallmentAtomically(
+          plan._id,
+          i,
+          today
+        );
 
-        if ((user.walletBalance || 0) >= payment.amount) {
-          user.walletBalance -= payment.amount;
-          user.walletTransactions.push({
-            type: "debit",
-            amount: payment.amount,
-            description: `BNPL installment ${i + 1}/${plan.installments} auto-deducted`,
-            reference: "BNPL-AUTO-" + Date.now()
-          });
-          await user.save();
-          plan.payments[i].paidAt = today;
-          plan.payments[i].status = "paid";
-          plan.paidInstallments += 1;
-          if (plan.paidInstallments >= plan.installments) plan.status = "completed";
-          await plan.save();
-          console.log(`💳 BNPL auto-deducted ₦${payment.amount} from ${user.email}`);
+        if (!result) continue;
+
+        if (result.status === "paid") {
+          console.log(
+            `💳 BNPL auto-deducted ₦${result.amount} from ${result.email}`
+          );
 
           // Send email reminder
           try {
             const { sendOTPEmail } = await import("./utils/email.js");
-            await sendOTPEmail(user.email, user.name, `Your BNPL installment of ₦${payment.amount.toLocaleString()} has been auto-deducted. ${plan.paidInstallments}/${plan.installments} paid.`);
+            await sendOTPEmail(
+              result.email,
+              result.name,
+              `Your BNPL installment of ₦${result.amount.toLocaleString()} has been auto-deducted. ${result.paidInstallments}/${result.installments} paid.`
+            );
           } catch {}
-        } else {
-          plan.payments[i].status = "overdue";
-          await plan.save();
-          console.warn(`⚠️ BNPL overdue for ${plan.userId} — insufficient wallet balance`);
+        } else if (result.status === "overdue") {
+          console.warn(
+            `⚠️ BNPL overdue for ${result.userId} — insufficient wallet balance`
+          );
         }
       }
     }
