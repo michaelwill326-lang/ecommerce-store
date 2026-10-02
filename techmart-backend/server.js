@@ -1828,11 +1828,14 @@ const FlashSale = mongoose.model("FlashSale", FlashSaleSchema);
 const PayoutSchema = new mongoose.Schema({
   sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller", required: true },
   sellerName: String,
+  sellerEmail: String,
   storeName: String,
   amount: { type: Number, required: true },
+  bankCode: String,
   bankName: String,
   accountNumber: String,
   accountName: String,
+  reference: String,
   status: { type: String, enum: ["pending", "approved", "paid", "rejected"], default: "pending" },
   note: String,
   createdAt: { type: Date, default: Date.now }
@@ -8039,56 +8042,78 @@ app.post("/api/orders/:orderId/release-escrow", adminOnly, async (req, res) => {
 
 // 5. Seller requests withdrawal from wallet
 app.post("/api/seller/withdraw", sellerAuth, async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
     const { amount, bankCode, accountNumber, accountName, bankName } = req.body;
-    if (!amount || !bankCode || !accountNumber || !accountName) return res.status(400).json({ error: "All fields are required" });
-    if (Number(amount) < 1000) return res.status(400).json({ error: "Minimum seller withdrawal is ₦1,000" });
-    const seller = await Seller.findById(req.seller.id);
-    if (!seller) return res.status(404).json({ error: "Seller not found" });
-    if ((seller.walletBalance || 0) < Number(amount)) return res.status(400).json({ error: "Insufficient wallet balance" });
+    const withdrawalAmount = Number(amount);
 
-    // Create payout request
-    const Payout = mongoose.models.Payout || mongoose.model("Payout", new mongoose.Schema({
-      sellerId: String,
-      sellerName: String,
-      sellerEmail: String,
-      amount: Number,
-      bankCode: String,
-      accountNumber: String,
-      accountName: String,
-      bankName: String,
-      status: { type: String, default: "pending" },
-      reference: String,
-      createdAt: { type: Date, default: Date.now }
-    }));
+    if (!amount || !bankCode || !accountNumber || !accountName) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
 
-    const reference = "PAY-" + Date.now();
-    await Payout.create({
-      sellerId: seller._id,
-      sellerName: seller.name,
-      sellerEmail: seller.email,
-      amount: Number(amount),
-      bankCode,
-      accountNumber,
-      accountName,
-      bankName: bankName || "",
-      reference
+    if (!Number.isFinite(withdrawalAmount) || withdrawalAmount < 1000) {
+      return res.status(400).json({ error: "Minimum seller withdrawal is ₦1,000" });
+    }
+
+    let reference = null;
+
+    await session.withTransaction(async () => {
+      const seller = await Seller.findById(req.seller.id).session(session);
+
+      if (!seller) {
+        const err = new Error("Seller not found");
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if ((seller.walletBalance || 0) < withdrawalAmount) {
+        const err = new Error("Insufficient wallet balance");
+        err.statusCode = 400;
+        throw err;
+      }
+
+      reference = "PAY-" + new mongoose.Types.ObjectId().toString();
+
+      const payout = new Payout({
+        sellerId: seller._id,
+        sellerName: seller.name,
+        sellerEmail: seller.email,
+        storeName: seller.storeName,
+        amount: withdrawalAmount,
+        bankCode,
+        bankName: bankName || "",
+        accountNumber,
+        accountName,
+        reference,
+        status: "pending"
+      });
+
+      seller.walletBalance = (seller.walletBalance || 0) - withdrawalAmount;
+      seller.walletTransactions = seller.walletTransactions || [];
+      seller.walletTransactions.push({
+        type: "debit",
+        amount: withdrawalAmount,
+        description: `Withdrawal request to ${accountName} (${accountNumber})`,
+        reference
+      });
+
+      await seller.save({ session });
+      await payout.save({ session });
     });
 
-    // Debit wallet
-    seller.walletBalance = (seller.walletBalance || 0) - Number(amount);
-    seller.walletTransactions.push({
-      type: "debit",
-      amount: Number(amount),
-      description: `Withdrawal request to ${accountName} (${accountNumber})`,
-      reference
+    res.json({
+      success: true,
+      reference,
+      message: `Withdrawal of ₦${withdrawalAmount.toLocaleString()} requested. Processing within 24 hours.`
     });
-    await seller.save();
-
-    res.json({ success: true, reference, message: `Withdrawal of ₦${Number(amount).toLocaleString()} requested. Processing within 24 hours.` });
   } catch (err) {
     console.error("Seller withdrawal error:", err.message);
-    res.status(500).json({ error: "Withdrawal request failed" });
+    res.status(err.statusCode || 500).json({
+      error: err.statusCode ? err.message : "Withdrawal request failed"
+    });
+  } finally {
+    await session.endSession();
   }
 });
 
