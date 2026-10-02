@@ -8480,7 +8480,7 @@ cron.schedule("0 10 * * 5", async () => {
 
     for (const candidate of sellers) {
       try {
-        const reference = `AUTO-PAY-${candidate._id}-${payoutDate}`;
+        const reference = `auto-pay-${candidate._id}-${payoutDate}`;
 
         const existing = await Payout.findOne({
           reference,
@@ -8628,6 +8628,139 @@ cron.schedule("0 10 * * 5", async () => {
     console.error("❌ Auto payout cron error:", e.message);
 
     await recordSystemStatus("auto-seller-payout", "down", {
+      responseTimeMs: Date.now() - monitorStartedAt,
+      error: e.message
+    });
+  }
+});
+
+// ── Auto Seller Payout Reconciliation Cron (every 30 minutes)
+cron.schedule("*/30 * * * *", async () => {
+  const monitorStartedAt = Date.now();
+
+  try {
+    const payouts = await Payout.find({
+      payoutType: "auto_weekly",
+      transferStatus: "processing",
+      reference: { $exists: true, $ne: "" }
+    }).limit(50);
+
+    for (const payout of payouts) {
+      try {
+        const verifyRes = await axios.get(
+          `https://api.paystack.co/transfer/verify/${encodeURIComponent(payout.reference)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+            }
+          }
+        );
+
+        const transfer = verifyRes.data?.data;
+        const transferStatus = transfer?.status;
+
+        if (!transferStatus) {
+          console.warn(
+            `⚠️ Auto payout reconciliation returned no status: ${payout.reference}`
+          );
+          continue;
+        }
+
+        if (transferStatus === "success") {
+          await Payout.findOneAndUpdate(
+            {
+              _id: payout._id,
+              transferStatus: "processing"
+            },
+            {
+              transferStatus: "success",
+              status: "paid",
+              transferCode: transfer.transfer_code || payout.transferCode,
+              transferId: transfer.id ? String(transfer.id) : payout.transferId,
+              processedAt: new Date(),
+              note: "Paystack transfer confirmed by reconciliation"
+            }
+          );
+
+          console.log(`🔎✅ Auto payout reconciled successfully: ${payout.reference}`);
+          continue;
+        }
+
+        if (["failed", "reversed"].includes(transferStatus)) {
+          const session = await mongoose.startSession();
+
+          try {
+            await session.withTransaction(async () => {
+              const currentPayout = await Payout.findById(payout._id).session(session);
+
+              if (!currentPayout) return;
+
+              if (["success", "failed", "reversed"].includes(currentPayout.transferStatus)) {
+                return;
+              }
+
+              const seller = await Seller.findById(currentPayout.sellerId).session(session);
+
+              if (!seller) {
+                throw new Error(`Seller not found for payout ${payout.reference}`);
+              }
+
+              const refundReference = `REFUND-${payout.reference}`;
+
+              const alreadyRefunded = (seller.walletTransactions || []).some(
+                transaction => transaction.reference === refundReference
+              );
+
+              if (!alreadyRefunded) {
+                seller.walletBalance = (seller.walletBalance || 0) + currentPayout.amount;
+                seller.walletTransactions = seller.walletTransactions || [];
+                seller.walletTransactions.push({
+                  type: "credit",
+                  amount: currentPayout.amount,
+                  description: `Auto weekly payout returned — ${payout.reference}`,
+                  reference: refundReference
+                });
+
+                await seller.save({ session });
+              }
+
+              currentPayout.transferStatus = transferStatus;
+              currentPayout.status = "rejected";
+              currentPayout.processedAt = new Date();
+              currentPayout.transferCode =
+                transfer.transfer_code || currentPayout.transferCode;
+              currentPayout.transferId =
+                transfer.id ? String(transfer.id) : currentPayout.transferId;
+              currentPayout.note =
+                transferStatus === "reversed"
+                  ? "Paystack transfer confirmed reversed by reconciliation; funds returned to seller wallet"
+                  : "Paystack transfer confirmed failed by reconciliation; funds returned to seller wallet";
+
+              await currentPayout.save({ session });
+            });
+
+            console.log(
+              `🔎↩️ Auto payout reconciled ${transferStatus}: ${payout.reference}`
+            );
+          } finally {
+            await session.endSession();
+          }
+        }
+      } catch (e) {
+        console.error(
+          `❌ Auto payout reconciliation failed for ${payout.reference}:`,
+          e.response?.data || e.message
+        );
+      }
+    }
+
+    await recordSystemStatus("auto-seller-payout-reconciliation", "healthy", {
+      responseTimeMs: Date.now() - monitorStartedAt
+    });
+  } catch (e) {
+    console.error("❌ Auto payout reconciliation cron error:", e.message);
+
+    await recordSystemStatus("auto-seller-payout-reconciliation", "down", {
       responseTimeMs: Date.now() - monitorStartedAt,
       error: e.message
     });
