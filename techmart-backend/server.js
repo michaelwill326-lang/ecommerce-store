@@ -1146,7 +1146,7 @@ app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, password } = req.body;
     const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
-    if (!name || !email || !password || !req.body.phone) return res.status(400).json({ error: "Name, email, password, and phone number are required" });
+    if (!name || !email || !password) return res.status(400).json({ error: "Name, email, and password are required" });
     const { referralCode } = req.body;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return res.status(400).json({ error: "Invalid email address" });
@@ -1167,27 +1167,37 @@ app.post("/api/auth/signup", async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // 🔐 CREATE + SEND VERIFICATION EMAIL FIRST
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    await User.findByIdAndUpdate(user._id, {
+      emailVerificationToken: verifyToken,
+      emailVerificationExpires: new Date(Date.now() + 24*60*60*1000)
+    });
+
+    try {
+      const { sendEmailVerification } = require("./utils/email");
+      await sendEmailVerification(user, verifyToken);
+    } catch (e) {
+      console.error("Verify email failed:", e.message);
+    }
+
     // 📧 SEND WELCOME EMAIL
     try {
       // Process referral if code provided
-    if (referralCode) {
-      const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
-      if (referrer && referrer._id.toString() !== user._id.toString()) {
-        await User.findByIdAndUpdate(user._id, { referredBy: referralCode.toUpperCase() });
-        await User.findByIdAndUpdate(referrer._id, {
-          $inc: { referralCount: 1, referralCredits: 500, walletBalance: 500 },
-          $push: { walletTransactions: { type: "credit", amount: 500, description: `Referral bonus — ${name} signed up`, createdAt: new Date() } }
-        });
+      if (referralCode) {
+        const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+        if (referrer && referrer._id.toString() !== user._id.toString()) {
+          await User.findByIdAndUpdate(user._id, { referredBy: referralCode.toUpperCase() });
+          await User.findByIdAndUpdate(referrer._id, {
+            $inc: { referralCount: 1, referralCredits: 500, walletBalance: 500 },
+            $push: { walletTransactions: { type: "credit", amount: 500, description: `Referral bonus — ${name} signed up`, createdAt: new Date() } }
+          });
+        }
       }
-    }
-    await sendWelcomeEmail(user);
+      await sendWelcomeEmail(user);
     } catch (e) {
       console.log("Welcome email failed:", e.message);
     }
-
-    const verifyToken = crypto.randomBytes(32).toString("hex");
-    await User.findByIdAndUpdate(user._id, { emailVerificationToken: verifyToken, emailVerificationExpires: new Date(Date.now() + 24*60*60*1000) });
-    try { const { sendEmailVerification } = require("./utils/email"); await sendEmailVerification(user, verifyToken); } catch(e) { console.error("Verify email failed:", e.message); }
     res.status(201).json({ success: true, requireVerification: true, message: "Account created! Please check your email to verify your account." });
   } catch (err) {
     console.error(err);
