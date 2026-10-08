@@ -165,7 +165,6 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const [referralCode, setReferralCode] = useState(searchParams.get("ref") || "");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); // 📱 Track phone number state
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -191,11 +190,6 @@ export default function Signup() {
     if (!/^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/.test(cleanName)) {
       return setError("Please enter a valid name using letters, spaces, hyphens or apostrophes.");
     }
-
-    if (!phone.trim()) {
-      return setError("Phone number is required for dispatch updates");
-    }
-
     const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
     if (!pwdRegex.test(password)) {
       return setError("Password must contain uppercase, lowercase, number, symbol and be 8+ characters.");
@@ -212,7 +206,6 @@ export default function Signup() {
         ...(referralCode.trim() && { referralCode: referralCode.trim().toUpperCase() }),
         name: name.trim(),
         email: email.trim(),
-        phone: phone.trim(), // 📦 Added payload parameter for our updated backend
         password: password.trim(),
       });
 
@@ -334,18 +327,7 @@ export default function Signup() {
             />
           </div>
 
-          {/* PHONE NUMBER FIELD */}
-          <div style={styles.fieldWrap}>
-            <label style={styles.label}>Phone Number (For Delivery Updates)</label>
-            <input
-              type="tel"
-              placeholder="e.g. 2348031234567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              style={styles.input}
-            />
-          </div>
+
 
           {/* PASSWORD */}
           <div style={styles.fieldWrap}>
