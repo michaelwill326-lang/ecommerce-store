@@ -51,7 +51,7 @@ const styles = {
     width: "32px",
     height: "32px",
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
+    background: "#15803d",
     color: "var(--text-primary)",
     fontSize: "14px",
     fontWeight: "800",
@@ -77,7 +77,7 @@ const styles = {
   },
   signupBtn: {
     padding: "8px 18px",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
+    background: "#15803d",
     color: "var(--text-primary)",
     border: "none",
     borderRadius: "8px",
