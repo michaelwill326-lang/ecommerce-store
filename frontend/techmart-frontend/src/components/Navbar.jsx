@@ -52,7 +52,7 @@ const styles = {
     height: "32px",
     borderRadius: "50%",
     background: "#15803d",
-    color: "var(--text-primary)",
+    color: "#ffffff",
     fontSize: "14px",
     fontWeight: "800",
     display: "flex",
@@ -78,7 +78,7 @@ const styles = {
   signupBtn: {
     padding: "8px 18px",
     background: "#15803d",
-    color: "var(--text-primary)",
+    color: "#ffffff",
     border: "none",
     borderRadius: "8px",
     cursor: "pointer",
