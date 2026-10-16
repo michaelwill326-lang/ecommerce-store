@@ -120,7 +120,7 @@ export default function Home() {
         .tm-card-img{width:100%;height:130px;object-fit:cover;background:#222;display:block}
         .tm-title{font-size:15px;font-weight:700;margin:0 0 10px;color:#fff}
         .tm-cat-btn{padding:6px 14px;border-radius:999px;border:1px solid #333;background:#1a1a1a;color:#888;font-size:12px;cursor:pointer;white-space:nowrap;font-weight:600;transition:all 0.2s}
-        .tm-cat-btn.active{background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border-color:transparent}
+        .tm-cat-btn.active{background:var(--cta-color);color:#fff;border-color:transparent}
         .tm-select{padding:8px 12px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;outline:none;cursor:pointer}
         .tm-price-input{width:100%;padding:8px 12px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;outline:none;box-sizing:border-box}
         @media(min-width:600px){.tm-grid{grid-template-columns:repeat(3,1fr);gap:14px}.tm-card-img{height:160px}.tm-title{font-size:18px}}

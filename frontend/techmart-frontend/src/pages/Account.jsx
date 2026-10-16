@@ -77,7 +77,7 @@ export default function Account() {
       {/* TABS */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px", background: tab === t ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a", color: tab === t ? "#fff" : "#888" }}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px", background: tab === t ? "var(--cta-color)" : "#1a1a1a", color: tab === t ? "#fff" : "#888" }}>{t}</button>
         ))}
       </div>
 

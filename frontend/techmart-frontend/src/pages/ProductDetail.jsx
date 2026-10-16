@@ -500,7 +500,7 @@ export default function ProductDetail() {
                 ? "linear-gradient(135deg, #22c55e, #16a34a)"
                 : product.stock === 0 || cartLoading
                 ? "#333"
-                : "linear-gradient(135deg, #f97316, #dc2626)",
+                : "var(--cta-color)",
               cursor: product.stock === 0 || cartLoading ? "not-allowed" : "pointer",
               opacity: cartLoading ? 0.7 : 1,
             }}

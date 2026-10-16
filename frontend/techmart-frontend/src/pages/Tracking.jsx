@@ -209,7 +209,7 @@ export default function Tracking() {
             onClick={() => setTab("track")}
             style={{
               ...styles.tabBtn,
-              background: tab === "track" ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a",
+              background: tab === "track" ? "var(--cta-color)" : "#1a1a1a",
               color: tab === "track" ? "#fff" : "#888",
               border: tab === "track" ? "none" : "1px solid #333",
             }}
@@ -220,7 +220,7 @@ export default function Tracking() {
             onClick={() => setTab("my")}
             style={{
               ...styles.tabBtn,
-              background: tab === "my" ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a",
+              background: tab === "my" ? "var(--cta-color)" : "#1a1a1a",
               color: tab === "my" ? "#fff" : "#888",
               border: tab === "my" ? "none" : "1px solid #333",
             }}
@@ -326,7 +326,7 @@ export default function Tracking() {
                               style={{
                                 ...styles.stepCircle,
                                 background: isCompleted
-                                  ? "linear-gradient(135deg, #f97316, #dc2626)"
+                                  ? "var(--cta-color)"
                                   : "var(--bg-secondary)",
                                 border: isCurrent
                                   ? "2px solid var(--cta-color)"
