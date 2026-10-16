@@ -123,7 +123,7 @@ const styles = {
   submitBtn: {
     width: "100%",
     padding: "14px",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     border: "none",
     borderRadius: "12px",
@@ -262,7 +262,7 @@ export default function Signup() {
           <p style={{ color:"var(--cta-color)",fontWeight:"700",fontSize:"15px",marginBottom:"24px" }}>{signupEmail}</p>
           <p style={{ color:"var(--text-muted)",fontSize:"13px",marginBottom:"28px" }}>Click the link in the email to activate your account. Check your spam folder if you don't see it.</p>
           {resendMsg && <p style={{ color:resendMsg.includes("resent")?"#22c55e":"#ef4444",fontSize:"13px",marginBottom:"16px",fontWeight:"600" }}>{resendMsg}</p>}
-          <button onClick={handleResend} disabled={resendLoading} style={{ width:"100%",padding:"12px",background:"linear-gradient(135deg,#f97316,#dc2626)",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:"15px",cursor:"pointer",marginBottom:"12px" }}>
+          <button onClick={handleResend} disabled={resendLoading} style={{ width:"100%",padding:"12px",background: "var(--cta-color)",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:"15px",cursor:"pointer",marginBottom:"12px" }}>
             {resendLoading ? "Sending..." : "Resend Verification Email"}
           </button>
           <button onClick={()=>navigate("/login")} style={{ width:"100%",padding:"12px",background:"none",color:"var(--text-muted)",border:"1px solid var(--border-color)",borderRadius:"10px",fontWeight:"600",fontSize:"14px",cursor:"pointer" }}>

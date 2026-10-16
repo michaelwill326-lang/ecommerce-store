@@ -121,7 +121,7 @@ export default function AISearch() {
             placeholder='e.g. "iPhone under ₦200,000" or "used Samsung S23"'
             style={{ flex: 1, padding: "14px 18px", background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", color: "var(--text-primary)", fontSize: "15px", outline: "none" }}
           />
-          <button onClick={() => search()} disabled={loading} style={{ padding: "14px 24px", background: "linear-gradient(135deg,#f97316,#dc2626)", color: "#fff", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "15px", flexShrink: 0 }}>
+          <button onClick={() => search()} disabled={loading} style={{ padding: "14px 24px", background: "var(--cta-color)", color: "#fff", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "15px", flexShrink: 0 }}>
             {loading ? "..." : "Search"}
           </button>
         </div>

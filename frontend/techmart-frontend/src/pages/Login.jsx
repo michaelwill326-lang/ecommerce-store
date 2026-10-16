@@ -138,7 +138,7 @@ const styles = {
   submitBtn: {
     width: "100%",
     padding: "14px",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     border: "none",
     borderRadius: "12px",

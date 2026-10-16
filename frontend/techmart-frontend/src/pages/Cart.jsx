@@ -28,10 +28,10 @@ const styles = {
   summaryTitle: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", marginBottom: "20px" },
   summaryRow: { display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "15px" },
   divider: { borderTop: "1px solid #2a2a2a", margin: "16px 0" },
-  checkoutBtn: { width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer" },
+  checkoutBtn: { width: "100%", padding: "14px", background: "var(--cta-color)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer" },
   emptyWrap: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", textAlign: "center" },
   blackBtn: { padding: "10px 18px", background: "var(--bg-card)", color: "var(--text-primary)", border: "1px solid var(--border-color)", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
-  orangeBtn: { padding: "14px 28px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px" },
+  orangeBtn: { padding: "14px 28px", background: "var(--cta-color)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px" },
 };
 
 export default function Cart() {
