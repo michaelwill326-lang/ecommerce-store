@@ -11,7 +11,10 @@ const THEMES = [
 
 export default function ThemeSwitcher() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState(() => localStorage.getItem("techmart-theme") || "light");
+  const [current, setCurrent] = useState(() => {
+    const saved = localStorage.getItem("techmart-theme");
+    return !saved || saved === "dark" ? "light" : saved;
+  });
 
   useEffect(() => {
     document.body.setAttribute("data-theme", current);

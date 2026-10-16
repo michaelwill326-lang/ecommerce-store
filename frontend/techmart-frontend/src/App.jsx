@@ -243,8 +243,10 @@ export default function App() {
   useEffect(() => {
     // Apply saved theme safely after mount
     try {
-      const savedTheme = localStorage.getItem("techmart-theme") || "light";
-      document.body.setAttribute("data-theme", savedTheme);
+      const savedTheme = localStorage.getItem("techmart-theme");
+      const theme = !savedTheme || savedTheme === "dark" ? "light" : savedTheme;
+      localStorage.setItem("techmart-theme", theme);
+      document.body.setAttribute("data-theme", theme);
     } catch {}
   }, []);
 
