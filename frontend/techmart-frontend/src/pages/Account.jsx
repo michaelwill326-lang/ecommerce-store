@@ -65,7 +65,7 @@ export default function Account() {
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "16px", minHeight: "100vh" }}>
       {/* HEADER */}
       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-        <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "linear-gradient(135deg, #f97316, #dc2626)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", flexShrink: 0 }}>
+        <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "var(--cta-color)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", flexShrink: 0 }}>
           {user?.name?.charAt(0).toUpperCase()}
         </div>
         <div>
@@ -77,7 +77,7 @@ export default function Account() {
       {/* TABS */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px", background: tab === t ? "linear-gradient(135deg, #f97316, #dc2626)" : "#1a1a1a", color: tab === t ? "#fff" : "#888" }}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px", background: tab === t ? "var(--cta-color)" : "#1a1a1a", color: tab === t ? "#fff" : "#888" }}>{t}</button>
         ))}
       </div>
 
@@ -85,7 +85,7 @@ export default function Account() {
       {tab === "Wallet" && (
         <div>
           {/* Balance Card */}
-          <div style={{ background: "linear-gradient(135deg, #f97316, #dc2626)", borderRadius: "16px", padding: "28px", marginBottom: "20px", textAlign: "center" }}>
+          <div style={{ background: "var(--cta-color)", borderRadius: "16px", padding: "28px", marginBottom: "20px", textAlign: "center" }}>
             <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "14px", margin: "0 0 8px" }}>TechMart Wallet Balance</p>
             <p style={{ color: "var(--text-primary)", fontSize: "36px", fontWeight: "900", margin: "0 0 8px" }}>₦{(wallet.balance || 0).toLocaleString()}</p>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px", margin: 0 }}>Earn 2% cashback on every order</p>
@@ -511,7 +511,7 @@ export default function Account() {
             <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "40px", textAlign: "center" }}>
               <p style={{ fontSize: "40px", margin: "0 0 12px" }}>📦</p>
               <p style={{ color: "var(--text-muted)" }}>No orders yet.</p>
-              <Link to="/"><button style={{ marginTop: "12px", padding: "10px 24px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Shop Now</button></Link>
+              <Link to="/"><button style={{ marginTop: "12px", padding: "10px 24px", background: "var(--cta-color)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Shop Now</button></Link>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -549,13 +549,13 @@ export default function Account() {
             ))}
           </div>
           {user?.referralCode && (
-            <div style={{ background: "var(--bg-secondary)", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginTop: "16px", marginBottom: "8px" }}>
-              <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>🎁 Refer & Earn</p>
+            <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--cta-color)", borderRadius: "12px", padding: "16px", marginTop: "16px", marginBottom: "8px" }}>
+              <p style={{ color: "var(--cta-color)", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>🎁 Refer & Earn</p>
               <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 12px" }}>Share your code and earn ₦500 for every friend who signs up!</p>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <div style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "10px 14px", fontFamily: "monospace", fontWeight: "700", fontSize: "16px", color: "var(--text-primary)", letterSpacing: "2px" }}>{user.referralCode}</div>
-                <button onClick={() => { navigator.clipboard?.writeText(user.referralCode); showToast("Referral code copied!", "success"); }} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Copy</button>
-                <button onClick={() => navigate("/referral")} style={{ padding: "10px 16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>🎁 Referral Dashboard</button>
+                <button onClick={() => { navigator.clipboard?.writeText(user.referralCode); showToast("Referral code copied!", "success"); }} style={{ padding: "10px 16px", background: "var(--cta-color)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Copy</button>
+                <button onClick={() => navigate("/referral")} style={{ padding: "10px 16px", background: "var(--cta-color)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>🎁 Referral Dashboard</button>
               </div>
             </div>
           )}

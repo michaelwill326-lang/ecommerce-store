@@ -1,3 +1,4 @@
+import Icon from "./Icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
@@ -30,10 +31,11 @@ const styles = {
     objectFit: "contain",
   },
   logoText: {
-    color: "#f97316",
-    fontWeight: "800",
+    color: "var(--cta-color)",
+    fontFamily: "'Sora', 'Inter', system-ui, sans-serif",
+    fontWeight: "700",
     fontSize: "20px",
-    letterSpacing: "1px",
+    letterSpacing: "-1px",
   },
   desktopLinks: {
     display: "flex",
@@ -49,8 +51,8 @@ const styles = {
     width: "32px",
     height: "32px",
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
-    color: "var(--text-primary)",
+    background: "#15803d",
+    color: "#ffffff",
     fontSize: "14px",
     fontWeight: "800",
     display: "flex",
@@ -75,8 +77,8 @@ const styles = {
   },
   signupBtn: {
     padding: "8px 18px",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
-    color: "var(--text-primary)",
+    background: "#15803d",
+    color: "#ffffff",
     border: "none",
     borderRadius: "8px",
     cursor: "pointer",
@@ -97,7 +99,7 @@ const styles = {
     position: "absolute",
     top: "-6px",
     right: "-6px",
-    background: "#f97316",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     borderRadius: "50%",
     fontSize: "10px",
@@ -162,7 +164,7 @@ const styles = {
     gap: "10px",
   },
   mobileBadge: {
-    background: "#f97316",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     borderRadius: "999px",
     fontSize: "11px",
@@ -255,7 +257,7 @@ export default function Navbar() {
   };
 
   const linkStyle = (path) => ({
-    color: location.pathname === path ? "#f97316" : "#aaa",
+    color: location.pathname === path ? "var(--cta-color)" : "#aaa",
     textDecoration: "none",
     fontSize: "14px",
     fontWeight: "500",
@@ -291,15 +293,15 @@ export default function Navbar() {
           <div style={styles.desktopLinks}>
             <Link to="/" style={linkStyle("/")}>Home</Link>
             <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
-            <Link to="/phone-checker" style={linkStyle("/phone-checker")}>📱 Phone Check</Link>
-            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "#f97316" : "#22c55e", fontWeight: "700" }}>Pay</Link>
+            <Link to="/phone-checker" style={linkStyle("/phone-checker")}><Icon name="phone" size={16} /> Phone Check</Link>
+            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "var(--cta-color)" : "#22c55e", fontWeight: "700" }}>Pay</Link>
 
             {user?.role === "admin" && (
               <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
             )}
             {user?.role === "seller" && (
-              <button onClick={toggleMode} style={{ padding: "8px 14px", background: sellerMode ? "linear-gradient(135deg, #f97316, #dc2626)" : "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
-                {sellerMode ? "🛍️ Shop as Buyer" : "🏪 Manage Store"}
+              <button onClick={toggleMode} style={{ padding: "8px 14px", background: "#15803d", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+                {sellerMode ? <><Icon name="bag" size={16} /> Shop as Buyer</> : <><Icon name="store" size={16} /> Manage Store</>}
               </button>
             )}
 
@@ -307,9 +309,9 @@ export default function Navbar() {
               <div style={{
                 ...styles.cartWrap,
                 background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
-                border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
+                border: location.pathname === "/wishlist" ? "1px solid var(--cta-color)" : "1px solid #333",
               }}>
-                🤍
+                <Icon name="heart" size={18} />
                 {wishlistCount > 0 && (
                   <span style={styles.cartBadge}>{wishlistCount}</span>
                 )}
@@ -324,7 +326,7 @@ export default function Navbar() {
                   </div>
                 </Link>
                 <Link to="/account" style={{ textDecoration: "none" }}>
-                  <span style={{ ...styles.userName, color: "#f97316" }}>Hi, {user.name?.split(" ")[0]}</span>
+                  <span style={{ ...styles.userName, color: "var(--cta-color)" }}>Hi, {user.name?.split(" ")[0]}</span>
                 </Link>
                 <button onClick={handleLogout} style={styles.logoutBtn}>
                   Logout
@@ -346,9 +348,9 @@ export default function Navbar() {
               <div style={{
                 ...styles.cartWrap,
                 background: location.pathname === "/cart" ? "#1a1a1a" : "transparent",
-                border: location.pathname === "/cart" ? "1px solid #f97316" : "1px solid #333",
+                border: location.pathname === "/cart" ? "1px solid var(--cta-color)" : "1px solid #333",
               }}>
-                🛒
+                <Icon name="cart" size={18} />
                 {cartCount > 0 && (
                   <span style={styles.cartBadge}>{cartCount}</span>
                 )}
@@ -366,7 +368,7 @@ export default function Navbar() {
               display: "block" // Toggles view visible instantly on mobile
             }}
           >
-            {menuOpen ? "✕" : "☰"}
+            {menuOpen ? <Icon name="close" size={22} /> : <Icon name="menu" size={22} />}
           </button>
         )}
 
@@ -389,30 +391,30 @@ export default function Navbar() {
           )}
 
           <Link to="/" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-            🏠 Home
+            <Icon name="home" size={18} /> Home
           </Link>
 
           <Link to="/tracking" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-            📦 My Orders
+            <Icon name="package" size={18} /> My Orders
           </Link>
 
           <Link to="/phone-checker" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-            📱 Phone Checker
+            <Icon name="phone" size={18} /> Phone Checker
           </Link>
 
           <Link to="/wishlist" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-            🤍 Wishlist {wishlistCount > 0 && (
+            <Icon name="heart" size={18} /> Wishlist {wishlistCount > 0 && (
               <span style={styles.mobileBadge}>{wishlistCount}</span>
             )}
           </Link>
 
           <Link to="/cart" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-            🛒 Cart {cartCount > 0 && (
+            <Icon name="cart" size={18} /> Cart {cartCount > 0 && (
               <span style={styles.mobileBadge}>{cartCount}</span>
             )}
           </Link>
-          <Link to="/pay" style={{...styles.mobileLink, color: "#f97316", fontWeight: "700"}} onClick={() => setMenuOpen(false)}>
-            💳 TechMart Pay
+          <Link to="/pay" style={{...styles.mobileLink, color: "var(--cta-color)", fontWeight: "700"}} onClick={() => setMenuOpen(false)}>
+            <Icon name="card" size={18} /> TechMart Pay
           </Link>
 
           <div style={{ margin: "12px 0" }}>
@@ -421,26 +423,26 @@ export default function Navbar() {
 
           {user?.role === "admin" && (
             <Link to="/admin" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>
-              👑 Admin Dashboard
+              <Icon name="shield" size={18} /> Admin Dashboard
             </Link>
           )}
           {user?.role === "seller" && (
-            <button onClick={() => { toggleMode(); setMenuOpen(false); }} style={{ width: "100%", padding: "12px 16px", background: sellerMode ? "linear-gradient(135deg, #f97316, #dc2626)" : "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px", marginBottom: "8px", textAlign: "left" }}>
-              {sellerMode ? "🛍️ Shop as Buyer" : "🏪 Manage Store"}
+            <button onClick={() => { toggleMode(); setMenuOpen(false); }} style={{ width: "100%", padding: "12px 16px", background: "#15803d", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px", marginBottom: "8px", textAlign: "left" }}>
+              {sellerMode ? <><Icon name="bag" size={16} /> Shop as Buyer</> : <><Icon name="store" size={16} /> Manage Store</>}
             </button>
           )}
 
           {user ? (
             <button onClick={handleLogout} style={styles.mobileLogoutBtn}>
-              🚪 Logout
+              <Icon name="logOut" size={18} /> Logout
             </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
               <Link to="/login" style={{ textDecoration: "none" }} onClick={() => setMenuOpen(false)}>
-                <button style={{ ...styles.logoutBtn, width: "100%", padding: "12px" }}>🔑 Login</button>
+                <button style={{ ...styles.logoutBtn, width: "100%", padding: "12px" }}><Icon name="logIn" size={18} /> Login</button>
               </Link>
               <Link to="/signup" style={{ textDecoration: "none" }} onClick={() => setMenuOpen(false)}>
-                <button style={{ ...styles.signupBtn, width: "100%", padding: "12px" }}>✨ Sign Up</button>
+                <button style={{ ...styles.signupBtn, width: "100%", padding: "12px" }}><Icon name="userPlus" size={18} /> Sign Up</button>
               </Link>
             </div>
           )}

@@ -1,3 +1,4 @@
+import { FEATURES } from "../config/features";
 import { useContext, useState, useEffect, useRef } from "react";
 import { useToast } from "../App";
 import { useNavigate, Link } from "react-router-dom";
@@ -13,15 +14,15 @@ const styles = {
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
   title: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800" },
   backBtn: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
-  orangeBtn: { padding: "14px 28px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px", marginTop: "16px" },
+  orangeBtn: { padding: "14px 28px", background: "var(--cta-color)", color: "var(--text-primary)", border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: "700", fontSize: "16px", marginTop: "16px" },
   layout: { display: "grid", gridTemplateColumns: "1fr 380px", gap: "32px", alignItems: "start" }, layoutMobile: { display: "flex", flexDirection: "column", gap: "16px" },
   leftCol: { display: "flex", flexDirection: "column", gap: "20px" },
   userCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
   userRow: { display: "flex", alignItems: "center", gap: "16px", marginTop: "12px" },
-  avatar: { width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" },
+  avatar: { width: "48px", height: "48px", borderRadius: "50%", background: "var(--cta-color)", color: "var(--text-primary)", fontSize: "20px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" },
   userName: { color: "var(--text-primary)", fontWeight: "700", fontSize: "16px", margin: 0 },
   userEmail: { color: "var(--text-muted)", fontSize: "14px", margin: 0 },
-  warningBox: { background: "#2a1a0a", border: "1px solid #f97316", color: "#fed7aa", padding: "14px 16px", borderRadius: "12px", fontSize: "14px" },
+  warningBox: { background: "#2a1a0a", border: "1px solid var(--cta-color)", color: "#fed7aa", padding: "14px 16px", borderRadius: "12px", fontSize: "14px" },
   itemsCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
   sectionTitle: { color: "var(--text-primary)", fontSize: "15px", fontWeight: "700", marginBottom: "12px" },
   itemRow: { display: "flex", alignItems: "center", gap: "16px", paddingBottom: "16px", marginBottom: "16px", borderBottom: "1px solid var(--border-light)" },
@@ -29,7 +30,7 @@ const styles = {
   itemDetails: { flex: 1 },
   itemName: { color: "var(--text-primary)", fontWeight: "600", fontSize: "15px", margin: "0 0 4px" },
   itemQty: { color: "var(--text-secondary)", fontSize: "13px", margin: 0 },
-  itemPrice: { color: "#f97316", fontWeight: "700", fontSize: "16px" },
+  itemPrice: { color: "var(--cta-color)", fontWeight: "700", fontSize: "16px" },
   rightCol: { position: "sticky", top: "90px" }, rightColMobile: { position: "static" },
   addressCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
   fieldWrap: { marginBottom: "16px" },
@@ -41,7 +42,7 @@ const styles = {
   summaryValue: { color: "var(--text-primary)", fontSize: "15px", fontWeight: "600" },
   divider: { borderTop: "1px solid #2a2a2a", margin: "16px 0" },
   errorBox: { background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginTop: "8px" },
-  payBtn: { width: "100%", padding: "16px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "800", marginTop: "16px", cursor: "pointer", marginBottom: "12px" },
+  payBtn: { width: "100%", padding: "16px", background: "var(--cta-color)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "800", marginTop: "16px", cursor: "pointer", marginBottom: "12px" },
   secureText: { color: "var(--text-muted)", fontSize: "13px", textAlign: "center", marginTop: "12px" },
   guaranteeRow: { display: "flex", justifyContent: "space-between", marginTop: "16px", flexWrap: "wrap", gap: "8px" },
   guaranteeItem: { color: "var(--text-muted)", fontSize: "12px" },
@@ -321,7 +322,7 @@ export default function Checkout() {
               <div style={styles.divider} />
               <div style={styles.summaryRow}>
                 <span style={{ color: "var(--text-primary)", fontWeight: "800", fontSize: "16px" }}>Total</span>
-                <span style={{ color: "#f97316", fontWeight: "800", fontSize: "18px" }}>
+                <span style={{ color: "var(--cta-color)", fontWeight: "800", fontSize: "18px" }}>
                   {couponStatus?.discount ? (
                     <><span style={{ textDecoration: "line-through", color: "#999", fontSize: "13px" }}>₦{total.toLocaleString()}</span>{" "}₦{finalTotal.toLocaleString()}</>
                   ) : <>₦{total.toLocaleString()}</>}
@@ -346,7 +347,7 @@ export default function Checkout() {
           {!user && (
             <div style={styles.warningBox}>
               ⚠️ Not logged in.{" "}
-              <Link to="/login" style={{ color: "#f97316" }}>Login</Link>{" "}
+              <Link to="/login" style={{ color: "var(--cta-color)" }}>Login</Link>{" "}
               to complete purchase.
             </div>
           )}
@@ -451,7 +452,7 @@ export default function Checkout() {
             <div style={styles.divider} />
             <div style={styles.summaryRow}>
               <span style={{ color: "var(--text-primary)", fontWeight: "800", fontSize: "18px" }}>Total</span>
-              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "22px" }}>
+              <span style={{ color: "var(--cta-color)", fontWeight: "800", fontSize: "22px" }}>
                 {(couponDiscount > 0 || walletApplied > 0) ? (
                   <>
                     <span style={{ textDecoration: "line-through", color: "#999", fontSize: "14px" }}>₦{total.toLocaleString()}</span>
@@ -467,9 +468,9 @@ export default function Checkout() {
             <div style={{ marginBottom: "16px" }}>
               <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "14px", margin: "0 0 10px" }}>Payment Method</p>
               <div style={{ display: "flex", gap: "10px" }}>
-                <div onClick={() => setPaymentMethod("online")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "online" ? "#f97316" : "#333"}`, background: paymentMethod === "online" ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
+                <div onClick={() => setPaymentMethod("online")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "online" ? "var(--cta-color)" : "#333"}`, background: paymentMethod === "online" ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
                   <p style={{ margin: "0 0 2px", fontSize: "18px" }}>💳</p>
-                  <p style={{ color: paymentMethod === "online" ? "#f97316" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay Online</p>
+                  <p style={{ color: paymentMethod === "online" ? "var(--cta-color)" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay Online</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>Card / Transfer</p>
                 </div>
                 <div onClick={() => podEligible && setPaymentMethod("pod")} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "pod" ? "#22c55e" : "#333"}`, background: paymentMethod === "pod" ? "#0a1a0a" : "#111", cursor: podEligible ? "pointer" : "not-allowed", textAlign: "center", opacity: podEligibilityChecked && !podEligible ? 0.5 : 1 }}>
@@ -479,14 +480,14 @@ export default function Checkout() {
                 </div>
               </div>
               {walletBalance >= finalTotal && finalTotal > 0 && (
-                <div onClick={() => setPaymentMethod("escrow")} style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "escrow" ? "#f97316" : "#333"}`, background: paymentMethod === "escrow" ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
+                <div onClick={() => setPaymentMethod("escrow")} style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "escrow" ? "var(--cta-color)" : "#333"}`, background: paymentMethod === "escrow" ? "#1a0a00" : "#111", cursor: "pointer", textAlign: "center" }}>
                   <p style={{ margin: "0 0 2px", fontSize: "18px" }}>🔐</p>
-                  <p style={{ color: paymentMethod === "escrow" ? "#f97316" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay with Wallet (Escrow)</p>
+                  <p style={{ color: paymentMethod === "escrow" ? "var(--cta-color)" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Pay with Wallet (Escrow)</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: 0 }}>Funds held safely until you confirm delivery</p>
                 </div>
               )}
               {/* BNPL Option */}
-              {bnplChecked && finalTotal >= 5000 && (
+              {FEATURES.bnpl && bnplChecked && finalTotal >= 5000 && (
                 <div onClick={() => bnplEligible && setPaymentMethod("bnpl")} style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "bnpl" ? "#3b82f6" : "#333"}`, background: paymentMethod === "bnpl" ? "#0a0a1a" : "#111", cursor: bnplEligible ? "pointer" : "not-allowed", textAlign: "center", opacity: !bnplEligible ? 0.5 : 1 }}>
                   <p style={{ margin: "0 0 2px", fontSize: "18px" }}>🔄</p>
                   <p style={{ color: paymentMethod === "bnpl" ? "#3b82f6" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Buy Now Pay Later</p>
@@ -597,9 +598,9 @@ export default function Checkout() {
                   <span style={{ fontSize: "14px" }}>🔐</span>
                   <span style={{ color: "#22c55e", fontSize: "13px", fontWeight: "700" }}>SSL Encrypted</span>
                 </div>
-                <div style={{ background: "var(--bg-card)", border: "1px solid #f97316", borderRadius: "8px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <div style={{ background: "var(--bg-card)", border: "1px solid var(--cta-color)", borderRadius: "8px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <span style={{ fontSize: "14px" }}>🇳🇬</span>
-                  <span style={{ color: "#f97316", fontSize: "13px", fontWeight: "700" }}>Made in Nigeria</span>
+                  <span style={{ color: "var(--cta-color)", fontSize: "13px", fontWeight: "700" }}>Made in Nigeria</span>
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-around", borderTop: "1px solid var(--border-light)", paddingTop: "12px" }}>

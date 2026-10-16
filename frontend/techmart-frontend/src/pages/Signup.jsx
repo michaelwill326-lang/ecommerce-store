@@ -30,7 +30,7 @@ const styles = {
     marginBottom: "24px",
   },
   brand: {
-    color: "#f97316",
+    color: "var(--cta-color)",
     fontSize: "24px",
     fontWeight: "800",
     letterSpacing: "1px",
@@ -123,7 +123,7 @@ const styles = {
   submitBtn: {
     width: "100%",
     padding: "14px",
-    background: "linear-gradient(135deg, #f97316, #dc2626)",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     border: "none",
     borderRadius: "12px",
@@ -153,7 +153,7 @@ const styles = {
     textAlign: "center",
   },
   link: {
-    color: "#f97316",
+    color: "var(--cta-color)",
     textDecoration: "none",
     fontWeight: "600",
   },
@@ -237,7 +237,7 @@ export default function Signup() {
     const score = [hasLower, hasUpper, hasNum, hasSym, password.length >= 8].filter(Boolean).length;
 
     if (score <= 2) return { label: "Weak", color: "#dc2626", width: "33%" };
-    if (score <= 4) return { label: "Medium", color: "#f97316", width: "66%" };
+    if (score <= 4) return { label: "Medium", color: "var(--cta-color)", width: "66%" };
     return { label: "Strong", color: "#22c55e", width: "100%" };
   };
 
@@ -259,10 +259,10 @@ export default function Signup() {
           <div style={{ fontSize:"64px",marginBottom:"16px" }}>✉️</div>
           <h2 style={{ color:"var(--text-primary)",fontSize:"22px",fontWeight:"800",marginBottom:"12px" }}>Check your email!</h2>
           <p style={{ color:"var(--text-muted)",fontSize:"15px",marginBottom:"8px" }}>We sent a verification link to</p>
-          <p style={{ color:"#f97316",fontWeight:"700",fontSize:"15px",marginBottom:"24px" }}>{signupEmail}</p>
+          <p style={{ color:"var(--cta-color)",fontWeight:"700",fontSize:"15px",marginBottom:"24px" }}>{signupEmail}</p>
           <p style={{ color:"var(--text-muted)",fontSize:"13px",marginBottom:"28px" }}>Click the link in the email to activate your account. Check your spam folder if you don't see it.</p>
           {resendMsg && <p style={{ color:resendMsg.includes("resent")?"#22c55e":"#ef4444",fontSize:"13px",marginBottom:"16px",fontWeight:"600" }}>{resendMsg}</p>}
-          <button onClick={handleResend} disabled={resendLoading} style={{ width:"100%",padding:"12px",background:"linear-gradient(135deg,#f97316,#dc2626)",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:"15px",cursor:"pointer",marginBottom:"12px" }}>
+          <button onClick={handleResend} disabled={resendLoading} style={{ width:"100%",padding:"12px",background: "var(--cta-color)",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:"15px",cursor:"pointer",marginBottom:"12px" }}>
             {resendLoading ? "Sending..." : "Resend Verification Email"}
           </button>
           <button onClick={()=>navigate("/login")} style={{ width:"100%",padding:"12px",background:"none",color:"var(--text-muted)",border:"1px solid var(--border-color)",borderRadius:"10px",fontWeight:"600",fontSize:"14px",cursor:"pointer" }}>

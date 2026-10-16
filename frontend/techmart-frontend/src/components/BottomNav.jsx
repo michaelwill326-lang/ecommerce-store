@@ -1,3 +1,4 @@
+import Icon from "./Icons";
 import { Link, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
@@ -29,13 +30,13 @@ export default function BottomNav() {
   if (hidden) return null;
 
   const tabs = [
-    { to: "/", icon: "🏠", label: "Home" },
-    { to: "/ai-search", icon: "🔍", label: "Search" },
-    { to: "/cart", icon: "🛒", label: "Cart", badge: cartCount },
-    { to: "/pay", icon: "💳", label: "Pay" },
+    { to: "/", icon: "home", label: "Home" },
+    { to: "/ai-search", icon: "search", label: "Search" },
+    { to: "/cart", icon: "cart", label: "Cart", badge: cartCount },
+    { to: "/pay", icon: "card", label: "Pay" },
     {
       to: user ? "/account" : "/login",
-      icon: "👤",
+      icon: "user",
       label: user ? "Account" : "Login",
     },
   ];
@@ -112,10 +113,11 @@ export default function BottomNav() {
                 <span
                   style={{
                     fontSize: "22px",
+                    color: active ? "var(--cta-color)" : "var(--text-muted)",
                     lineHeight: 1,
                   }}
                 >
-                  {tab.icon}
+                  <Icon name={tab.icon} size={22} />
                 </span>
 
                 {tab.badge > 0 && (
@@ -144,7 +146,7 @@ export default function BottomNav() {
                   fontSize: "10px",
                   fontWeight: active ? "800" : "500",
                   color: active
-                    ? "#f97316"
+                    ? "var(--cta-color)"
                     : "var(--text-muted)",
                 }}
               >
@@ -158,7 +160,7 @@ export default function BottomNav() {
                     bottom: "-8px",
                     width: "20px",
                     height: "2px",
-                    background: "#f97316",
+                    background: "var(--cta-color)",
                     borderRadius: "2px",
                   }}
                 />

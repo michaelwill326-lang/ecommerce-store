@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ALLOWED_THEMES, getInitialTheme } from "../config/theme";
 
 const THEMES = [
   { id: "dark", label: "🌙 Dark", bg: "#0a0a0a", cta: "#f97316" },
@@ -9,12 +10,11 @@ const THEMES = [
   { id: "purple", label: "💜 Purple", bg: "#0f0a1a", cta: "#a855f7" },
 ];
 
+const VISIBLE_THEMES = THEMES.filter(t => ALLOWED_THEMES.includes(t.id));
+
 export default function ThemeSwitcher() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState(() => {
-    const saved = localStorage.getItem("techmart-theme");
-    return !saved || saved === "dark" ? "light" : saved;
-  });
+  const [current, setCurrent] = useState(() => getInitialTheme());
 
   useEffect(() => {
     document.body.setAttribute("data-theme", current);
@@ -63,7 +63,7 @@ export default function ThemeSwitcher() {
           boxShadow: "0 8px 32px var(--shadow)"
         }}>
           <p style={{ color: "var(--text-muted)", fontSize: "11px", fontWeight: "600", margin: "0 0 6px 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Theme</p>
-          {THEMES.map(t => (
+          {VISIBLE_THEMES.map(t => (
             <button
               key={t.id}
               onClick={() => { setCurrent(t.id); setOpen(false); }}
