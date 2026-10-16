@@ -428,3 +428,8 @@ body {
 body {
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
+
+h1, h2, h3 {
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
