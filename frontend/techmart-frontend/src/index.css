@@ -338,8 +338,8 @@ html {
   --text-secondary: #333333;
   --text-muted: #666666;
   --cta-primary: linear-gradient(135deg, #16a34a, #15803d);
-  --cta-color: #16a34a;
-  --cta-hover: #15803d;
+  --cta-color: #15803d;
+  --cta-hover: #166534;
   --nav-bg: #ffffff;
   --nav-border: #e0e0e0;
   --shadow: rgba(0,0,0,0.1);

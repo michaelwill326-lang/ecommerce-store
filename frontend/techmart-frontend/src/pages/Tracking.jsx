@@ -48,7 +48,7 @@ const styles = {
   stepLine: { width: "2px", height: "40px", transition: "background 0.3s" },
   stepRight: { paddingBottom: "32px", flex: 1 },
   stepLabel: { fontSize: "15px", margin: "8px 0 4px", display: "flex", alignItems: "center", gap: "8px" },
-  currentBadge: { background: "#f97316", color: "var(--text-primary)", fontSize: "10px", padding: "2px 8px", borderRadius: "999px", fontWeight: "700" },
+  currentBadge: { background: "var(--cta-color)", color: "var(--text-primary)", fontSize: "10px", padding: "2px 8px", borderRadius: "999px", fontWeight: "700" },
   stepDesc: { color: "var(--text-muted)", fontSize: "13px", margin: 0 },
   cancelledBox: { background: "#2a1010", border: "1px solid #dc2626", color: "#f87171", padding: "16px", borderRadius: "12px", fontSize: "15px", textAlign: "center" },
   itemsSection: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px" },
@@ -57,21 +57,21 @@ const styles = {
   itemDetails: { flex: 1 },
   itemName: { color: "var(--text-primary)", fontWeight: "600", fontSize: "14px", margin: "0 0 4px" },
   itemQty: { color: "var(--text-muted)", fontSize: "13px", margin: 0 },
-  itemPrice: { color: "#f97316", fontWeight: "700", fontSize: "15px" },
+  itemPrice: { color: "var(--cta-color)", fontWeight: "700", fontSize: "15px" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: "16px" },
-  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
+  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid var(--cta-color)", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
   myOrderCard: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "16px", padding: "20px", marginBottom: "16px" },
   myOrderHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", marginBottom: "16px" },
   myOrderRef: { color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 4px" },
   myOrderDate: { color: "var(--text-muted)", fontSize: "13px", margin: 0 },
   myOrderRight: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" },
-  myOrderAmount: { color: "#f97316", fontWeight: "800", fontSize: "18px", margin: 0 },
+  myOrderAmount: { color: "var(--cta-color)", fontWeight: "800", fontSize: "18px", margin: 0 },
   miniTimeline: { display: "flex", alignItems: "center" },
   miniStep: { display: "flex", alignItems: "center", flex: 1 },
   miniDot: { width: "16px", height: "16px", borderRadius: "50%", flexShrink: 0 },
   miniLine: { flex: 1, height: "2px" },
   miniLabel: { fontSize: "16px", margin: "0 0 0 4px" },
-  viewBtn: { padding: "8px 16px", background: "transparent", border: "1px solid #f97316", color: "#f97316", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "600" },
+  viewBtn: { padding: "8px 16px", background: "transparent", border: "1px solid var(--cta-color)", color: "var(--cta-color)", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "600" },
   trackingNum: { color: "#3b82f6", fontSize: "13px", fontWeight: "600", margin: "auto 0" },
 };
 
@@ -188,7 +188,7 @@ export default function Tracking() {
   return (
     <div style={styles.page}>
       {pullDistance > 0 && (
-        <div style={{ textAlign: "center", padding: "10px", color: pulling ? "#f97316" : "var(--text-muted)", fontSize: "13px", fontWeight: "700" }}>
+        <div style={{ textAlign: "center", padding: "10px", color: pulling ? "var(--cta-color)" : "var(--text-muted)", fontSize: "13px", fontWeight: "700" }}>
           {pulling ? "🔄 Release to refresh" : "⬇️ Pull to refresh"}
         </div>
       )}
@@ -274,7 +274,7 @@ export default function Tracking() {
                 </div>
                 <div style={styles.orderInfoRow}>
                   <span style={styles.infoLabel}>Amount</span>
-                  <span style={{ ...styles.infoValue, color: "#f97316", fontWeight: "800" }}>
+                  <span style={{ ...styles.infoValue, color: "var(--cta-color)", fontWeight: "800" }}>
                     ₦{order.amount?.toLocaleString()}
                   </span>
                 </div>
@@ -329,7 +329,7 @@ export default function Tracking() {
                                   ? "linear-gradient(135deg, #f97316, #dc2626)"
                                   : "var(--bg-secondary)",
                                 border: isCurrent
-                                  ? "2px solid #f97316"
+                                  ? "2px solid var(--cta-color)"
                                   : isCompleted
                                   ? "none"
                                   : "2px solid var(--border-color)",
@@ -349,7 +349,7 @@ export default function Tracking() {
                                   ...styles.stepLine,
                                   background:
                                     currentIndex > i
-                                      ? "#f97316"
+                                      ? "var(--cta-color)"
                                       : "var(--border-color)",
                                 }}
                               />
@@ -581,7 +581,7 @@ export default function Tracking() {
 
           {!user && (
             <div style={styles.errorBox}>
-              ⚠️ Please <Link to="/login" style={{ color: "#f97316" }}>login</Link> to view your orders.
+              ⚠️ Please <Link to="/login" style={{ color: "var(--cta-color)" }}>login</Link> to view your orders.
             </div>
           )}
 

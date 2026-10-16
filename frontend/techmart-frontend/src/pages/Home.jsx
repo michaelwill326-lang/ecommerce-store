@@ -107,7 +107,7 @@ export default function Home() {
 
 
   if (loading) return <div className="tm-container"><ProductGridSkeleton count={8} /></div>;
-  if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"#f97316"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"#f97316",color:"var(--text-primary)",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
+  if (error) return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{color:"var(--cta-color)"}}>⚠️ {error}</p><button onClick={()=>window.location.reload()} style={{marginTop:"16px",padding:"10px 24px",background:"var(--cta-color)",color:"var(--text-primary)",border:"none",borderRadius:"8px",cursor:"pointer"}}>Retry</button></div>;
 
   return (
     <>
@@ -179,7 +179,7 @@ export default function Home() {
           <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="tm-select">
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--border-color)", background: showFilters ? "#f97316" : "#1a1a1a", color: "var(--text-primary)", fontSize: "13px", cursor: "pointer", fontWeight: "600" }}>
+          <button onClick={() => setShowFilters(!showFilters)} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--border-color)", background: showFilters ? "var(--cta-color)" : "#1a1a1a", color: "var(--text-primary)", fontSize: "13px", cursor: "pointer", fontWeight: "600" }}>
             {showFilters ? "Hide Filters" : "Price Filter"}
           </button>
           {isFiltering && (
@@ -230,7 +230,7 @@ export default function Home() {
               <h2 className="tm-title">�� All Products</h2>
               <div className="tm-grid">{paginatedProducts.map(p=><ProductCard key={p._id} p={p}/>)}</div>
               <div ref={loaderRef} style={{ padding: "20px", textAlign: "center" }}>
-                {hasMore && <div style={{ width: "30px", height: "30px", border: "3px solid #333", borderTop: "3px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />}
+                {hasMore && <div style={{ width: "30px", height: "30px", border: "3px solid #333", borderTop: "3px solid var(--cta-color)", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />}
                 {!hasMore && filtered.length > ITEMS_PER_PAGE && <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>All {filtered.length} products loaded</p>}
               </div>
             </section>

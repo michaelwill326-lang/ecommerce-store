@@ -107,7 +107,7 @@ export default function AISearch() {
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <h1 style={{ color: "var(--text-primary)", fontSize: "24px", fontWeight: "900", margin: "0 0 6px" }}>
-            <span style={{ color: "#f97316" }}>AI</span> Product Search
+            <span style={{ color: "var(--cta-color)" }}>AI</span> Product Search
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: 0 }}>Search in plain English — brand, price, condition, anything</p>
         </div>
@@ -156,7 +156,7 @@ export default function AISearch() {
               <div style={{ width: "220px", flexShrink: 0, background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px", position: "sticky", top: "80px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <span style={{ color: "#fff", fontWeight: "700", fontSize: "14px" }}>🔧 Filters</span>
-                  {hasActiveFilters && <button onClick={clearFilters} style={{ background: "none", border: "none", color: "#f97316", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}>Clear all</button>}
+                  {hasActiveFilters && <button onClick={clearFilters} style={{ background: "none", border: "none", color: "var(--cta-color)", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}>Clear all</button>}
                 </div>
 
                 {/* Sort */}
@@ -164,8 +164,8 @@ export default function AISearch() {
                   <p style={{ color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Sort By</p>
                   {[["relevance", "Most Relevant"], ["price_asc", "Price: Low to High"], ["price_desc", "Price: High to Low"], ["newest", "Newest First"]].map(([val, label]) => (
                     <div key={val} onClick={() => handleFilter("sort", val)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", cursor: "pointer" }}>
-                      <div style={{ width: "14px", height: "14px", borderRadius: "50%", border: `2px solid ${sortBy === val ? "#f97316" : "#444"}`, background: sortBy === val ? "#f97316" : "transparent", flexShrink: 0 }} />
-                      <span style={{ color: sortBy === val ? "#f97316" : "var(--text-muted)", fontSize: "13px" }}>{label}</span>
+                      <div style={{ width: "14px", height: "14px", borderRadius: "50%", border: `2px solid ${sortBy === val ? "var(--cta-color)" : "#444"}`, background: sortBy === val ? "var(--cta-color)" : "transparent", flexShrink: 0 }} />
+                      <span style={{ color: sortBy === val ? "var(--cta-color)" : "var(--text-muted)", fontSize: "13px" }}>{label}</span>
                     </div>
                   ))}
                 </div>
@@ -186,8 +186,8 @@ export default function AISearch() {
                     <p style={{ color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Condition</p>
                     {facets.conditions.map(c => (
                       <div key={c} onClick={() => handleFilter("cond", activeCondition === c ? "" : c)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", cursor: "pointer" }}>
-                        <div style={{ width: "14px", height: "14px", borderRadius: "3px", border: `2px solid ${activeCondition === c ? "#f97316" : "#444"}`, background: activeCondition === c ? "#f97316" : "transparent", flexShrink: 0 }} />
-                        <span style={{ color: activeCondition === c ? "#f97316" : "var(--text-muted)", fontSize: "13px" }}>{c}</span>
+                        <div style={{ width: "14px", height: "14px", borderRadius: "3px", border: `2px solid ${activeCondition === c ? "var(--cta-color)" : "#444"}`, background: activeCondition === c ? "var(--cta-color)" : "transparent", flexShrink: 0 }} />
+                        <span style={{ color: activeCondition === c ? "var(--cta-color)" : "var(--text-muted)", fontSize: "13px" }}>{c}</span>
                       </div>
                     ))}
                   </div>
@@ -199,8 +199,8 @@ export default function AISearch() {
                     <p style={{ color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Category</p>
                     {facets.categories.map(c => (
                       <div key={c} onClick={() => handleFilter("cat", activeCategory === c ? "" : c)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", cursor: "pointer" }}>
-                        <div style={{ width: "14px", height: "14px", borderRadius: "3px", border: `2px solid ${activeCategory === c ? "#f97316" : "#444"}`, background: activeCategory === c ? "#f97316" : "transparent", flexShrink: 0 }} />
-                        <span style={{ color: activeCategory === c ? "#f97316" : "var(--text-muted)", fontSize: "13px" }}>{c}</span>
+                        <div style={{ width: "14px", height: "14px", borderRadius: "3px", border: `2px solid ${activeCategory === c ? "var(--cta-color)" : "#444"}`, background: activeCategory === c ? "var(--cta-color)" : "transparent", flexShrink: 0 }} />
+                        <span style={{ color: activeCategory === c ? "var(--cta-color)" : "var(--text-muted)", fontSize: "13px" }}>{c}</span>
                       </div>
                     ))}
                   </div>
@@ -212,8 +212,8 @@ export default function AISearch() {
                     <p style={{ color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Brand</p>
                     {facets.brands.slice(0, 8).map(b => (
                       <div key={b} onClick={() => handleFilter("brand", activeBrand === b ? "" : b)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", cursor: "pointer" }}>
-                        <div style={{ width: "14px", height: "14px", borderRadius: "3px", border: `2px solid ${activeBrand === b ? "#f97316" : "#444"}`, background: activeBrand === b ? "#f97316" : "transparent", flexShrink: 0 }} />
-                        <span style={{ color: activeBrand === b ? "#f97316" : "var(--text-muted)", fontSize: "13px" }}>{b}</span>
+                        <div style={{ width: "14px", height: "14px", borderRadius: "3px", border: `2px solid ${activeBrand === b ? "var(--cta-color)" : "#444"}`, background: activeBrand === b ? "var(--cta-color)" : "transparent", flexShrink: 0 }} />
+                        <span style={{ color: activeBrand === b ? "var(--cta-color)" : "var(--text-muted)", fontSize: "13px" }}>{b}</span>
                       </div>
                     ))}
                   </div>
@@ -233,7 +233,7 @@ export default function AISearch() {
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     {["grid", "list"].map(v => (
-                      <button key={v} onClick={() => setViewMode(v)} style={{ padding: "6px 12px", background: viewMode === v ? "#f97316" : "#1a1a1a", border: "none", borderRadius: "8px", color: viewMode === v ? "#fff" : "var(--text-muted)", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>
+                      <button key={v} onClick={() => setViewMode(v)} style={{ padding: "6px 12px", background: viewMode === v ? "var(--cta-color)" : "#1a1a1a", border: "none", borderRadius: "8px", color: viewMode === v ? "#fff" : "var(--text-muted)", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>
                         {v === "grid" ? "⊞ Grid" : "☰ List"}
                       </button>
                     ))}
@@ -244,24 +244,24 @@ export default function AISearch() {
               {/* Active Filter Tags */}
               {hasActiveFilters && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
-                  {activeCategory && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid #f97316", borderRadius: "999px", color: "#f97316", fontSize: "12px" }}>📁 {activeCategory} ✕</span>}
-                  {activeBrand && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid #f97316", borderRadius: "999px", color: "#f97316", fontSize: "12px" }}>🏷 {activeBrand} ✕</span>}
-                  {activeCondition && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid #f97316", borderRadius: "999px", color: "#f97316", fontSize: "12px" }}>✨ {activeCondition} ✕</span>}
-                  {(priceMin || priceMax) && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid #f97316", borderRadius: "999px", color: "#f97316", fontSize: "12px" }}>💰 ₦{priceMin||"0"} – ₦{priceMax||"∞"} ✕</span>}
+                  {activeCategory && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid var(--cta-color)", borderRadius: "999px", color: "var(--cta-color)", fontSize: "12px" }}>📁 {activeCategory} ✕</span>}
+                  {activeBrand && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid var(--cta-color)", borderRadius: "999px", color: "var(--cta-color)", fontSize: "12px" }}>🏷 {activeBrand} ✕</span>}
+                  {activeCondition && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid var(--cta-color)", borderRadius: "999px", color: "var(--cta-color)", fontSize: "12px" }}>✨ {activeCondition} ✕</span>}
+                  {(priceMin || priceMax) && <span style={{ padding: "4px 10px", background: "#1a1a1a", border: "1px solid var(--cta-color)", borderRadius: "999px", color: "var(--cta-color)", fontSize: "12px" }}>💰 ₦{priceMin||"0"} – ₦{priceMax||"∞"} ✕</span>}
                 </div>
               )}
 
               {/* Sponsored */}
               {sponsored.length > 0 && (
                 <div style={{ marginBottom: "20px" }}>
-                  <p style={{ color: "#f97316", fontWeight: "700", fontSize: "11px", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "1px" }}>📢 Sponsored</p>
+                  <p style={{ color: "var(--cta-color)", fontWeight: "700", fontSize: "11px", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "1px" }}>📢 Sponsored</p>
                   <div style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "8px" }}>
                     {sponsored.map((p, i) => (
-                      <div key={i} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid #f97316", borderRadius: "12px", overflow: "hidden", cursor: "pointer", flexShrink: 0, width: "140px" }}>
+                      <div key={i} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid var(--cta-color)", borderRadius: "12px", overflow: "hidden", cursor: "pointer", flexShrink: 0, width: "140px" }}>
                         <img src={p.images?.[0] || FALLBACK} alt={p.name} style={{ width: "100%", height: "110px", objectFit: "cover" }} onError={e => e.target.src = FALLBACK} />
                         <div style={{ padding: "8px" }}>
                           <p style={{ color: "var(--text-primary)", fontSize: "11px", fontWeight: "600", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                          <p style={{ color: "#f97316", fontSize: "12px", fontWeight: "700", margin: 0 }}>₦{(p.price || 0).toLocaleString()}</p>
+                          <p style={{ color: "var(--cta-color)", fontSize: "12px", fontWeight: "700", margin: 0 }}>₦{(p.price || 0).toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -275,7 +275,7 @@ export default function AISearch() {
                   <p style={{ fontSize: "48px", margin: "0 0 12px" }}>🤔</p>
                   <p style={{ color: "var(--text-primary)", fontWeight: "700", marginBottom: "8px" }}>No products found</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "16px" }}>Try adjusting your filters or search with different keywords</p>
-                  {hasActiveFilters && <button onClick={clearFilters} style={{ padding: "10px 20px", background: "#f97316", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Clear Filters</button>}
+                  {hasActiveFilters && <button onClick={clearFilters} style={{ padding: "10px 20px", background: "var(--cta-color)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" }}>Clear Filters</button>}
                 </div>
               )}
 
@@ -295,7 +295,7 @@ export default function AISearch() {
                       <div style={{ padding: "10px" }}>
                         <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{p.category}</p>
                         <p style={{ color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                        <p style={{ color: "#f97316", fontWeight: "800", fontSize: "15px", margin: "0 0 4px" }}>₦{p.price?.toLocaleString()}</p>
+                        <p style={{ color: "var(--cta-color)", fontWeight: "800", fontSize: "15px", margin: "0 0 4px" }}>₦{p.price?.toLocaleString()}</p>
                         {p.stock <= 5 && <p style={{ color: "#ef4444", fontSize: "11px", margin: 0 }}>Only {p.stock} left</p>}
                       </div>
                     </div>
@@ -316,7 +316,7 @@ export default function AISearch() {
                         <p style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "15px", margin: "0 0 4px" }}>{p.name}</p>
                         <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.description}</p>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                          <p style={{ color: "#f97316", fontWeight: "800", fontSize: "18px", margin: 0 }}>₦{p.price?.toLocaleString()}</p>
+                          <p style={{ color: "var(--cta-color)", fontWeight: "800", fontSize: "18px", margin: 0 }}>₦{p.price?.toLocaleString()}</p>
                           {p.condition && <span style={{ padding: "2px 8px", background: "#1a1a1a", border: "1px solid #333", borderRadius: "6px", color: "var(--text-muted)", fontSize: "12px" }}>{p.condition}</span>}
                           {p.stock <= 5 && <span style={{ color: "#ef4444", fontSize: "12px" }}>Only {p.stock} left</span>}
                         </div>

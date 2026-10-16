@@ -18,7 +18,7 @@ const FALLBACK_IMG = "https://placehold.co/500x400?text=No+Image";
 const styles = {
   page: { maxWidth: "1100px", margin: "0 auto", padding: "16px", minHeight: "100vh", paddingBottom: "80px" },
   centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: "16px" },
-  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
+  spinner: { width: "40px", height: "40px", border: "4px solid #333", borderTop: "4px solid var(--cta-color)", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
   backBtn: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--text-primary)", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", marginBottom: "16px" },
   layout: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px", alignItems: "start" },
   layoutMobile: { display: "flex", flexDirection: "column", gap: "20px" },
@@ -30,12 +30,12 @@ const styles = {
   thumbRow: { display: "flex", gap: "10px", flexWrap: "wrap" },
   thumb: { width: "72px", height: "72px", objectFit: "cover", borderRadius: "8px", cursor: "pointer", transition: "border 0.2s" },
   detailsCol: { display: "flex", flexDirection: "column", gap: "8px" },
-  categoryBadge: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "#f97316", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", alignSelf: "flex-start" },
+  categoryBadge: { background: "var(--bg-card)", border: "1px solid var(--border-color)", color: "var(--cta-color)", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", alignSelf: "flex-start" },
   productName: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", lineHeight: "1.3" },
   ratingRow: { display: "flex", alignItems: "center", gap: "8px" },
-  stars: { color: "#f97316", fontSize: "18px" },
+  stars: { color: "var(--cta-color)", fontSize: "18px" },
   ratingText: { color: "var(--text-muted)", fontSize: "14px" },
-  price: { color: "#f97316", fontSize: "28px", fontWeight: "800" },
+  price: { color: "var(--cta-color)", fontSize: "28px", fontWeight: "800" },
   stockText: { fontSize: "14px", fontWeight: "600" },
   description: { color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.6", marginTop: "4px" },
   divider: { borderTop: "1px solid var(--border-light)", margin: "8px 0" },
@@ -45,8 +45,8 @@ const styles = {
   qtyBtn: { width: "36px", height: "36px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)", fontSize: "20px", cursor: "pointer" },
   qtyNum: { color: "var(--text-primary)", fontSize: "18px", fontWeight: "700", minWidth: "28px", textAlign: "center" },
   addBtn: { padding: "16px", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", transition: "background 0.3s" },
-  wishlistBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" },
-  viewCartBtn: { padding: "14px", background: "transparent", border: "1px solid #f97316", color: "#f97316", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer" },
+  wishlistBtn: { padding: "14px", background: "transparent", border: "1px solid var(--cta-color)", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" },
+  viewCartBtn: { padding: "14px", background: "transparent", border: "1px solid var(--cta-color)", color: "var(--cta-color)", borderRadius: "12px", fontSize: "15px", fontWeight: "600", cursor: "pointer" },
   recSection: { marginTop: "48px", paddingTop: "32px", borderTop: "1px solid var(--border-light)" },
   recTitle: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", marginBottom: "24px" },
   recGrid: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" },
@@ -54,7 +54,7 @@ const styles = {
   recImg: { width: "100%", height: "150px", objectFit: "cover", display: "block" },
   recInfo: { padding: "12px" },
   recName: { color: "var(--text-primary)", fontSize: "13px", fontWeight: "600", margin: "0 0 6px", lineHeight: "1.4" },
-  recPrice: { color: "#f97316", fontSize: "15px", fontWeight: "700", margin: 0 },
+  recPrice: { color: "var(--cta-color)", fontSize: "15px", fontWeight: "700", margin: 0 },
 };
 
 export default function ProductDetail() {
@@ -323,7 +323,7 @@ export default function ProductDetail() {
             {images.length > 1 && (
               <div style={{ position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "6px", zIndex: 10 }}>
                 {images.map((_, i) => (
-                  <div key={i} onClick={() => setSelectedImage(i)} style={{ width: selectedImage === i ? "20px" : "6px", height: "6px", borderRadius: "3px", background: selectedImage === i ? "#f97316" : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.3s ease" }} />
+                  <div key={i} onClick={() => setSelectedImage(i)} style={{ width: selectedImage === i ? "20px" : "6px", height: "6px", borderRadius: "3px", background: selectedImage === i ? "var(--cta-color)" : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.3s ease" }} />
                 ))}
               </div>
             )}
@@ -333,9 +333,9 @@ export default function ProductDetail() {
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                   {product.variants.map((v, i) => (
                     <button key={i} onClick={() => setSelectedVariant(v)}
-                      style={{ padding: "8px 14px", borderRadius: "8px", border: `2px solid ${selectedVariant?._id === v._id || (selectedVariant === v) ? "#f97316" : "#333"}`, background: selectedVariant === v ? "#1a0a00" : "#111", color: selectedVariant === v ? "#f97316" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>
+                      style={{ padding: "8px 14px", borderRadius: "8px", border: `2px solid ${selectedVariant?._id === v._id || (selectedVariant === v) ? "var(--cta-color)" : "#333"}`, background: selectedVariant === v ? "#1a0a00" : "#111", color: selectedVariant === v ? "var(--cta-color)" : "#888", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>
                       {v.name || [v.color, v.storage, v.size, v.condition].filter(Boolean).join(" / ")}
-                      <span style={{ display: "block", fontSize: "11px", color: selectedVariant === v ? "#f97316" : "#666" }}>₦{Number(v.price).toLocaleString()}</span>
+                      <span style={{ display: "block", fontSize: "11px", color: selectedVariant === v ? "var(--cta-color)" : "#666" }}>₦{Number(v.price).toLocaleString()}</span>
                     </button>
                   ))}
                 </div>
@@ -409,7 +409,7 @@ export default function ProductDetail() {
                   style={{
                     ...styles.thumb,
                     border: selectedImage === i
-                      ? "2px solid #f97316"
+                      ? "2px solid var(--cta-color)"
                       : "2px solid transparent",
                   }}
                 />
@@ -423,14 +423,14 @@ export default function ProductDetail() {
           {product.vendorName && (
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", flexWrap: "wrap" }}>
               <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>Sold by</span>
-              <span style={{ color: "#f97316", fontWeight: "700", fontSize: "13px" }}>{product.vendorName}</span>
+              <span style={{ color: "var(--cta-color)", fontWeight: "700", fontSize: "13px" }}>{product.vendorName}</span>
               <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "20px" }}>✓ Verified Seller</span>
             </div>
           )}
           {/* BUYER PROTECTION BADGE */}
           <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
             <span style={{ background: "#0a1a2a", border: "1px solid #3b82f6", color: "#60a5fa", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>🛡️ Buyer Protected</span>
-            <span style={{ background: "#1a0a00", border: "1px solid #f97316", color: "#f97316", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>↩️ Easy Returns</span>
+            <span style={{ background: "#1a0a00", border: "1px solid var(--cta-color)", color: "var(--cta-color)", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>↩️ Easy Returns</span>
             <span style={{ background: "#0a2a1a", border: "1px solid #22c55e", color: "#22c55e", fontSize: "11px", fontWeight: "700", padding: "4px 10px", borderRadius: "20px" }}>⚡ Fast Delivery</span>
           </div>
 
@@ -513,8 +513,8 @@ export default function ProductDetail() {
             onClick={handleWishlist}
             style={{
               ...styles.wishlistBtn,
-              borderColor: wishlisted ? "#dc2626" : "#f97316",
-              color: wishlisted ? "#dc2626" : "#f97316",
+              borderColor: wishlisted ? "#dc2626" : "var(--cta-color)",
+              color: wishlisted ? "#dc2626" : "var(--cta-color)",
               background: wishlisted ? "rgba(220,38,38,0.1)" : "transparent",
             }}
           >
@@ -626,7 +626,7 @@ export default function ProductDetail() {
                       <XAxis dataKey="date" tick={{ fill: "#888", fontSize: 10 }} />
                       <YAxis tick={{ fill: "#888", fontSize: 10 }} tickFormatter={v => `₦${(v/1000).toFixed(0)}k`} />
                       <Tooltip formatter={v => [`₦${Number(v).toLocaleString()}`, "Price"]} contentStyle={{ background: "#111", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} />
-                      <Line type="monotone" dataKey="price" stroke="#f97316" strokeWidth={2} dot={{ fill: "#f97316", r: 3 }} />
+                      <Line type="monotone" dataKey="price" stroke="#f97316" strokeWidth={2} dot={{ fill: "var(--cta-color)", r: 3 }} />
                     </LineChart>
                   </ResponsiveContainer>
                   {priceHistory.length >= 2 && (() => {

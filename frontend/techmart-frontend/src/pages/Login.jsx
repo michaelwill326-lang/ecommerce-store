@@ -30,7 +30,7 @@ const styles = {
     marginBottom: "24px",
   },
   brand: {
-    color: "#f97316",
+    color: "var(--cta-color)",
     fontSize: "24px",
     fontWeight: "800",
     letterSpacing: "1px",
@@ -117,7 +117,7 @@ const styles = {
   forgotBtn: {
     background: "transparent",
     border: "none",
-    color: "#f97316",
+    color: "var(--cta-color)",
     fontSize: "12px",
     fontWeight: "600",
     cursor: "pointer",
@@ -168,7 +168,7 @@ const styles = {
     textAlign: "center",
   },
   link: {
-    color: "#f97316",
+    color: "var(--cta-color)",
     textDecoration: "none",
     fontWeight: "600",
   },
@@ -345,11 +345,11 @@ export default function Login() {
             </form>
             <div style={{ textAlign: "center", marginTop: "12px" }}>
               {otpTimer > 0 ? (
-                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Resend in <strong style={{ color: "#f97316" }}>{Math.floor(otpTimer/60)}:{String(otpTimer%60).padStart(2,"0")}</strong></p>
+                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Resend in <strong style={{ color: "var(--cta-color)" }}>{Math.floor(otpTimer/60)}:{String(otpTimer%60).padStart(2,"0")}</strong></p>
               ) : (
                 <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
                   Didn't receive it?{" "}
-                  <span onClick={async () => { await axios.post(`${API}/api/auth/send-otp`, { email }); setOtpTimer(120); setError(""); }} style={{ color: "#f97316", cursor: "pointer", fontWeight: "700" }}>Resend OTP</span>
+                  <span onClick={async () => { await axios.post(`${API}/api/auth/send-otp`, { email }); setOtpTimer(120); setError(""); }} style={{ color: "var(--cta-color)", cursor: "pointer", fontWeight: "700" }}>Resend OTP</span>
                 </p>
               )}
             </div>

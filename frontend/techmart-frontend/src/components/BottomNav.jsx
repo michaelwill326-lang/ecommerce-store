@@ -113,7 +113,7 @@ export default function BottomNav() {
                 <span
                   style={{
                     fontSize: "22px",
-                    color: active ? "#f97316" : "var(--text-muted)",
+                    color: active ? "var(--cta-color)" : "var(--text-muted)",
                     lineHeight: 1,
                   }}
                 >
@@ -146,7 +146,7 @@ export default function BottomNav() {
                   fontSize: "10px",
                   fontWeight: active ? "800" : "500",
                   color: active
-                    ? "#f97316"
+                    ? "var(--cta-color)"
                     : "var(--text-muted)",
                 }}
               >
@@ -160,7 +160,7 @@ export default function BottomNav() {
                     bottom: "-8px",
                     width: "20px",
                     height: "2px",
-                    background: "#f97316",
+                    background: "var(--cta-color)",
                     borderRadius: "2px",
                   }}
                 />

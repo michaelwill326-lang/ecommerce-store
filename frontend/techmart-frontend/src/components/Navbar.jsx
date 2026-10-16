@@ -31,7 +31,7 @@ const styles = {
     objectFit: "contain",
   },
   logoText: {
-    color: "#f97316",
+    color: "var(--cta-color)",
     fontFamily: "'Sora', 'Inter', system-ui, sans-serif",
     fontWeight: "700",
     fontSize: "20px",
@@ -99,7 +99,7 @@ const styles = {
     position: "absolute",
     top: "-6px",
     right: "-6px",
-    background: "#f97316",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     borderRadius: "50%",
     fontSize: "10px",
@@ -164,7 +164,7 @@ const styles = {
     gap: "10px",
   },
   mobileBadge: {
-    background: "#f97316",
+    background: "var(--cta-color)",
     color: "var(--text-primary)",
     borderRadius: "999px",
     fontSize: "11px",
@@ -257,7 +257,7 @@ export default function Navbar() {
   };
 
   const linkStyle = (path) => ({
-    color: location.pathname === path ? "#f97316" : "#aaa",
+    color: location.pathname === path ? "var(--cta-color)" : "#aaa",
     textDecoration: "none",
     fontSize: "14px",
     fontWeight: "500",
@@ -294,7 +294,7 @@ export default function Navbar() {
             <Link to="/" style={linkStyle("/")}>Home</Link>
             <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
             <Link to="/phone-checker" style={linkStyle("/phone-checker")}><Icon name="phone" size={16} /> Phone Check</Link>
-            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "#f97316" : "#22c55e", fontWeight: "700" }}>Pay</Link>
+            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "var(--cta-color)" : "#22c55e", fontWeight: "700" }}>Pay</Link>
 
             {user?.role === "admin" && (
               <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
@@ -309,7 +309,7 @@ export default function Navbar() {
               <div style={{
                 ...styles.cartWrap,
                 background: location.pathname === "/wishlist" ? "#1a1a1a" : "transparent",
-                border: location.pathname === "/wishlist" ? "1px solid #f97316" : "1px solid #333",
+                border: location.pathname === "/wishlist" ? "1px solid var(--cta-color)" : "1px solid #333",
               }}>
                 <Icon name="heart" size={18} />
                 {wishlistCount > 0 && (
@@ -326,7 +326,7 @@ export default function Navbar() {
                   </div>
                 </Link>
                 <Link to="/account" style={{ textDecoration: "none" }}>
-                  <span style={{ ...styles.userName, color: "#f97316" }}>Hi, {user.name?.split(" ")[0]}</span>
+                  <span style={{ ...styles.userName, color: "var(--cta-color)" }}>Hi, {user.name?.split(" ")[0]}</span>
                 </Link>
                 <button onClick={handleLogout} style={styles.logoutBtn}>
                   Logout
@@ -348,7 +348,7 @@ export default function Navbar() {
               <div style={{
                 ...styles.cartWrap,
                 background: location.pathname === "/cart" ? "#1a1a1a" : "transparent",
-                border: location.pathname === "/cart" ? "1px solid #f97316" : "1px solid #333",
+                border: location.pathname === "/cart" ? "1px solid var(--cta-color)" : "1px solid #333",
               }}>
                 <Icon name="cart" size={18} />
                 {cartCount > 0 && (
@@ -413,7 +413,7 @@ export default function Navbar() {
               <span style={styles.mobileBadge}>{cartCount}</span>
             )}
           </Link>
-          <Link to="/pay" style={{...styles.mobileLink, color: "#f97316", fontWeight: "700"}} onClick={() => setMenuOpen(false)}>
+          <Link to="/pay" style={{...styles.mobileLink, color: "var(--cta-color)", fontWeight: "700"}} onClick={() => setMenuOpen(false)}>
             <Icon name="card" size={18} /> TechMart Pay
           </Link>
 

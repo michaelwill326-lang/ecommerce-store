@@ -549,8 +549,8 @@ export default function Account() {
             ))}
           </div>
           {user?.referralCode && (
-            <div style={{ background: "var(--bg-secondary)", border: "1px solid #f97316", borderRadius: "12px", padding: "16px", marginTop: "16px", marginBottom: "8px" }}>
-              <p style={{ color: "#f97316", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>🎁 Refer & Earn</p>
+            <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--cta-color)", borderRadius: "12px", padding: "16px", marginTop: "16px", marginBottom: "8px" }}>
+              <p style={{ color: "var(--cta-color)", fontWeight: "700", fontSize: "14px", margin: "0 0 8px" }}>🎁 Refer & Earn</p>
               <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "0 0 12px" }}>Share your code and earn ₦500 for every friend who signs up!</p>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <div style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "10px 14px", fontFamily: "monospace", fontWeight: "700", fontSize: "16px", color: "var(--text-primary)", letterSpacing: "2px" }}>{user.referralCode}</div>

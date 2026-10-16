@@ -8,7 +8,7 @@ const styles = {
   container: { maxWidth: "1100px", margin: "0 auto", padding: "16px", paddingBottom: "80px", minHeight: "100vh" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" },
   title: { color: "var(--text-primary)", fontSize: "22px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px" },
-  badge: { background: "#f97316", color: "var(--text-primary)", fontSize: "12px", fontWeight: "600", padding: "3px 8px", borderRadius: "999px" },
+  badge: { background: "var(--cta-color)", color: "var(--text-primary)", fontSize: "12px", fontWeight: "600", padding: "3px 8px", borderRadius: "999px" },
   layout: { display: "grid", gridTemplateColumns: "1fr 340px", gap: "32px", alignItems: "start" },
   layoutMobile: { display: "flex", flexDirection: "column", gap: "12px" },
   summaryMobile: { background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "16px" },
@@ -18,7 +18,7 @@ const styles = {
   details: { flex: 1, minWidth: "0" },
   itemName: { color: "var(--text-primary)", fontSize: "16px", fontWeight: "700", marginBottom: "4px" },
   itemCategory: { color: "var(--text-muted)", fontSize: "12px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" },
-  itemPrice: { color: "#f97316", fontSize: "18px", fontWeight: "800", marginBottom: "4px" },
+  itemPrice: { color: "var(--cta-color)", fontSize: "18px", fontWeight: "800", marginBottom: "4px" },
   qtyRow: { display: "flex", alignItems: "center", gap: "12px", marginTop: "12px" },
   qtyBtn: { width: "32px", height: "32px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-input)", color: "var(--text-primary)", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   qtyNum: { color: "var(--text-primary)", fontSize: "16px", fontWeight: "700", minWidth: "24px", textAlign: "center" },
@@ -73,7 +73,7 @@ export default function Cart() {
           <div style={styles.summaryMobile}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <span style={{ color: "var(--text-muted)", fontSize: "14px" }}>Total ({cart.length} item{cart.length !== 1 ? "s" : ""})</span>
-              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
+              <span style={{ color: "var(--cta-color)", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
               <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>Delivery</span>
@@ -126,7 +126,7 @@ export default function Cart() {
             <div style={styles.divider} />
             <div style={styles.summaryRow}>
               <span style={{ color: "var(--text-primary)", fontWeight: "700", fontSize: "18px" }}>Total</span>
-              <span style={{ color: "#f97316", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
+              <span style={{ color: "var(--cta-color)", fontWeight: "800", fontSize: "20px" }}>₦{total.toLocaleString()}</span>
             </div>
             <Link to="/checkout" style={{ display: "block", marginTop: "24px" }}>
               <button style={styles.checkoutBtn}>Proceed to Payment →</button>
