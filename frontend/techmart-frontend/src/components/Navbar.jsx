@@ -31,9 +31,10 @@ const styles = {
   },
   logoText: {
     color: "#f97316",
-    fontWeight: "800",
+    fontFamily: "'Sora', 'Inter', system-ui, sans-serif",
+    fontWeight: "700",
     fontSize: "20px",
-    letterSpacing: "1px",
+    letterSpacing: "-1px",
   },
   desktopLinks: {
     display: "flex",
