@@ -1,3 +1,4 @@
+import { getInitialTheme } from "./config/theme";
 import { Routes, Route } from "react-router-dom";
 import { useEffect, Suspense, lazy, useState, createContext, useContext } from "react";
 
@@ -243,8 +244,7 @@ export default function App() {
   useEffect(() => {
     // Apply saved theme safely after mount
     try {
-      const savedTheme = localStorage.getItem("techmart-theme");
-      const theme = !savedTheme || savedTheme === "dark" ? "light" : savedTheme;
+      const theme = getInitialTheme();
       localStorage.setItem("techmart-theme", theme);
       document.body.setAttribute("data-theme", theme);
     } catch {}
