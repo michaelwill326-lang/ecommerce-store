@@ -626,7 +626,7 @@ export default function ProductDetail() {
                       <XAxis dataKey="date" tick={{ fill: "#888", fontSize: 10 }} />
                       <YAxis tick={{ fill: "#888", fontSize: 10 }} tickFormatter={v => `₦${(v/1000).toFixed(0)}k`} />
                       <Tooltip formatter={v => [`₦${Number(v).toLocaleString()}`, "Price"]} contentStyle={{ background: "#111", border: "1px solid #333", borderRadius: "8px", color: "#fff" }} />
-                      <Line type="monotone" dataKey="price" stroke="#f97316" strokeWidth={2} dot={{ fill: "var(--cta-color)", r: 3 }} />
+                      <Line type="monotone" dataKey="price" stroke="var(--cta-color)" strokeWidth={2} dot={{ fill: "var(--cta-color)", r: 3 }} />
                     </LineChart>
                   </ResponsiveContainer>
                   {priceHistory.length >= 2 && (() => {

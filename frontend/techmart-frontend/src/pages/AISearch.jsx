@@ -284,7 +284,7 @@ export default function AISearch() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "16px" }}>
                   {filtered.map(p => (
                     <div key={p._id} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", overflow: "hidden", cursor: "pointer", transition: "border-color 0.2s" }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = "#f97316"}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = "var(--cta-color)"}
                       onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border-color)"}>
                       <div style={{ position: "relative" }}>
                         <img src={p.images?.[0] || FALLBACK} alt={p.name} style={{ width: "100%", height: "150px", objectFit: "cover" }} onError={e => e.target.src = FALLBACK} />
@@ -308,7 +308,7 @@ export default function AISearch() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {filtered.map(p => (
                     <div key={p._id} onClick={() => navigate(`/product/${p._id}`)} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px", overflow: "hidden", cursor: "pointer", display: "flex", gap: "16px", padding: "12px" }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = "#f97316"}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = "var(--cta-color)"}
                       onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border-color)"}>
                       <img src={p.images?.[0] || FALLBACK} alt={p.name} style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }} onError={e => e.target.src = FALLBACK} />
                       <div style={{ flex: 1, minWidth: 0 }}>
