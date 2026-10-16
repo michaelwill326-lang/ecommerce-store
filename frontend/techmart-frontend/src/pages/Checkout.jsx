@@ -1,3 +1,4 @@
+import { FEATURES } from "../config/features";
 import { useContext, useState, useEffect, useRef } from "react";
 import { useToast } from "../App";
 import { useNavigate, Link } from "react-router-dom";
@@ -486,7 +487,7 @@ export default function Checkout() {
                 </div>
               )}
               {/* BNPL Option */}
-              {bnplChecked && finalTotal >= 5000 && (
+              {FEATURES.bnpl && bnplChecked && finalTotal >= 5000 && (
                 <div onClick={() => bnplEligible && setPaymentMethod("bnpl")} style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", border: `2px solid ${paymentMethod === "bnpl" ? "#3b82f6" : "#333"}`, background: paymentMethod === "bnpl" ? "#0a0a1a" : "#111", cursor: bnplEligible ? "pointer" : "not-allowed", textAlign: "center", opacity: !bnplEligible ? 0.5 : 1 }}>
                   <p style={{ margin: "0 0 2px", fontSize: "18px" }}>🔄</p>
                   <p style={{ color: paymentMethod === "bnpl" ? "#3b82f6" : "#fff", fontWeight: "700", fontSize: "13px", margin: 0 }}>Buy Now Pay Later</p>

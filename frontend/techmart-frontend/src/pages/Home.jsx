@@ -1,3 +1,4 @@
+import { FEATURES } from "../config/features";
 import { useEffect, useState, useMemo, useRef, useCallback, useDeferredValue } from "react";
 import { Link } from "react-router-dom";
 import FlashSaleBanner from "../components/FlashSaleBanner";
@@ -131,6 +132,7 @@ export default function Home() {
         <FlashSaleBanner />
 
         {/* 💳 TECHMART PAY PROMO */}
+        {FEATURES.payPromo && (
         <div style={{ margin:"0 0 20px", position:"relative", overflow:"hidden", borderRadius:"18px", background:"linear-gradient(135deg,#0d1117 0%,#161b27 55%,#1a1f35 100%)", border:"1px solid rgba(99,102,241,0.3)", boxShadow:"0 8px 32px rgba(0,0,0,0.35)" }}>
           <div style={{ position:"absolute", width:"200px", height:"200px", borderRadius:"50%", background:"rgba(99,102,241,0.1)", filter:"blur(40px)", top:"-60px", right:"-40px", pointerEvents:"none" }} />
           <div style={{ position:"relative", zIndex:1, padding:"20px 20px 18px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"16px", flexWrap:"wrap" }}>
@@ -158,6 +160,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        )}
 
         {/* SEARCH BAR */}
         <div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
