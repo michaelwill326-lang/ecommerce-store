@@ -31,7 +31,7 @@ const styles = {
     objectFit: "contain",
   },
   logoText: {
-    color: "var(--cta-color)",
+    color: "var(--text-primary)",
     fontFamily: "'Sora', 'Inter', system-ui, sans-serif",
     fontWeight: "700",
     fontSize: "20px",
