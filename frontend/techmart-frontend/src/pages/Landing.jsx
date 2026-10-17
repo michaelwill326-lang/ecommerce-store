@@ -31,18 +31,6 @@ export default function Landing() {
           ))}
         </div>
       </div>
-      <div style={{ borderTop:"1px solid var(--border-color)", padding:"32px 24px", textAlign:"center" }}>
-        <p style={{ color:"#15803d", fontWeight:"900", fontSize:"20px", margin:"0 0 4px" }}>TechMart</p>
-        <p style={{ color:"var(--text-muted)", fontSize:"13px", margin:"0 0 20px" }}>Built with ❤️ in Nigeria 🇳🇬</p>
-        <div style={{ display:"flex", gap:"16px", justifyContent:"center", flexWrap:"wrap" }}>
-          <Link to="/shop" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Shop</Link>
-          <Link to="/login" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Sign In</Link>
-          <Link to="/signup" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Create Account</Link>
-          <Link to="/ai-search" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>AI Search</Link>
-          <Link to="/phone-checker" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Phone Checker</Link>
-          <Link to="/policy" style={{ color:"var(--text-muted)", fontSize:"13px", textDecoration:"none" }}>Privacy Policy</Link>
-        </div>
-      </div>
     </div>
   );
 }
