@@ -6,8 +6,8 @@ export default function Footer() {
     <footer style={{ background: "var(--bg-secondary)", borderTop: "1px solid var(--border-color)", padding: "32px 24px 80px", marginTop: "auto" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <p style={{ color: "#f97316", fontWeight: "900", fontSize: "20px", margin: "0 0 4px" }}>TechMart</p>
-          <p style={{ color: "#555", fontSize: "12px", margin: 0 }}>Nigeria's trusted tech marketplace — Built by Jamiu Sanni</p>
+          <p style={{ color: "var(--cta-color)", fontWeight: "900", fontSize: "20px", margin: "0 0 4px" }}>TechMart</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Nigeria's trusted tech marketplace — Built by Jamiu Sanni</p>
         </div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
           <Link to="/buyer-protection" style={linkStyle}>🛡️ Buyer Protection</Link>
@@ -28,10 +28,10 @@ export default function Footer() {
             <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" style={{ width:"36px",height:"36px",background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",textDecoration:"none" }} title={s.label}>{s.icon}</a>
           ))}
         </div>
-        <p style={{ color: "#555", fontSize: "12px", textAlign: "center", margin: 0 }}>© {currentYear} TechMart. All rights reserved. · Nigeria's Leading Tech Marketplace</p>
+        <p style={{ color: "var(--text-muted)", fontSize: "12px", textAlign: "center", margin: 0 }}>© {currentYear} TechMart. All rights reserved. · Nigeria's Leading Tech Marketplace</p>
       </div>
     </footer>
   );
 }
 const linkStyle = { color: "var(--text-muted)", textDecoration: "none", fontSize: "13px", fontWeight: "500", whiteSpace: "nowrap" };
-const dot = { color: "#444", fontSize: "13px", userSelect: "none" };
+const dot = { color: "var(--text-muted)", fontSize: "13px", userSelect: "none" };
