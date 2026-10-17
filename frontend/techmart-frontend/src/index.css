@@ -433,3 +433,8 @@ h1, h2 {
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
+
+.wa-float { bottom: 24px; }
+@media (max-width: 768px) {
+  .wa-float { bottom: 88px; }
+}
