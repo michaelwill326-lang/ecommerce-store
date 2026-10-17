@@ -3,7 +3,7 @@ import { ALLOWED_THEMES, getInitialTheme } from "../config/theme";
 
 const THEMES = [
   { id: "dark", label: "🌙 Dark", bg: "#0a0a0a", cta: "#f97316" },
-  { id: "light", label: "🌞 Light", bg: "#ffffff", cta: "#16a34a" },
+  { id: "light", label: "🌞 Light", bg: "#ffffff", cta: "#c2410c" },
   { id: "ocean", label: "🌊 Ocean", bg: "#0a1628", cta: "#06b6d4" },
   { id: "forest", label: "🌿 Forest", bg: "#0a1a0a", cta: "#f59e0b" },
   { id: "ember", label: "🔥 Ember", bg: "#1a0505", cta: "#f59e0b" },
