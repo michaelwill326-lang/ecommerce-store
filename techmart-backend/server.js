@@ -1174,11 +1174,17 @@ app.post("/api/auth/signup", async (req, res) => {
       emailVerificationExpires: new Date(Date.now() + 24*60*60*1000)
     });
 
+    let verificationEmailSent = false;
     try {
       const { sendEmailVerification } = require("./utils/email");
       await sendEmailVerification(user, verifyToken);
+      verificationEmailSent = true;
     } catch (e) {
-      console.error("Verify email failed:", e.message);
+      console.error("Verify email failed:", {
+        message: e.message,
+        status: e.status || e.statusCode || null,
+        code: e.code || null
+      });
     }
 
     // 📧 SEND WELCOME EMAIL
@@ -1198,7 +1204,14 @@ app.post("/api/auth/signup", async (req, res) => {
     } catch (e) {
       console.log("Welcome email failed:", e.message);
     }
-    res.status(201).json({ success: true, requireVerification: true, message: "Account created! Please check your email to verify your account." });
+    res.status(201).json({
+      success: true,
+      requireVerification: true,
+      emailSent: verificationEmailSent,
+      message: verificationEmailSent
+        ? "Account created! Please check your email to verify your account."
+        : "Account created, but the verification email could not be sent. Please try resending it."
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Signup failed" });
@@ -1231,7 +1244,14 @@ app.post("/api/auth/resend-verification", async (req, res) => {
     const { sendEmailVerification } = require("./utils/email");
     await sendEmailVerification(user, verifyToken);
     res.json({ success: true, message: "Verification email resent!" });
-  } catch (err) { res.status(500).json({ error: "Failed to resend verification email" }); }
+  } catch (err) {
+    console.error("Resend verification email failed:", {
+      message: err.message,
+      status: err.status || err.statusCode || null,
+      code: err.code || null
+    });
+    res.status(500).json({ error: "We couldn't send the verification email. Please try again later." });
+  }
 });
 
 /* LOGIN */

@@ -169,6 +169,7 @@ export default function Signup() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(true);
   const [signupEmail, setSignupEmail] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
@@ -211,6 +212,9 @@ export default function Signup() {
 
       if (response.data.requireVerification) {
         setSignupEmail(email.trim());
+        const sent = response.data.emailSent !== false;
+        setVerificationEmailSent(sent);
+        setResendMsg(sent ? "" : "Your account was created, but the confirmation email could not be sent. Please try resending.");
         setEmailSent(true);
       } else {
         sessionStorage.setItem("token", response.data.token);
@@ -247,7 +251,8 @@ export default function Signup() {
     setResendLoading(true); setResendMsg("");
     try {
       await axios.post(`${API}/api/auth/resend-verification`, { email: signupEmail });
-      setResendMsg("Verification email resent! Check your inbox.");
+      setVerificationEmailSent(true);
+      setResendMsg("Verification email resent! Check your inbox and spam folder.");
     } catch (err) { setResendMsg(err.response?.data?.error || "Failed to resend. Try again."); }
     finally { setResendLoading(false); }
   };
@@ -257,10 +262,10 @@ export default function Signup() {
       <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg-primary)",padding:"24px" }}>
         <div style={{ background:"var(--bg-card)",border:"1px solid var(--border-color)",borderRadius:"20px",padding:"40px 32px",maxWidth:"420px",width:"100%",textAlign:"center" }}>
           <div style={{ fontSize:"64px",marginBottom:"16px" }}>✉️</div>
-          <h2 style={{ color:"var(--text-primary)",fontSize:"22px",fontWeight:"800",marginBottom:"12px" }}>Check your email!</h2>
-          <p style={{ color:"var(--text-muted)",fontSize:"15px",marginBottom:"8px" }}>We sent a verification link to</p>
+          <h2 style={{ color:"var(--text-primary)",fontSize:"22px",fontWeight:"800",marginBottom:"12px" }}>{verificationEmailSent ? "Check your email!" : "Your account is created"}</h2>
+          <p style={{ color:"var(--text-muted)",fontSize:"15px",marginBottom:"8px" }}>{verificationEmailSent ? "We sent a verification link to" : "We couldn't send a verification link to"}</p>
           <p style={{ color:"var(--cta-color)",fontWeight:"700",fontSize:"15px",marginBottom:"24px" }}>{signupEmail}</p>
-          <p style={{ color:"var(--text-muted)",fontSize:"13px",marginBottom:"28px" }}>Click the link in the email to activate your account. Check your spam folder if you don't see it.</p>
+          <p style={{ color:"var(--text-muted)",fontSize:"13px",marginBottom:"28px" }}>{verificationEmailSent ? "Click the link in the email to activate your account. Check your spam folder if you don't see it." : "Your account has been saved. Use Resend Verification Email to try sending the confirmation again."}</p>
           {resendMsg && <p style={{ color:resendMsg.includes("resent")?"#22c55e":"#ef4444",fontSize:"13px",marginBottom:"16px",fontWeight:"600" }}>{resendMsg}</p>}
           <button onClick={handleResend} disabled={resendLoading} style={{ width:"100%",padding:"12px",background: "var(--cta-color)",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:"15px",cursor:"pointer",marginBottom:"12px" }}>
             {resendLoading ? "Sending..." : "Resend Verification Email"}
