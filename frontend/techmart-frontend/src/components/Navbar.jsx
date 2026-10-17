@@ -294,7 +294,7 @@ export default function Navbar() {
             <Link to="/" style={linkStyle("/")}>Home</Link>
             <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
             <Link to="/phone-checker" style={linkStyle("/phone-checker")}><Icon name="phone" size={16} /> Phone Check</Link>
-            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "var(--cta-color)" : "#22c55e", fontWeight: "700" }}>Pay</Link>
+            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "var(--cta-color)" : "var(--brand-purple)", fontWeight: "700" }}>Pay</Link>
 
             {user?.role === "admin" && (
               <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
