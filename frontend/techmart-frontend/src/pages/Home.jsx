@@ -5,7 +5,9 @@ import FlashSaleBanner from "../components/FlashSaleBanner";
 import ProductCard from "../components/ProductCard";
 import { ProductGridSkeleton } from "../components/Skeleton";
 
-const CATEGORIES = ["All", "Phones", "Laptops", "Electronics", "Audio", "Accessories", "Gaming", "Computers", "Wearables", "Printers"];
+const CATEGORIES = ["All", "Phones", "Laptops", "Tablets", "Audio", "Accessories", "Computers", "Wearables", "Printers"];
+// The backend matches categories by substring, so send the singular stem
+const CATEGORY_VALUES = { Phones: "Phone", Laptops: "Laptop", Tablets: "Tablet", Computers: "Computer", Wearables: "Wearable", Printers: "Printer" };
 const SORT_OPTIONS = [
   { label: "Newest", value: "newest" },
   { label: "Price: Low to High", value: "price_asc" },
@@ -50,7 +52,7 @@ export default function Home() {
     if (debouncedSearch.length >= 2) {
       params.set("search", debouncedSearch);
     }
-    if (category !== "All") params.set("category", category);
+    if (category !== "All") params.set("category", CATEGORY_VALUES[category] || category);
     if (minPrice) params.set("minPrice", minPrice);
     if (maxPrice) params.set("maxPrice", maxPrice);
     fetch(`${import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com"}/api/products?${params.toString()}`)
