@@ -337,9 +337,12 @@ html {
   --text-primary: #000000;
   --text-secondary: #333333;
   --text-muted: #666666;
-  --cta-primary: linear-gradient(135deg, #16a34a, #15803d);
-  --cta-color: #15803d;
-  --cta-hover: #166534;
+  --cta-primary: linear-gradient(135deg, #f97316, #c2410c);
+  --cta-color: #c2410c;
+  --cta-hover: #9a3412;
+  --brand-purple: #7c3aed;
+  --brand-purple-light: #f5f3ff;
+  --brand-purple-border: #ddd6fe;
   --nav-bg: #ffffff;
   --nav-border: #e0e0e0;
   --shadow: rgba(0,0,0,0.1);

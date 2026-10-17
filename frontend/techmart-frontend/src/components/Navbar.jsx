@@ -51,7 +51,7 @@ const styles = {
     width: "32px",
     height: "32px",
     borderRadius: "50%",
-    background: "#15803d",
+    background: "var(--cta-color)",
     color: "#ffffff",
     fontSize: "14px",
     fontWeight: "800",
@@ -77,7 +77,7 @@ const styles = {
   },
   signupBtn: {
     padding: "8px 18px",
-    background: "#15803d",
+    background: "var(--cta-color)",
     color: "#ffffff",
     border: "none",
     borderRadius: "8px",
@@ -294,13 +294,13 @@ export default function Navbar() {
             <Link to="/" style={linkStyle("/")}>Home</Link>
             <Link to="/tracking" style={linkStyle("/tracking")}>Orders</Link>
             <Link to="/phone-checker" style={linkStyle("/phone-checker")}><Icon name="phone" size={16} /> Phone Check</Link>
-            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "var(--cta-color)" : "#22c55e", fontWeight: "700" }}>Pay</Link>
+            <Link to="/pay" style={{ ...linkStyle("/pay"), color: "/pay" === location.pathname ? "var(--cta-color)" : "var(--brand-purple)", fontWeight: "700" }}>Pay</Link>
 
             {user?.role === "admin" && (
               <Link to="/admin" style={linkStyle("/admin")}>Admin</Link>
             )}
             {user?.role === "seller" && (
-              <button onClick={toggleMode} style={{ padding: "8px 14px", background: "#15803d", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+              <button onClick={toggleMode} style={{ padding: "8px 14px", background: "var(--cta-color)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
                 {sellerMode ? <><Icon name="bag" size={16} /> Shop as Buyer</> : <><Icon name="store" size={16} /> Manage Store</>}
               </button>
             )}
@@ -427,7 +427,7 @@ export default function Navbar() {
             </Link>
           )}
           {user?.role === "seller" && (
-            <button onClick={() => { toggleMode(); setMenuOpen(false); }} style={{ width: "100%", padding: "12px 16px", background: "#15803d", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px", marginBottom: "8px", textAlign: "left" }}>
+            <button onClick={() => { toggleMode(); setMenuOpen(false); }} style={{ width: "100%", padding: "12px 16px", background: "var(--cta-color)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px", marginBottom: "8px", textAlign: "left" }}>
               {sellerMode ? <><Icon name="bag" size={16} /> Shop as Buyer</> : <><Icon name="store" size={16} /> Manage Store</>}
             </button>
           )}
