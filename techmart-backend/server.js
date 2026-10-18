@@ -1229,7 +1229,14 @@ app.get("/api/auth/verify-email", async (req, res) => {
     await User.findByIdAndUpdate(user._id, { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null });
     const jwtToken = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.json({ success: true, token: jwtToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, referralCode: user.referralCode, walletBalance: user.walletBalance || 0, walletPinSet: user.walletPinSet || false, twoFactorEnabled: user.twoFactorEnabled || false } });
-  } catch (err) { res.status(500).json({ error: "Verification failed" }); }
+  } catch (err) {
+    console.error("Email verification failed:", {
+      message: err.message,
+      status: err.status || err.statusCode || null,
+      code: err.code || null
+    });
+    res.status(500).json({ error: "Verification failed" });
+  }
 });
 
 app.post("/api/auth/resend-verification", async (req, res) => {
