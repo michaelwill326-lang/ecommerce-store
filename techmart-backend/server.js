@@ -9377,16 +9377,6 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       });
     }
 
-    console.log("IMEICheck blacklist response:", JSON.stringify({
-      status: blacklistData.status,
-      deviceId: blacklistData.deviceId,
-      propertyKeys: Object.keys(blacklistData.properties || {})
-    }));
-    console.log("IMEICheck properties DEBUG:", JSON.stringify(blacklistData.properties || {}));
-    console.log("IMEICheck device response:", JSON.stringify({
-      status: deviceData?.status,
-      propertyKeys: Object.keys(deviceData?.properties || {})
-    }));
 
     const properties = { ...( deviceData?.properties || {}), ...(blacklistData.properties || {}) };
 
