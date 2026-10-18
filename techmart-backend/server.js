@@ -9594,6 +9594,10 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
   }
 });
 
+// Device Health Passport (seller-entered, source-labelled checks)
+const DevicePassport = require("./models/DevicePassport");
+app.use("/api/passport", require("./routes/passport")({ express, sellerAuth, Product, DevicePassport }));
+
 // 404 handler for unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });
