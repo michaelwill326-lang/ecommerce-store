@@ -11,6 +11,7 @@ import ReviewSection from "../components/ReviewSection";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import AIReviewSummary from "../components/AIReviewSummary";
 import AIBundle from "../components/AIBundle";
+import DevicePassportCard from "../components/DevicePassportCard";
 
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 const FALLBACK_IMG = "https://placehold.co/500x400?text=No+Image";
@@ -609,6 +610,8 @@ export default function ProductDetail() {
               </div>
             </div>
           )}
+
+          <DevicePassportCard productId={id} />
 
           {/* PRICE HISTORY */}
           {priceHistory.length > 1 && (

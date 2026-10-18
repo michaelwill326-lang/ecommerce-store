@@ -3,4 +3,5 @@ export const FEATURES = {
   payPromo: false, // TechMart Pay banner on the shop page
   bnpl: false,     // Buy Now Pay Later option at checkout
   extraThemes: false, // Ocean, Forest, Ember and Purple in the theme switcher
+  devicePassport: false, // Device passport card on product pages
 };

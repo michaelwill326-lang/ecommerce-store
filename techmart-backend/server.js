@@ -9377,16 +9377,6 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
       });
     }
 
-    console.log("IMEICheck blacklist response:", JSON.stringify({
-      status: blacklistData.status,
-      deviceId: blacklistData.deviceId,
-      propertyKeys: Object.keys(blacklistData.properties || {})
-    }));
-    console.log("IMEICheck properties DEBUG:", JSON.stringify(blacklistData.properties || {}));
-    console.log("IMEICheck device response:", JSON.stringify({
-      status: deviceData?.status,
-      propertyKeys: Object.keys(deviceData?.properties || {})
-    }));
 
     const properties = { ...( deviceData?.properties || {}), ...(blacklistData.properties || {}) };
 
@@ -9603,6 +9593,10 @@ app.post("/api/phone-checker/photo", auth, upload.single("photo"), async (req, r
     res.status(500).json({ error: "Photo analysis failed. Please try again." });
   }
 });
+
+// Device Health Passport (seller-entered, source-labelled checks)
+const DevicePassport = require("./models/DevicePassport");
+app.use("/api/passport", require("./routes/passport")({ express, sellerAuth, Product, DevicePassport }));
 
 // 404 handler for unknown routes
 app.use((req, res) => {
