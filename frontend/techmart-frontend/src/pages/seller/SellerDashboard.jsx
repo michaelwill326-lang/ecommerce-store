@@ -3,6 +3,8 @@ import EmptyState from "../../components/EmptyState";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import AIDescriptionGenerator from "../../components/AIDescriptionGenerator";
+import PassportEditor from "../../components/PassportEditor";
+import { FEATURES } from "../../config/features";
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function SellerDashboard() {
@@ -11,6 +13,7 @@ export default function SellerDashboard() {
   const seller = (() => { try { return JSON.parse(localStorage.getItem("seller") || "{}"); } catch { return {}; } })();
   const headers = { Authorization: `Bearer ${token}` };
   const [tab, setTab] = useState("Overview");
+  const [passportFor, setPassportFor] = useState(null);
   const [data, setData] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [enhanced, setEnhanced] = useState(null);
@@ -498,11 +501,16 @@ export default function SellerDashboard() {
                   <p style={{ color: "#f97316", fontWeight: "700", margin: "0 0 2px" }}>N{p.price?.toLocaleString()}</p>
                   <p style={{ color: "var(--text-muted)", fontSize: "12px", margin: 0 }}>Stock: {p.stock} | Rating: {p.rating || 0}</p>
                 </div>
+                {FEATURES.devicePassport && (<button onClick={() => setPassportFor(p)} style={{ background: "transparent", color: "var(--text-primary)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "8px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "600", flexShrink: 0 }}>Passport</button>)}
                 <button onClick={() => deleteProduct(p._id)} style={{ background: "#dc2626", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 12px", cursor: "pointer", fontSize: "13px" }}>Delete</button>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {FEATURES.devicePassport && passportFor && (
+        <PassportEditor productId={passportFor._id} productName={passportFor.name} token={token} onClose={() => setPassportFor(null)} />
       )}
 
       {/* STOREFRONT */}
