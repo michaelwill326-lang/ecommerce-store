@@ -128,8 +128,9 @@ module.exports = function createPassportRouter({ express, sellerAuth, Product, D
       const existing = await DevicePassport.findOne({ productId }).lean();
       const merged = { ...(existing || {}), ...cleaned.set };
       if (cleaned.publish === true &&
-          !(merged.deviceInfo && merged.deviceInfo.model && merged.cosmetic && merged.cosmetic.grade)) {
-        return res.status(400).json({ error: "Add the phone model and a cosmetic grade before publishing" });
+          !(merged.deviceInfo && merged.deviceInfo.brand && merged.deviceInfo.model &&
+            merged.cosmetic && merged.cosmetic.grade)) {
+        return res.status(400).json({ error: "Add the phone brand, model and a cosmetic grade before publishing" });
       }
 
       const set = { ...cleaned.set, sellerReportedAt: new Date() };
@@ -137,7 +138,7 @@ module.exports = function createPassportRouter({ express, sellerAuth, Product, D
 
       const saved = await DevicePassport.findOneAndUpdate(
         { productId },
-        { $set: set, $setOnInsert: { sellerId: String(req.seller.id) } },
+        { $set: { ...set, sellerId: String(req.seller.id) } },
         { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
       ).lean();
 
