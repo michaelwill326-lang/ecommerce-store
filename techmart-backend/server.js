@@ -498,6 +498,10 @@ const User = mongoose.model(
     role: { type: String, default: "customer" },
     referralCode: { type: String, unique: true, sparse: true },
     referredBy: { type: String, default: null },
+    emailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String, default: null },
+    emailVerificationExpires: { type: Date, default: null },
+    emailVerificationSentAt: { type: Date, default: null },
     referralCount: { type: Number, default: 0 },
     referralCredits: { type: Number, default: 0 },
     resetPasswordToken: { type: String, default: null },
@@ -1050,9 +1054,6 @@ const Order = mongoose.model(
 confirmationEmailSent: { type: Boolean, default: false },
 confirmationEmailSentAt: { type: Date, default: null },
 confirmationEmailError: { type: String, default: "" },
-    emailVerified: { type: Boolean, default: false },
-    emailVerificationToken: { type: String, default: null },
-    emailVerificationExpires: { type: Date, default: null },
     originalAmount: Number,
     couponCode: String,
     escrow: { type: Boolean, default: false },
@@ -1171,7 +1172,8 @@ app.post("/api/auth/signup", async (req, res) => {
     const verifyToken = crypto.randomBytes(32).toString("hex");
     await User.findByIdAndUpdate(user._id, {
       emailVerificationToken: verifyToken,
-      emailVerificationExpires: new Date(Date.now() + 24*60*60*1000)
+      emailVerificationExpires: new Date(Date.now() + 24*60*60*1000),
+      emailVerificationSentAt: new Date()
     });
 
     let verificationEmailSent = false;
@@ -1220,13 +1222,33 @@ app.post("/api/auth/signup", async (req, res) => {
 
 
 /* VERIFY EMAIL */
+const VERIFY_TOKEN_RE = /^[a-f0-9]{64}$/i;
+const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const RESEND_REUSE_MIN_LEFT_MS = 60 * 60 * 1000;
+
 app.get("/api/auth/verify-email", async (req, res) => {
   try {
-    const { token } = req.query;
-    if (!token) return res.status(400).json({ error: "Verification token required" });
-    const user = await User.findOne({ emailVerificationToken: token, emailVerificationExpires: { $gt: new Date() } });
-    if (!user) return res.status(400).json({ error: "Invalid or expired verification link. Please request a new one." });
-    await User.findByIdAndUpdate(user._id, { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null });
+    const token = req.query.token;
+    // Only a plain 64-character hex string is accepted. Objects such as ?token[$ne]=x never reach the database.
+    if (typeof token !== "string" || !VERIFY_TOKEN_RE.test(token)) {
+      return res.status(400).json({ error: "This verification link is not valid. Please request a new one.", code: "TOKEN_INVALID" });
+    }
+    const user = await User.findOne({ emailVerificationToken: token });
+    if (!user) {
+      console.warn("Email verification: token not found");
+      return res.status(400).json({ error: "This link is no longer valid. If you already verified your email, please log in. Otherwise, request a new link.", code: "TOKEN_UNKNOWN" });
+    }
+    if (user.emailVerified) {
+      return res.json({ success: true, alreadyVerified: true });
+    }
+    if (!user.emailVerificationExpires || new Date(user.emailVerificationExpires).getTime() <= Date.now()) {
+      console.warn("Email verification: token expired");
+      return res.status(400).json({ error: "This link has expired. Please request a new one.", code: "TOKEN_EXPIRED" });
+    }
+    // Only one request can flip the flag, so only one request receives a login token.
+    const updated = await User.findOneAndUpdate({ _id: user._id, emailVerified: { $ne: true } }, { emailVerified: true }, { new: true });
+    if (!updated) return res.json({ success: true, alreadyVerified: true });
     const jwtToken = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.json({ success: true, token: jwtToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, referralCode: user.referralCode, walletBalance: user.walletBalance || 0, walletPinSet: user.walletPinSet || false, twoFactorEnabled: user.twoFactorEnabled || false } });
   } catch (err) {
@@ -1241,13 +1263,32 @@ app.get("/api/auth/verify-email", async (req, res) => {
 
 app.post("/api/auth/resend-verification", async (req, res) => {
   try {
-    const email = req.body.email?.toLowerCase().trim();
-    if (!email) return res.status(400).json({ error: "Email required" });
+    const rawEmail = req.body && req.body.email;
+    if (typeof rawEmail !== "string" || !rawEmail.trim()) return res.status(400).json({ error: "Email required" });
+    const email = rawEmail.toLowerCase().trim();
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: "Account not found" });
     if (user.emailVerified) return res.status(400).json({ error: "Email already verified" });
-    const verifyToken = crypto.randomBytes(32).toString("hex");
-    await User.findByIdAndUpdate(user._id, { emailVerificationToken: verifyToken, emailVerificationExpires: new Date(Date.now() + 24*60*60*1000) });
+
+    const now = Date.now();
+    const expiresAt = user.emailVerificationExpires ? new Date(user.emailVerificationExpires).getTime() : 0;
+    // Keep the existing token while it has more than an hour left, so earlier emails keep working.
+    const keepToken = Boolean(user.emailVerificationToken) && expiresAt - now > RESEND_REUSE_MIN_LEFT_MS;
+    const verifyToken = keepToken ? user.emailVerificationToken : crypto.randomBytes(32).toString("hex");
+    const update = { emailVerificationSentAt: new Date(now) };
+    if (!keepToken) {
+      update.emailVerificationToken = verifyToken;
+      update.emailVerificationExpires = new Date(now + VERIFY_TOKEN_TTL_MS);
+    }
+    // Atomic cooldown: only one request per minute can claim a send for this account.
+    const claimed = await User.findOneAndUpdate(
+      { _id: user._id, emailVerified: { $ne: true }, $or: [{ emailVerificationSentAt: null }, { emailVerificationSentAt: { $lte: new Date(now - RESEND_COOLDOWN_MS) } }] },
+      { $set: update },
+      { new: true }
+    );
+    if (!claimed) {
+      return res.status(429).json({ error: "A verification email was just sent. Please wait a minute, then check your inbox and spam folder before asking for another.", code: "RESEND_COOLDOWN" });
+    }
     const { sendEmailVerification } = require("./utils/email");
     await sendEmailVerification(user, verifyToken);
     res.json({ success: true, message: "Verification email resent!" });
