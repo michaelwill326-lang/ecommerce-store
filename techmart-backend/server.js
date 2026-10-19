@@ -1182,6 +1182,8 @@ app.post("/api/auth/signup", async (req, res) => {
       await sendEmailVerification(user, verifyToken);
       verificationEmailSent = true;
     } catch (e) {
+      // The send failed, so do not start the resend cooldown.
+      await User.findByIdAndUpdate(user._id, { emailVerificationSentAt: null }).catch(() => {});
       console.error("Verify email failed:", {
         message: e.message,
         status: e.status || e.statusCode || null,
@@ -1290,7 +1292,13 @@ app.post("/api/auth/resend-verification", async (req, res) => {
       return res.status(429).json({ error: "A verification email was just sent. Please wait a minute, then check your inbox and spam folder before asking for another.", code: "RESEND_COOLDOWN" });
     }
     const { sendEmailVerification } = require("./utils/email");
-    await sendEmailVerification(user, verifyToken);
+    try {
+      await sendEmailVerification(user, verifyToken);
+    } catch (sendErr) {
+      // The send failed, so do not start the cooldown: put the previous send time back so the person can retry.
+      await User.findOneAndUpdate({ _id: user._id }, { $set: { emailVerificationSentAt: user.emailVerificationSentAt || null } }).catch(() => {});
+      throw sendErr;
+    }
     res.json({ success: true, message: "Verification email resent!" });
   } catch (err) {
     console.error("Resend verification email failed:", {
