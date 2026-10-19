@@ -51,6 +51,7 @@ export function validateForm(form) {
   }
   if (f.grade && !GRADES.some((g) => g.value === f.grade)) return "Choose a cosmetic grade from the list.";
   if (f.publish) {
+    if (!trim(f.brand, 60)) return "Add the phone brand before showing the passport to buyers.";
     if (!trim(f.model, 60)) return "Add the phone model before showing the passport to buyers.";
     if (!f.grade) return "Choose a cosmetic grade before showing the passport to buyers.";
   }
