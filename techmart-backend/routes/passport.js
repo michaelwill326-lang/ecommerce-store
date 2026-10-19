@@ -60,6 +60,24 @@ module.exports = function createPassportRouter({ express, sellerAuth, Product, D
     return { ...rest, imei: imei && imei.last4 ? { last4: imei.last4 } : null };
   }
 
+  function sellerView(doc) {
+    if (!doc) return null;
+    const imei = doc.imei;
+    return {
+      productId: String(doc.productId),
+      published: doc.published === true,
+      deviceInfo: doc.deviceInfo || {},
+      imei: imei && imei.last4 ? { last4: imei.last4 } : null,
+      checks: doc.checks || [],
+      battery: doc.battery || { healthPercent: null },
+      cosmetic: doc.cosmetic || {},
+      repairs: doc.repairs || [],
+      knownFaults: doc.knownFaults || [],
+      sellerReportedAt: doc.sellerReportedAt || null,
+      updatedAt: doc.updatedAt || null
+    };
+  }
+
   function publicView(doc) {
     const d = strip(doc);
     return {
@@ -108,7 +126,7 @@ module.exports = function createPassportRouter({ express, sellerAuth, Product, D
       const product = await ownProduct(req, res);
       if (!product) return;
       const doc = await DevicePassport.findOne({ productId: req.params.productId }).lean();
-      res.json({ success: true, passport: doc ? strip(doc) : null });
+      res.json({ success: true, passport: sellerView(doc) });
     } catch (err) {
       console.error("Passport read failed:", err.message);
       res.status(500).json({ error: "Could not load the passport" });
@@ -125,7 +143,13 @@ module.exports = function createPassportRouter({ express, sellerAuth, Product, D
       if (cleaned.error) return res.status(400).json({ error: cleaned.error });
 
       const productId = req.params.productId;
+      const sellerId = String(req.seller.id);
       const existing = await DevicePassport.findOne({ productId }).lean();
+
+      if (existing && String(existing.sellerId) !== sellerId) {
+        return res.status(403).json({ error: "This passport belongs to another seller" });
+      }
+
       const merged = { ...(existing || {}), ...cleaned.set };
       if (cleaned.publish === true &&
           !(merged.deviceInfo && merged.deviceInfo.brand && merged.deviceInfo.model &&
@@ -137,12 +161,12 @@ module.exports = function createPassportRouter({ express, sellerAuth, Product, D
       if (cleaned.publish !== undefined) set.published = cleaned.publish;
 
       const saved = await DevicePassport.findOneAndUpdate(
-        { productId },
-        { $set: { ...set, sellerId: String(req.seller.id) } },
+        { productId, sellerId },
+        { $set: set, $setOnInsert: { sellerId } },
         { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
       ).lean();
 
-      res.json({ success: true, passport: strip(saved) });
+      res.json({ success: true, passport: sellerView(saved) });
     } catch (err) {
       console.error("Passport save failed:", err.message);
       res.status(500).json({ error: "Could not save the passport" });
