@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
+import VerifiedBadge from "./VerifiedBadge";
 const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onrender.com";
 
 export default function Chatbot() {
   const navigate = useNavigate();
   const { addToCart } = useContext(CartContext);
   const [isOpen, setIsOpen] = useState(false);
-  const [aiStatus, setAiStatus] = useState({ isPro: false, remaining: 10, limit: 10, dailyUsage: 0 });
+  const [aiStatus, setAiStatus] = useState({ isPro: false, remaining: 15, limit: 15, dailyUsage: 0 });
   const [showProBanner, setShowProBanner] = useState(false);
   const [upgradingPro, setUpgradingPro] = useState(false);
   const [messages, setMessages] = useState([
@@ -234,7 +235,7 @@ export default function Chatbot() {
                 style={{ display:"flex", alignItems:"center", gap:8, background:"var(--bg-secondary)", border:"1px solid #2a2a2a", borderRadius:8, padding:8, cursor:"pointer" }}>
                 {p.image && <img src={p.image} alt={p.name} style={{ width:40, height:40, borderRadius:6, objectFit:"cover" }} />}
                 <div style={{ flex:1 }}>
-                  <p style={{ color:"var(--text-primary)", fontSize:12, fontWeight:600, margin:"0 0 2px" }}>{p.name}</p>
+                  <p style={{ color:"var(--text-primary)", fontSize:12, fontWeight:600, margin:"0 0 2px" }}>{p.name}<VerifiedBadge verified={p.techmartVerified} /></p>
                   <p style={{ color:"#f97316", fontSize:12, fontWeight:700, margin:0 }}>₦{p.price?.toLocaleString()} {p.stock <= 3 && <span style={{ color:"#f59e0b", fontSize:10 }}>• {p.stock} left</span>}</p>
                 </div>
                 <button onClick={e => { e.stopPropagation(); sendMessage(`Add ${p.name} to cart`); }} style={{ background:"#f97316", border:"none", color:"var(--text-primary)", borderRadius:6, padding:"4px 8px", fontSize:10, cursor:"pointer" }}>+Cart</button>
@@ -248,7 +249,7 @@ export default function Chatbot() {
               <div key={p._id} onClick={() => navigate(`/product/${p._id}`)}
                 style={{ background: p._id === msg.data.cheaper ? "#0a2a0a" : "#111", border: `1px solid ${p._id === msg.data.cheaper ? "#22c55e" : "#2a2a2a"}`, borderRadius:8, padding:8, cursor:"pointer", textAlign:"center" }}>
                 {p.image && <img src={p.image} alt={p.name} style={{ width:"100%", height:50, objectFit:"cover", borderRadius:4, marginBottom:4 }} />}
-                <p style={{ color:"var(--text-primary)", fontSize:11, fontWeight:600, margin:"0 0 2px" }}>{p.name}</p>
+                <p style={{ color:"var(--text-primary)", fontSize:11, fontWeight:600, margin:"0 0 2px" }}>{p.name}<VerifiedBadge verified={p.techmartVerified} /></p>
                 <p style={{ color:"#f97316", fontSize:12, fontWeight:700, margin:0 }}>₦{p.price?.toLocaleString()}</p>
                 {p._id === msg.data.cheaper && <p style={{ color:"#22c55e", fontSize:10, margin:"2px 0 0", fontWeight:700 }}>✓ Cheaper</p>}
               </div>

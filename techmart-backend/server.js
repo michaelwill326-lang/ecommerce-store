@@ -2612,7 +2612,7 @@ app.get("/api/ai/pro/status", auth, async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const isProActive = user.aiPro && user.aiProExpiry && new Date(user.aiProExpiry) > new Date();
     const dailyUsage = user.aiUsageDate === today ? (user.aiDailyUsage || 0) : 0;
-    const limit = isProActive ? 999 : 10;
+    const limit = isProActive ? 999 : AI_FREE_DAILY_LIMIT;
     res.json({ isPro: isProActive, expiresAt: user.aiProExpiry, dailyUsage, limit, remaining: Math.max(0, limit - dailyUsage) });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch AI status" });
@@ -2645,13 +2645,16 @@ app.post("/api/ai/pro/upgrade", auth, async (req, res) => {
 });
 
 // 🤖 Track AI Usage
+// Free AI messages per day (AI Pro is unlimited)
+const AI_FREE_DAILY_LIMIT = 15;
+
 app.post("/api/ai/track-usage", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("aiPro aiProExpiry aiDailyUsage aiUsageDate");
     const today = new Date().toISOString().slice(0, 10);
     const isProActive = user.aiPro && user.aiProExpiry && new Date(user.aiProExpiry) > new Date();
     const dailyUsage = user.aiUsageDate === today ? (user.aiDailyUsage || 0) : 0;
-    const limit = isProActive ? 999 : 10;
+    const limit = isProActive ? 999 : AI_FREE_DAILY_LIMIT;
 
     if (dailyUsage >= limit) return res.status(429).json({ error: isProActive ? "Daily limit reached" : "Daily limit reached. Upgrade to AI Pro for unlimited messages!", limitReached: true, isPro: isProActive });
 
@@ -7121,7 +7124,7 @@ Current message: ${message}`
           ? await Product.find({ name: new RegExp(params.query, "i"), stock: { $gt: 0 }, ...query }).limit(5)
           : await Product.find(query).limit(5);
         responseData.message = products.length > 0 ? `Found ${products.length} product${products.length > 1 ? "s" : ""}:` : "No products found.";
-        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock })) };
+        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock, techmartVerified: p.techmartVerified === true })) };
         responseData.context = { lastProducts: products.map(p => ({ _id: p._id, name: p.name, price: p.price })) };
         break;
       }
@@ -7137,7 +7140,7 @@ Current message: ${message}`
         if (!prod1 || !prod2) { responseData.message = "Could not find both products to compare."; break; }
         const cheaper = prod1.price < prod2.price ? prod1 : prod2;
         responseData.message = `Comparing **${prod1.name}** vs **${prod2.name}**:`;
-        responseData.data = { type: "compare", items: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock, rating: p.rating })), cheaper: cheaper._id };
+        responseData.data = { type: "compare", items: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock, rating: p.rating, techmartVerified: p.techmartVerified === true })), cheaper: cheaper._id };
         responseData.context = { lastProducts: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price })), cheaperProduct: { _id: cheaper._id, name: cheaper.name, price: cheaper.price } };
         break;
       }
