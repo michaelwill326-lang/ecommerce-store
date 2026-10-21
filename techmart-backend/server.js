@@ -1812,32 +1812,12 @@ app.post("/api/orders", auth, async (req, res) => {
   }
 });
 
-// AI Assistant "Buy Now" quick action
+// AI quick-buy is disabled. Orders must go through normal checkout.
 app.post("/api/orders/buy-now", auth, async (req, res) => {
-  try {
-    const { productId, quantity } = req.body;
-    if (!productId) return res.status(400).json({ error: "Product ID is required" });
-    const qty = Number(quantity) || 1;
-    const product = await Product.findById(productId);
-    if (!product) return res.status(404).json({ error: "Product not found" });
-    if (product.stock < qty) return res.status(400).json({ error: `Sorry, only ${product.stock} unit(s) of "${product.name}" available` });
-    const user = await User.findById(req.user.id);
-    if (!user.phone) return res.status(400).json({ error: "Please add a phone number to your profile before ordering" });
-    const order = await Order.create({
-      email: req.user.email,
-      items: [{ productId, quantity: qty, name: product.name, price: product.price, vendorId: product.vendorId }],
-      amount: product.price * qty,
-      reference: "TX-" + Date.now(),
-      deliveryAddress: "",
-      phone: user.phone,
-      paymentMethod: "Paystack",
-      status: "Pending"
-    });
-    res.json({ success: true, order, message: `Order placed for ${product.name}! Complete payment to confirm.` });
-  } catch (err) {
-    console.error("Buy-now error:", err.message);
-    res.status(500).json({ error: "Failed to place order" });
-  }
+  return res.status(410).json({
+    success: false,
+    error: "AI cannot place orders. Please use checkout to enter your delivery address and complete payment."
+  });
 });
 app.get("/api/orders/me", auth, async (req, res) => {
   try {
@@ -2647,6 +2627,7 @@ app.post("/api/ai/pro/upgrade", auth, async (req, res) => {
 // 🤖 Track AI Usage
 // Free AI messages per day (AI Pro is unlimited)
 const AI_FREE_DAILY_LIMIT = 15;
+const { scrubOrderClaims } = require("./utils/orderClaims");
 
 app.post("/api/ai/track-usage", auth, async (req, res) => {
   try {
@@ -7065,7 +7046,7 @@ Context from previous turn: ${JSON.stringify(context)}
 Intents:
 - find_product: search products (params: query, maxPrice, minPrice, category)
 - add_to_cart: add product to cart (params: productId, productName, quantity)
-- buy_now: buy product immediately with wallet (params: productId, productName, price)
+- buy_now: prepare a purchase and direct the user to normal checkout; NEVER place or pay for an order (params: productId, productName, price)
 - compare_products: compare two products (params: product1, product2)
 - wallet_balance: check balance
 - wallet_transfer: transfer money (params: recipientEmail, amount, note)
@@ -7076,7 +7057,7 @@ Intents:
 - track_order: track orders
 - show_orders: list recent orders
 - apply_coupon: apply best coupon
-- place_order: complete checkout with wallet (params: couponCode)
+- place_order: direct the user to normal checkout; NEVER create, confirm, or pay for an order (params: couponCode)
 - start_return: start return (params: orderId)
 - generate_description: generate product description (params: productName, category)
 - seller_flash_sale: create flash sale (params: productName, discount, endDate) - seller/admin only
@@ -7159,20 +7140,10 @@ Current message: ${message}`
         break;
       }
 
+      case "place_order":
       case "buy_now": {
-        let product = null;
-        if (params.productId) product = await Product.findById(params.productId);
-        else if (context.cartProduct) product = await Product.findById(context.cartProduct._id);
-        else if (context.cheaperProduct) product = await Product.findById(context.cheaperProduct._id);
-        if (!product) { responseData.message = "Which product would you like to buy?"; break; }
-        if ((user.walletBalance || 0) < product.price) {
-          responseData.message = `Insufficient wallet balance. You need ₦${product.price?.toLocaleString()} but have ₦${(user.walletBalance||0).toLocaleString()}. Would you like to add money to your wallet?`;
-          responseData.data = { type: "navigate", path: "/pay", tab: "Add Money" };
-          break;
-        }
-        responseData.message = `Ready to buy **${product.name}** for ₦${product.price?.toLocaleString()} from your wallet. Confirm?`;
-        responseData.data = { type: "confirm_buy", product: { _id: product._id, name: product.name, price: product.price } };
-        responseData.action = "confirm_buy";
+        responseData.message = "I can help you prepare your purchase, but I cannot place or pay for orders. Please review your cart, enter your delivery address and phone number, and complete payment through checkout. No order has been placed.";
+        responseData.data = { type: "navigate", path: "/checkout" };
         break;
       }
 
@@ -7370,13 +7341,14 @@ TECHMART FAQ KNOWLEDGE:
 - Seller Fees: Selling on TechMart is completely free for now. No listing fees, no commission.
 - Delivery: TechMart partners with trusted delivery partners to fulfil orders. Sellers coordinate dispatch and buyers are notified with tracking updates.
 If a user asks about any of these topics, answer confidently using the above information.
+You cannot place, confirm or pay for orders, and you cannot move money. Never say or imply that an order was placed or that a payment was made. For purchases, tell the user to add the item to their cart and pay at checkout.
 Be helpful and concise.` },
             ...history.slice(-6).map(m => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text })),
             { role: "user", content: message }
           ],
           max_tokens: 300, temperature: 0.7
         });
-        responseData.message = chatRes.choices[0].message.content.trim();
+        responseData.message = scrubOrderClaims(chatRes.choices[0].message.content.trim());
         break;
       }
     }
@@ -7571,6 +7543,9 @@ async function executeTool(toolName, toolArgs, user) {
     }
 
     case "transfer_money": {
+      // Disabled for the AI agent: transfers must go through the wallet screen, which asks for the PIN.
+      return { error: "Transfers are not available through the AI agent. Please use the wallet screen, which asks for your PIN." };
+      // eslint-disable-next-line no-unreachable
       const recipient = await User.findOne({ email: toolArgs.recipientEmail });
       if (!recipient) return { error: "Recipient not found" };
       if ((user.walletBalance || 0) < toolArgs.amount) return { error: "Insufficient balance" };
@@ -7712,6 +7687,7 @@ TECHMART FAQ KNOWLEDGE:
 - Seller Fees: Selling on TechMart is completely free for now. No listing fees, no commission.
 - Delivery: TechMart partners with trusted delivery partners to fulfil orders. Sellers coordinate dispatch and buyers are notified with tracking updates.
 If a user asks about any of these topics, answer confidently using the above information.
+You cannot place, confirm or pay for orders, and you cannot move money. Never say or imply that an order was placed or that a payment was made. For purchases, tell the user to add the item to their cart and pay at checkout.
 Speak naturally like a smart Nigerian assistant.`;
 
     const messages = [
@@ -7732,7 +7708,7 @@ Speak naturally like a smart Nigerian assistant.`;
       const response = await groq.chat.completions.create({
         model: "openai/gpt-oss-20b",
         messages,
-        tools: TECHMART_TOOLS,
+        tools: TECHMART_TOOLS.filter(t => t.function.name !== "transfer_money"),
         tool_choice: "auto",
         max_tokens: 1000,
         temperature: 0.3
@@ -7742,7 +7718,7 @@ Speak naturally like a smart Nigerian assistant.`;
 
       // If no tool calls, we have the final answer
       if (!choice.message.tool_calls || choice.message.tool_calls.length === 0) {
-        finalMessage = choice.message.content || "";
+        finalMessage = toolResults.some(t => t.tool === "get_orders") ? (choice.message.content || "") : scrubOrderClaims(choice.message.content || "");
         break;
       }
 

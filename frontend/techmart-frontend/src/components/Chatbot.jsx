@@ -164,6 +164,11 @@ export default function Chatbot() {
       const data = await response.json();
       setTyping(false);
       if (data.context) setContext(prev => ({ ...prev, ...data.context }));
+      if (data.action === "confirm_buy" || data.data?.type === "confirm_buy") {
+        data.action = null;
+        data.data = { type: "navigate", path: "/checkout" };
+        data.message = "Please review your cart, enter your delivery address and phone number, and complete payment at checkout. No order has been placed.";
+      }
       if (data.action) setPendingAction({ action: data.action, data: data.data });
       addMessage(data.message || "Sorry, I could not process that.", "bot", data.data);
       speak(data.message || "");
@@ -213,14 +218,6 @@ export default function Chatbot() {
     setPendingAction(null);
     if (action === "apply_coupon") { navigator.clipboard?.writeText(actionData.code); addMessage(`Coupon **${actionData.code}** copied!`, "bot"); }
     if (action === "start_return") { navigate("/tracking"); addMessage("Taking you to tracking to start the return.", "bot"); }
-    if (action === "confirm_buy") {
-      try {
-        const res = await fetch(`${API}/api/orders/buy-now`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ productId: actionData.product._id }) });
-        const data = await res.json();
-        const msg = data.success ? `Order placed! ${data.message}` : `Could not place order: ${data.error}`;
-        addMessage(msg, "bot"); speak(msg);
-      } catch { addMessage("Could not place order.", "bot"); }
-    }
   };
 
   const renderMsg = (msg) => {
@@ -309,12 +306,6 @@ export default function Chatbot() {
         {pendingAction?.action === "confirm_split" && msg.data?.type === "confirm_split" && (
           <div style={{ marginTop:8, display:"flex", gap:6 }}>
             <button onClick={() => executeAction("confirm_split", pendingAction.data)} style={{ flex:1, padding:8, background:"linear-gradient(135deg,#f97316,#dc2626)", color:"var(--text-primary)", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:12 }}>Split Now</button>
-            <button onClick={() => { setPendingAction(null); addMessage("Cancelled.", "bot"); }} style={{ flex:1, padding:8, background:"var(--bg-input)", color:"var(--text-muted)", border:"1px solid var(--border-color)", borderRadius:8, cursor:"pointer", fontSize:12 }}>Cancel</button>
-          </div>
-        )}
-        {pendingAction?.action === "confirm_buy" && msg.data?.type === "confirm_buy" && (
-          <div style={{ marginTop:8, display:"flex", gap:6 }}>
-            <button onClick={() => executeAction("confirm_buy", pendingAction.data)} style={{ flex:1, padding:8, background:"linear-gradient(135deg,#22c55e,#16a34a)", color:"var(--text-primary)", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:12 }}>Buy Now</button>
             <button onClick={() => { setPendingAction(null); addMessage("Cancelled.", "bot"); }} style={{ flex:1, padding:8, background:"var(--bg-input)", color:"var(--text-muted)", border:"1px solid var(--border-color)", borderRadius:8, cursor:"pointer", fontSize:12 }}>Cancel</button>
           </div>
         )}
