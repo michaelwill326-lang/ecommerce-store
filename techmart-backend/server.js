@@ -7105,7 +7105,22 @@ Current message: ${message}`
           ? await Product.find({ name: new RegExp(params.query, "i"), stock: { $gt: 0 }, ...query }).limit(5)
           : await Product.find(query).limit(5);
         responseData.message = products.length > 0 ? `Found ${products.length} product${products.length > 1 ? "s" : ""}:` : "No products found.";
-        responseData.data = { type: "products", items: products.map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock, techmartVerified: p.techmartVerified === true })) };
+        const sellerIds = [...new Set(products.map(p => p.vendorId).filter(Boolean).map(String))];
+        const sellers = await Seller.find({ _id: { $in: sellerIds } }).select("_id verified").lean();
+        const sellerById = new Map(sellers.map(s => [String(s._id), s]));
+        responseData.data = {
+          type: "products",
+          items: products.map(p => {
+            const seller = sellerById.get(String(p.vendorId || ""));
+            return {
+              _id: p._id, name: p.name, price: p.price,
+              image: p.images?.[0], category: p.category, stock: p.stock,
+              techmartVerified: p.techmartVerified === true,
+              sellerVerified: seller ? seller.verified === true : null,
+              sellerVerification: !seller ? "unavailable" : seller.verified === true ? "verified" : "not_verified"
+            };
+          })
+        };
         responseData.context = { lastProducts: products.map(p => ({ _id: p._id, name: p.name, price: p.price })) };
         break;
       }
@@ -7121,7 +7136,25 @@ Current message: ${message}`
         if (!prod1 || !prod2) { responseData.message = "Could not find both products to compare."; break; }
         const cheaper = prod1.price < prod2.price ? prod1 : prod2;
         responseData.message = `Comparing **${prod1.name}** vs **${prod2.name}**:`;
-        responseData.data = { type: "compare", items: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price, image: p.images?.[0], category: p.category, stock: p.stock, rating: p.rating, techmartVerified: p.techmartVerified === true })), cheaper: cheaper._id };
+        const compareProducts = [prod1, prod2];
+        const compareSellerIds = [...new Set(compareProducts.map(p => p.vendorId).filter(Boolean).map(String))];
+        const compareSellers = await Seller.find({ _id: { $in: compareSellerIds } }).select("_id verified").lean();
+        const compareSellerById = new Map(compareSellers.map(s => [String(s._id), s]));
+        responseData.data = {
+          type: "compare",
+          items: compareProducts.map(p => {
+            const seller = compareSellerById.get(String(p.vendorId || ""));
+            return {
+              _id: p._id, name: p.name, price: p.price,
+              image: p.images?.[0], category: p.category, stock: p.stock,
+              rating: p.rating,
+              techmartVerified: p.techmartVerified === true,
+              sellerVerified: seller ? seller.verified === true : null,
+              sellerVerification: !seller ? "unavailable" : seller.verified === true ? "verified" : "not_verified"
+            };
+          }),
+          cheaper: cheaper._id
+        };
         responseData.context = { lastProducts: [prod1, prod2].map(p => ({ _id: p._id, name: p.name, price: p.price })), cheaperProduct: { _id: cheaper._id, name: cheaper.name, price: cheaper.price } };
         break;
       }
