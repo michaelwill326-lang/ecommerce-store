@@ -1691,8 +1691,10 @@ const requestPinReset = async () => {
           <div style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "32px 24px", width: "300px", textAlign: "center" }}>
             <h3 style={{ color: "var(--text-primary)", marginBottom: "8px" }}>Set Wallet PIN</h3>
             <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "20px" }}>Create a 4-digit PIN to secure your wallet</p>
-            <input type="password" maxLength={4} placeholder="Enter 4-digit PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ""))}
-              style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "16px" }} />
+            <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={4} placeholder="Enter 4-digit PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ""))}
+              style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "12px" }} />
+            <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={4} placeholder="Confirm 4-digit PIN" value={confirmNewPin} onChange={e => setConfirmNewPin(e.target.value.replace(/[^0-9]/g, ""))}
+              style={{ ...inp, textAlign: "center", fontSize: "24px", letterSpacing: "8px", marginBottom: "16px", borderColor: confirmNewPin.length === 4 ? (confirmNewPin === newPin ? "#22c55e" : "#ef4444") : undefined }} />
             <button onClick={setWalletPin} style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700", marginBottom: "10px" }}>
               Set PIN
             </button>
