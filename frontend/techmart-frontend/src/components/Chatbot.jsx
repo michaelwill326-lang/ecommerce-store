@@ -30,6 +30,7 @@ export default function Chatbot() {
   const [alerts, setAlerts] = useState([]);
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const splitInFlightRef = useRef(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -39,13 +40,28 @@ export default function Chatbot() {
 
   useEffect(() => {
     const syncUser = () => {
-      const user = (() => { try { return JSON.parse(sessionStorage.getItem("user")); } catch { return null; } })();
-      setUserName(user?.name?.split(" ")[0] || "Guest");
-      setUserRole(user?.role || "customer");
+      const token = sessionStorage.getItem("token");
+      let user = null;
+      try {
+        user = JSON.parse(sessionStorage.getItem("user"));
+      } catch {
+        user = null;
+      }
+
+      setUserName(token ? (user?.name?.trim().split(/\s+/)[0] || "Account") : "Guest");
+      setUserRole(token ? (user?.role || "customer") : "customer");
     };
+
     syncUser();
     window.addEventListener("storage", syncUser);
-    return () => window.removeEventListener("storage", syncUser);
+    window.addEventListener("techmart-auth-change", syncUser);
+    window.addEventListener("focus", syncUser);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("techmart-auth-change", syncUser);
+      window.removeEventListener("focus", syncUser);
+    };
   }, []);
 
   useEffect(() => {
@@ -187,6 +203,14 @@ export default function Chatbot() {
 
   const executeAction = async (action, actionData, pin) => {
     const token = sessionStorage.getItem("token");
+
+    if (["confirm_transfer", "confirm_split"].includes(action) && !token) {
+      setPendingAction(null);
+      setPinPromptAction(null);
+      setPinInput("");
+      addMessage("Please log in to use wallet transfers.", "bot");
+      return;
+    }
     if (action === "confirm_transfer") {
       if (!pin) { setPinPromptAction({ action, actionData }); return; }
       setPendingAction(null);
@@ -200,19 +224,79 @@ export default function Chatbot() {
     }
     if (action === "confirm_split") {
       if (!pin) { setPinPromptAction({ action, actionData }); return; }
+      if (splitInFlightRef.current) return;
+
+      splitInFlightRef.current = true;
       setPendingAction(null);
-      const { recipients, amount } = actionData;
-      const share = Math.floor(Number(amount) / recipients.length);
-      let results = [];
-      for (const email of recipients) {
-        try {
-          const res = await fetch(`${API}/api/pay/send`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ recipientEmail: email, amount: share, pin }) });
-          const data = await res.json();
-          results.push(data.success ? `✅ ${email}` : `❌ ${email}`);
-        } catch { results.push(`❌ ${email}`); }
+
+      let storedUser = {};
+      try {
+        storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+      } catch {
+        storedUser = {};
       }
-      const msg = `Split complete:\n${results.join("\n")}`;
-      addMessage(msg, "bot"); speak("Split complete");
+      const splitUserId = String(storedUser._id || storedUser.id || "");
+      if (!splitUserId) {
+        splitInFlightRef.current = false;
+        addMessage("I couldn't verify your account session. Please log in again before splitting your wallet.", "bot");
+        return;
+      }
+
+      const splitSignature = JSON.stringify({
+        userId: splitUserId,
+        amount: Number(actionData.amount),
+        recipients: (actionData.recipients || []).map(value =>
+          String(value).trim().toLowerCase()
+        )
+      });
+      const storageKey = `techmart:wallet-split:${splitSignature}`;
+
+      try {
+        let idempotencyKey = sessionStorage.getItem(storageKey);
+        if (!idempotencyKey) {
+          idempotencyKey = window.crypto?.randomUUID?.() ||
+            `split-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+          sessionStorage.setItem(storageKey, idempotencyKey);
+        }
+
+        const res = await fetch(`${API}/api/pay/split`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "Idempotency-Key": idempotencyKey
+          },
+          body: JSON.stringify({
+            amount: actionData.amount,
+            recipients: actionData.recipients,
+            pin
+          })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          // A client error means this request was rejected, not committed.
+          if (res.status >= 400 && res.status < 500 && res.status !== 409) {
+            sessionStorage.removeItem(storageKey);
+          }
+          const msg = `Split failed: ${data.error || "No changes were confirmed."}`;
+          addMessage(msg, "bot");
+          speak("Split failed");
+          return;
+        }
+
+        sessionStorage.removeItem(storageKey);
+        const details = (data.recipients || [])
+          .map(item => `₦${Number(item.amount).toLocaleString()} → ${item.email}`)
+          .join("\\n");
+        const msg = `Split successful: ₦${Number(data.total).toLocaleString()}\\n${details}`;
+        addMessage(msg, "bot");
+        speak("Split successful");
+      } catch {
+        addMessage("The split result could not be confirmed. Check your wallet history before trying again; retrying the same split will reuse its request key.", "bot");
+      } finally {
+        splitInFlightRef.current = false;
+      }
       return;
     }
     setPendingAction(null);
@@ -221,7 +305,11 @@ export default function Chatbot() {
   };
 
   const renderMsg = (msg) => {
-    const html = (msg.text || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br/>");
+    const hideSensitiveBalance = msg.data?.type === "balance" && !sessionStorage.getItem("token");
+    const sourceText = hideSensitiveBalance
+      ? "Please log in to view your wallet balance."
+      : (msg.text || "");
+    const html = sourceText.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br/>");
     return (
       <div>
         <span dangerouslySetInnerHTML={{ __html: html }} />
@@ -263,7 +351,7 @@ export default function Chatbot() {
             ))}
           </div>
         )}
-        {msg.data?.type === "balance" && (
+        {msg.data?.type === "balance" && !hideSensitiveBalance && (
           <div style={{ marginTop:8, background:"#0a2a0a", border:"1px solid #22c55e", borderRadius:8, padding:10, textAlign:"center" }}>
             <p style={{ color:"var(--text-muted)", fontSize:11, margin:"0 0 2px" }}>Wallet Balance</p>
             <p style={{ color:"#22c55e", fontSize:22, fontWeight:900, margin:0 }}>₦{msg.data.balance?.toLocaleString()}</p>
@@ -383,7 +471,7 @@ export default function Chatbot() {
               <div key={msg.id || i} style={{ display:"flex", justifyContent: msg.sender === "user" ? "flex-end" : "flex-start", animation:"fadeIn 0.2s ease" }}>
                 <div style={{ maxWidth:"88%", padding:"10px 12px", borderRadius: msg.sender === "user" ? "12px 12px 0 12px" : "12px 12px 12px 0", background: msg.sender === "user" ? "linear-gradient(135deg,#f97316,#dc2626)" : "#1a1a1a", border: msg.sender === "bot" ? "1px solid #222" : "none", color:"var(--text-primary)", fontSize:13, lineHeight:1.5 }}>
                   {renderMsg(msg)}
-                  {msg.sender === "bot" && <button onClick={() => speak(msg.text)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:11, marginTop:4, padding:0 }}>🔊</button>}
+                  {msg.sender === "bot" && !(msg.data?.type === "balance" && !sessionStorage.getItem("token")) && <button onClick={() => speak(msg.data?.type === "balance" && !sessionStorage.getItem("token") ? "Please log in to view your wallet balance." : msg.text)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:11, marginTop:4, padding:0 }}>🔊</button>}
                 </div>
               </div>
             ))}

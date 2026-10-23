@@ -2279,6 +2279,237 @@ app.post("/api/pay/send", auth, pinLimiter, async (req, res) => {
   }
 });
 
+
+// Idempotency records are committed atomically with wallet split transactions.
+const walletSplitRequestSchema = new mongoose.Schema({
+  senderId: { type: String, required: true },
+  idempotencyKey: { type: String, required: true },
+  fingerprint: { type: String, required: true },
+  result: { type: mongoose.Schema.Types.Mixed, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+walletSplitRequestSchema.index(
+  { senderId: 1, idempotencyKey: 1 },
+  { unique: true }
+);
+const WalletSplitRequest = mongoose.models.WalletSplitRequest ||
+  mongoose.model("WalletSplitRequest", walletSplitRequestSchema);
+
+// Atomic wallet split: all recipient credits and sender debit commit together.
+app.post("/api/pay/split", auth, pinLimiter, async (req, res) => {
+  let session;
+  let idempotencyKey;
+  let requestFingerprint;
+
+  try {
+    const { amount, recipients, pin } = req.body || {};
+    const total = Number(amount);
+
+    if (!Number.isSafeInteger(total) || total <= 0) {
+      return res.status(400).json({ error: "Enter a valid whole-naira split amount" });
+    }
+
+    if (!Array.isArray(recipients) || recipients.length < 2 || recipients.length > 10) {
+      return res.status(400).json({ error: "A split must have between 2 and 10 recipients" });
+    }
+
+    const emails = recipients.map(value =>
+      typeof value === "string" ? value.trim().toLowerCase() : ""
+    );
+
+    if (emails.some(email => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      return res.status(400).json({ error: "One or more recipient email addresses are invalid" });
+    }
+
+    if (new Set(emails).size !== emails.length) {
+      return res.status(400).json({ error: "Each recipient must be unique" });
+    }
+
+    if (total < emails.length * 100) {
+      return res.status(400).json({
+        error: `The total must be at least ₦${(emails.length * 100).toLocaleString()} for these recipients`
+      });
+    }
+
+    idempotencyKey = String(req.get("Idempotency-Key") || "").trim();
+    if (!/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
+      return res.status(400).json({
+        error: "A valid Idempotency-Key is required. Please retry from the chatbot."
+      });
+    }
+
+    requestFingerprint = crypto.createHash("sha256")
+      .update(JSON.stringify({ total, emails }))
+      .digest("hex");
+
+    await WalletSplitRequest.init();
+
+    const previousRequest = await WalletSplitRequest.findOne({
+      senderId: String(req.user.id),
+      idempotencyKey
+    }).lean();
+
+    if (previousRequest) {
+      if (previousRequest.fingerprint !== requestFingerprint) {
+        return res.status(409).json({
+          error: "This request key was already used for a different split. Start a new split."
+        });
+      }
+      return res.json(previousRequest.result);
+    }
+
+    session = await mongoose.startSession();
+    let result;
+
+    await session.withTransaction(async () => {
+      const sender = await User.findById(req.user.id).session(session);
+      if (!sender) {
+        const error = new Error("User account not found");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const pinCheck = await verifyWalletPin(sender, pin);
+      if (!pinCheck.ok) {
+        const error = new Error(pinCheck.error);
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const senderEmail = String(sender.email || "").trim().toLowerCase();
+      if (emails.includes(senderEmail)) {
+        const error = new Error("You cannot include your own email in a wallet split");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const recipientUsers = await User.find({ email: { $in: emails } }).session(session);
+      const recipientByEmail = new Map(
+        recipientUsers.map(user => [String(user.email || "").trim().toLowerCase(), user])
+      );
+
+      const missing = emails.filter(email => !recipientByEmail.has(email));
+      if (missing.length) {
+        const error = new Error(`No TechMart account found for: ${missing.join(", ")}`);
+        error.statusCode = 404;
+        throw error;
+      }
+
+      if ((sender.walletBalance || 0) < total) {
+        const error = new Error("Insufficient wallet balance for the full split");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const limit = checkDailyLimit(sender, "transfer", total);
+      if (!limit.ok) {
+        const error = new Error(limit.error);
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const reference =
+        `SPLIT-${Date.now()}-${require("crypto").randomBytes(4).toString("hex")}`;
+      const baseShare = Math.floor(total / emails.length);
+      const remainder = total % emails.length;
+      const shares = emails.map((_, index) => baseShare + (index < remainder ? 1 : 0));
+
+      sender.walletBalance = (sender.walletBalance || 0) - total;
+      sender.dailyTransferTotal = limit.total + total;
+      sender.dailyTransferDate = limit.today;
+      sender.walletTransactions.push({
+        type: "debit",
+        amount: total,
+        description: `Wallet split to ${emails.length} recipients`,
+        reference,
+        meta: { kind: "wallet_split", recipients: emails }
+      });
+
+      await sender.save({ session });
+
+      for (let index = 0; index < emails.length; index++) {
+        const email = emails[index];
+        const recipient = recipientByEmail.get(email);
+        const share = shares[index];
+
+        recipient.walletBalance = (recipient.walletBalance || 0) + share;
+        recipient.walletTransactions.push({
+          type: "credit",
+          amount: share,
+          description: `Wallet split received from ${sender.name || senderEmail}`,
+          reference,
+          meta: { kind: "wallet_split", senderId: String(sender._id), recipientIndex: index + 1 }
+        });
+
+        await recipient.save({ session });
+      }
+
+      result = {
+        success: true,
+        reference,
+        total,
+        recipients: emails.map((email, index) => ({ email, amount: shares[index] })),
+        message: `₦${total.toLocaleString()} split successfully among ${emails.length} recipients`
+      };
+
+      await WalletSplitRequest.create([{
+        senderId: String(req.user.id),
+        idempotencyKey,
+        fingerprint: requestFingerprint,
+        result
+      }], { session });
+    });
+
+    if (!result) {
+      return res.status(500).json({ error: "The split could not be confirmed. Please check your wallet before retrying." });
+    }
+
+    res.json(result);
+    // Fraud analytics run after the transaction commits; they cannot cause a partial split.
+    User.findById(req.user.id)
+      .then(sender => sender && analyzeFraud(sender, "wallet_split", {
+        reference: result.reference,
+        amount: result.total,
+        recipients: result.recipients.map(item => item.email)
+      }).catch(() => {}))
+      .catch(() => {});
+  } catch (err) {
+    if (idempotencyKey && requestFingerprint) {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const committed = await WalletSplitRequest.findOne({
+            senderId: String(req.user.id),
+            idempotencyKey
+          }).lean();
+
+          if (committed) {
+            if (committed.fingerprint !== requestFingerprint) {
+              return res.status(409).json({
+                error: "This request key was already used for a different split."
+              });
+            }
+            return res.json(committed.result);
+          }
+        } catch (lookupError) {
+          console.error("Wallet split idempotency lookup failed:", lookupError.message);
+          break;
+        }
+
+        if (attempt < 4) {
+          await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+        }
+      }
+    }
+
+    console.error("Wallet split error:", err.message);
+    res.status(err.statusCode || 500).json({
+      error: err.statusCode ? err.message : "The split failed and was rolled back if the transaction had started"
+    });
+  } finally {
+    if (session) await session.endSession().catch(() => {});
+  }
+});
+
 // 3. Withdraw to Bank Account
 // NIN Verification
 app.post("/api/pay/verify-nin", auth, async (req, res) => {
