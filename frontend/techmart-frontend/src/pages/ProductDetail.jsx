@@ -465,8 +465,45 @@ export default function ProductDetail() {
             {product.stock > 0 ? `✅ ${product.stock} in stock` : "❌ Out of stock"}
           </p>
 
-          {/* DESCRIPTION */}
-          <p style={styles.description}>{product.description}</p>
+          {/* DESCRIPTION & SPECIFICATIONS */}
+          <div style={{ marginTop: "8px" }}>
+            <h3 style={{ color: "var(--text-primary)", fontSize: "16px", margin: "0 0 8px" }}>
+              Product Details
+            </h3>
+
+            <p style={styles.description}>
+              {product.description?.trim() || "The seller has not added a product description yet."}
+            </p>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+              gap: "10px",
+              marginTop: "14px"
+            }}>
+              {[
+                ["Condition", selectedVariant?.condition || product.condition],
+                ["Storage", selectedVariant?.storage || product.storage],
+                ["RAM", selectedVariant?.ram || product.ram],
+                ["Battery", selectedVariant?.battery || product.battery]
+              ].filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "")
+                .map(([label, value]) => (
+                  <div key={label} style={{
+                    padding: "12px",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "10px"
+                  }}>
+                    <div style={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "5px" }}>
+                      {label}
+                    </div>
+                    <div style={{ color: "var(--text-primary)", fontSize: "14px", fontWeight: "700" }}>
+                      {String(value)}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
 
           <div style={styles.divider} />
 
