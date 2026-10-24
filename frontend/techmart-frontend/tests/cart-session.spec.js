@@ -8,37 +8,61 @@ test('logout clears the visible cart for the guest session', async ({ page }) =>
     quantity: 1,
   };
 
-  // Start with a clean browser storage state.
-  await page.goto('/');
-  await page.evaluate(({ product }) => {
-    localStorage.clear();
-    localStorage.setItem('token', 'test-session-token');
-    localStorage.setItem(
+  await page.route('**/api/cart', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [product] }),
+    })
+  );
+
+  await page.route('**/api/cart/sync', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true }),
+    })
+  );
+
+  await page.route('**/api/auth/logout', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true }),
+    })
+  );
+
+  // Seed the browser session before React initializes.
+  await page.addInitScript(({ product }) => {
+    if (sessionStorage.getItem('__playwrightCartSeeded')) return;
+
+    sessionStorage.setItem('__playwrightCartSeeded', '1');
+    sessionStorage.setItem('token', 'test-session-token');
+    sessionStorage.setItem(
       'user',
       JSON.stringify({ name: 'Test Customer', email: 'test@example.com' })
     );
     localStorage.setItem('cart', JSON.stringify([product]));
   }, { product });
 
-  // Reload so the app initializes from the authenticated session.
-  await page.reload();
-
-  // The authenticated cart should contain the test product.
   await page.goto('/cart');
   await expect(page.getByText('Test Product', { exact: true })).toBeVisible();
 
-  // Logout through the real Navbar button.
   await page.getByRole('button', { name: 'Logout', exact: true }).click();
-
   await expect(page).toHaveURL(/login/);
 
-  // Guest cart must now be empty.
   await page.goto('/cart');
   await expect(page.getByText('Your cart is empty', { exact: true })).toBeVisible();
 
-  // Confirm the cart storage was cleared as well.
-  const cartStorage = await page.evaluate(() => localStorage.getItem('cart'));
-  expect(cartStorage).toBeNull();
+  const result = await page.evaluate(() => ({
+    cart: localStorage.getItem('cart'),
+    token: sessionStorage.getItem('token'),
+    user: sessionStorage.getItem('user'),
+  }));
+
+  expect(result.cart).toBeNull();
+  expect(result.token).toBeNull();
+  expect(result.user).toBeNull();
 });
 
 test('guest cannot add products to the cart', async ({ page }) => {
@@ -59,7 +83,7 @@ test('guest cannot add products to the cart', async ({ page }) => {
 });
 
 test('guest is redirected to login when adding a product from product detail', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/shop');
 
   // Start completely unauthenticated.
   await page.evaluate(() => {

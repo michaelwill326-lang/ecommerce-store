@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('products section loads on homepage', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/shop');
 
   const cards = page.locator('.tm-card');
 
@@ -10,7 +10,7 @@ test('products section loads on homepage', async ({ page }) => {
 
 
 test('clicking a product opens product detail page', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/shop');
 
   await page.locator('.tm-card').first().click();
 
