@@ -84,9 +84,15 @@ export default function SellerDashboard() {
     finally { setUploading(false); }
   };
 
-  const [variants, setVariants] = useState([{ name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
+  const [variants, setVariants] = useState([{
+    name: "", color: "", size: "", storage: "", ram: "", battery: "",
+    grade: "", workingStatus: "", condition: "New", price: "", stock: ""
+  }]);
 
-  const addVariant = () => setVariants(prev => [...prev, { name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
+  const addVariant = () => setVariants(prev => [...prev, {
+    name: "", color: "", size: "", storage: "", ram: "", battery: "",
+    grade: "", workingStatus: "", condition: "New", price: "", stock: ""
+  }]);
   const removeVariant = (i) => setVariants(prev => prev.filter((_, j) => j !== i));
   const updateVariant = (i, field, value) => setVariants(prev => prev.map((v, j) => j === i ? { ...v, [field]: value } : v));
 
@@ -115,7 +121,10 @@ export default function SellerDashboard() {
       setData(prev => ({ ...prev, products: [res.data.data, ...(prev?.products || [])] }));
       setShowAddProduct(false);
       setNewProduct({ name: "", price: "", description: "", category: "", stock: "" });
-      setVariants([{ name: "", color: "", size: "", storage: "", condition: "New", price: "", stock: "" }]);
+      setVariants([{
+        name: "", color: "", size: "", storage: "", ram: "", battery: "",
+        grade: "", workingStatus: "", condition: "New", price: "", stock: ""
+      }]);
       setImages([]);
       setMsg("✅ Product added successfully!");
     } catch (err) { setMsg(err.response?.data?.error || "Failed to add product"); }
@@ -478,6 +487,17 @@ export default function SellerDashboard() {
                         <option value="Used">Used</option>
                         <option value="Refurbished">Refurbished</option>
                       </select>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+                      <input placeholder="RAM (e.g. 8GB)" value={v.ram} onChange={e => updateVariant(i, "ram", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                      <input placeholder="Battery (e.g. 4500mAh)" value={v.battery} onChange={e => updateVariant(i, "battery", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
+                      <select value={v.grade} onChange={e => updateVariant(i, "grade", e.target.value)} style={{ ...inp, marginBottom: 0, appearance: "none" }}>
+                        <option value="">Select grade</option>
+                        <option value="A">Grade A</option>
+                        <option value="B">Grade B</option>
+                        <option value="C">Grade C</option>
+                      </select>
+                      <input placeholder="What's working? (e.g. screen, camera)" value={v.workingStatus} onChange={e => updateVariant(i, "workingStatus", e.target.value)} style={{ ...inp, marginBottom: 0 }} />
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                       <input placeholder="Price (₦) *" type="number" value={v.price} onChange={e => updateVariant(i, "price", e.target.value)} style={{ ...inp, marginBottom: 0 }} />

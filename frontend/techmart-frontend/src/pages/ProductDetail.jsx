@@ -483,6 +483,8 @@ export default function ProductDetail() {
             }}>
               {[
                 ["Condition", selectedVariant?.condition || product.condition],
+                ["Grade", selectedVariant?.grade || product.grade],
+                ["Working Status", selectedVariant?.workingStatus || product.workingStatus],
                 ["Storage", selectedVariant?.storage || product.storage],
                 ["RAM", selectedVariant?.ram || product.ram],
                 ["Battery", selectedVariant?.battery || product.battery]

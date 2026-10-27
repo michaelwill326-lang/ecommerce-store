@@ -77,6 +77,9 @@ export function DevicePassportView({ passport }) {
   const repairs = Array.isArray(p.repairs) ? p.repairs : [];
   const faults = Array.isArray(p.knownFaults) ? p.knownFaults : [];
   const last4 = p.imei && p.imei.last4;
+  const blacklistCheck = byKey.blacklist;
+  const imeiCheckPassed = blacklistCheck?.status === 'pass' &&
+    ['provider_lookup', 'techmart_inspected'].includes(blacklistCheck?.source);
   const sellerDate = p.sellerReportedAt;
 
   const checkRow = (key, label, c) => (
@@ -96,6 +99,11 @@ export function DevicePassportView({ passport }) {
         Every line shows where it came from and when. Items marked “Not checked” have no source yet.
       </p>
 
+      {imeiCheckPassed && (
+        <div style={{ display: "inline-block", padding: "7px 11px", margin: "8px 0", borderRadius: "8px", background: "#dcfce7", color: "#14532d", fontSize: "12px", fontWeight: 800 }}>
+          ✓ IMEI CHECK PASSED
+        </div>
+      )}
       <Row label="Device"><div style={valueStyle}>{deviceName || "Not provided"}</div></Row>
 
       <Row label="IMEI">

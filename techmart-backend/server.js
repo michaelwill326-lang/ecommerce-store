@@ -905,11 +905,20 @@ const Product = mongoose.model(
       fraudCheck: { type: Boolean, default: false }
     },
     condition: { type: String, default: "New" },
+    storage: { type: String, default: "" },
+    ram: { type: String, default: "" },
+    battery: { type: String, default: "" },
+    grade: { type: String, default: "" },
+    workingStatus: { type: String, default: "" },
     variants: [{
       name: String,
       color: { type: String, default: "" },
       size: { type: String, default: "" },
       storage: { type: String, default: "" },
+      ram: { type: String, default: "" },
+      battery: { type: String, default: "" },
+      grade: { type: String, default: "" },
+      workingStatus: { type: String, default: "" },
       condition: { type: String, default: "New" },
       price: {
         type: Number,
@@ -5613,6 +5622,45 @@ app.post("/api/seller/products", sellerAuth, adminUploader.array("images", 5), a
       }
     }
 
+    let variants = [];
+
+    if (req.body.variants) {
+      try {
+        const parsedVariants =
+          typeof req.body.variants === "string"
+            ? JSON.parse(req.body.variants)
+            : req.body.variants;
+
+        if (!Array.isArray(parsedVariants)) {
+          return res.status(400).json({
+            success: false,
+            error: "Variants must be an array"
+          });
+        }
+
+        variants = parsedVariants.map((variant) => ({
+          name: String(variant.name || ""),
+          color: String(variant.color || ""),
+          size: String(variant.size || ""),
+          storage: String(variant.storage || ""),
+          ram: String(variant.ram || ""),
+          battery: String(variant.battery || ""),
+          grade: String(variant.grade || ""),
+          workingStatus: String(variant.workingStatus || ""),
+          condition: String(variant.condition || "New"),
+          price: Number(variant.price || 0),
+          stock: Number(variant.stock || 0)
+        }));
+      } catch {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid variants data"
+        });
+      }
+    }
+
+    const firstVariant = variants[0] || {};
+
     const product = await Product.create({
       name: req.body.name,
       price: Number(req.body.price),
@@ -5620,8 +5668,15 @@ app.post("/api/seller/products", sellerAuth, adminUploader.array("images", 5), a
       stock: Number(req.body.stock),
       category: req.body.category || "",
       images: imageUrls,
+      condition: req.body.condition || firstVariant.condition || "New",
+      storage: req.body.storage || firstVariant.storage || "",
+      ram: req.body.ram || firstVariant.ram || "",
+      battery: req.body.battery || firstVariant.battery || "",
+      grade: req.body.grade || firstVariant.grade || "",
+      workingStatus: req.body.workingStatus || firstVariant.workingStatus || "",
+      variants,
       vendorId: req.seller.id,
-      vendorName: req.seller.storeName,
+      vendorName: req.seller.storeName
     });
 
     res.status(201).json({
