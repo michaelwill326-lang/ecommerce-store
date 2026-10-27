@@ -9872,10 +9872,83 @@ app.post("/api/phone-checker/imei", auth, async (req, res) => {
             : "Do not treat this result as a clean verification yet. The provider did not return enough information to confirm blacklist status."
     };
 
+    // Optionally persist the provider result to the seller's own product passport.
+    let passportSaved = false;
+    const requestedProductId = String(req.body?.productId || "").trim();
+
+    if (requestedProductId) {
+      if (req.user?.role !== "seller") {
+        return res.status(403).json({
+          error: "Only the product's seller can attach an IMEI check to its passport."
+        });
+      }
+
+      if (!/^[a-f\\d]{24}$/i.test(requestedProductId)) {
+        return res.status(400).json({ error: "Invalid product id." });
+      }
+
+      const ownedProduct = await Product.findById(requestedProductId)
+        .select("vendorId")
+        .lean();
+
+      if (!ownedProduct) {
+        return res.status(404).json({ error: "Product not found." });
+      }
+
+      if (String(ownedProduct.vendorId) !== String(req.user.id)) {
+        return res.status(403).json({ error: "You do not own this product." });
+      }
+
+      const existingPassport = await DevicePassport.findOne({
+        productId: requestedProductId
+      }).lean();
+
+      if (
+        existingPassport &&
+        String(existingPassport.sellerId) !== String(req.user.id)
+      ) {
+        return res.status(403).json({
+          error: "This passport belongs to another seller."
+        });
+      }
+
+      const passportChecks = (existingPassport?.checks || [])
+        .filter(check => check.key !== "blacklist");
+
+      passportChecks.push({
+        key: "blacklist",
+        label: "IMEI Blacklist Status",
+        status: blacklistStatus,
+        source: "provider_lookup",
+        detail: blacklistRaw == null
+          ? "Provider returned no definitive blacklist status."
+          : String(blacklistRaw).slice(0, 300),
+        checkedAt: new Date()
+      });
+
+      await DevicePassport.findOneAndUpdate(
+        { productId: requestedProductId },
+        {
+          $set: {
+            sellerId: String(req.user.id),
+            "imei.last4": cleanImei.slice(-4),
+            checks: passportChecks
+          },
+          $setOnInsert: {
+            productId: requestedProductId
+          }
+        },
+        { upsert: true, new: true, runValidators: true }
+      );
+
+      passportSaved = true;
+    }
+
     return res.json({
       success: true,
       imei: cleanImei,
       result,
+      passportSaved,
       rawApiData: blacklistData
     });
 

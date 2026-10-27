@@ -126,6 +126,49 @@ export function PassportEditorView({ form, setForm, onSave, onClose, saving, loa
               <Field id="pp-color" label="Colour" value={form.color} max={30} placeholder="Blue" onChange={(v) => set("color", v)} />
             </div>
 
+            <div style={sectionTitle}>IMEI provider verification</div>
+            <p style={helpStyle}>
+              Verify this product's IMEI with the provider. The full IMEI is sent
+              for verification but should not be displayed in the public passport.
+            </p>
+            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <input
+                aria-label="Device IMEI"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={15}
+                style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+                value={imei}
+                placeholder="15-digit IMEI"
+                onChange={(e) => setImei(e.target.value.replace(/\D/g, "").slice(0, 15))}
+              />
+              <button
+                type="button"
+                style={{ ...secondaryBtn, opacity: imeiLoading ? 0.6 : 1 }}
+                disabled={imeiLoading || loading}
+                onClick={runImeiCheck}
+              >
+                {imeiLoading ? "Checking…" : "Verify IMEI"}
+              </button>
+            </div>
+            {imeiError ? (
+              <p role="alert" style={{ color: "#b91c1c", fontSize: "13px" }}>{imeiError}</p>
+            ) : null}
+            {imeiCheckResult?.result ? (
+              <div role="status" style={{ marginTop: "10px", padding: "12px", border: "1px solid var(--border-color, #ddd)", borderRadius: "10px" }}>
+                <strong>
+                  Provider result: {imeiCheckResult.result.verdict || "UNVERIFIED"}
+                </strong>
+                <p style={helpStyle}>
+                  {imeiCheckResult.result.summary || "No additional provider summary was returned."}
+                </p>
+                <p style={helpStyle}>
+                  This result is associated with product {productId}. Only a definitive,
+                  provider-confirmed clean result should qualify for the IMEI passed badge.
+                </p>
+              </div>
+            ) : null}
+
             <div style={sectionTitle}>Cosmetic condition</div>
             <label htmlFor="pp-grade" style={labelStyle}>Grade</label>
             <select id="pp-grade" style={inputStyle} value={form.grade} onChange={(e) => set("grade", e.target.value)}>
@@ -189,6 +232,39 @@ export default function PassportEditor({ productId, productName, token, onClose 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [imei, setImei] = useState("");
+  const [imeiLoading, setImeiLoading] = useState(false);
+  const [imeiCheckResult, setImeiCheckResult] = useState(null);
+  const [imeiError, setImeiError] = useState("");
+
+  const runImeiCheck = async () => {
+    setImeiError("");
+    setImeiCheckResult(null);
+    const cleanImei = imei.trim();
+    if (!/^\d{15}$/.test(cleanImei)) {
+      setImeiError("Enter a valid 15-digit IMEI.");
+      return;
+    }
+    setImeiLoading(true);
+    try {
+      const response = await axios.post(
+        `${API}/api/phone-checker/imei`,
+        { imei: cleanImei, productId },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 20000,
+        }
+      );
+      setImeiCheckResult(response.data);
+      setImei("");
+    } catch (e) {
+      setImeiError(
+        e.response?.data?.error || "IMEI verification failed. Please try again."
+      );
+    } finally {
+      setImeiLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
