@@ -107,6 +107,27 @@ export default function Admin() {
     fetchAll();
   }, []);
 
+  const reviewSellerVerification = async (sellerId, check, status, extra = {}) => {
+    try {
+      const res = await axios.patch(
+        `${API}/api/admin/sellers/${sellerId}/verification/${check}`,
+        { ...extra, ...(status ? { status } : {}) },
+        { headers }
+      );
+
+      setSellers(current =>
+        current.map(s => s._id === sellerId ? res.data.data : s)
+      );
+
+      showToast("Seller verification updated successfully");
+    } catch (err) {
+      const message =
+        err.response?.data?.error || "Failed to update seller verification";
+      showToast(message);
+      console.error("Seller verification review failed:", err);
+    }
+  };
+
   const fetchAll = async () => {
     try {
       setLoading(true);
@@ -1016,10 +1037,6 @@ ${url}`, "success");
                         }} style={{ background: "#22c55e", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Approve</button>
                       )}
                       <button onClick={async () => {
-                        const res = await axios.put(`${API}/api/admin/sellers/${s._id}/verify`, { verified: !s.verified }, { headers });
-                        setSellers(sellers.map(x => x._id === s._id ? res.data.data : x));
-                      }} style={{ background: s.verified ? "#1d4ed8" : "#333", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>{s.verified ? "Unverify" : "Verify"}</button>
-                      <button onClick={async () => {
                         const commission = prompt("Set commission % (current: " + (s.commission || 10) + "%):");
                         if (!commission) return;
                         const res = await axios.put(`${API}/api/admin/sellers/${s._id}/commission`, { commission }, { headers });
@@ -1038,6 +1055,129 @@ ${url}`, "success");
                       }} style={{ background: "#dc2626", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>Delete</button>
                     </div>
                   </div>
+
+                  {(() => {
+                    const v = s.verification || {};
+                    const getStatus = check => check?.status || "not_submitted";
+                    const actionStyle = {
+                      background: "#333", color: "var(--text-primary)", border: "1px solid #555",
+                      borderRadius: "6px", padding: "6px 10px", cursor: "pointer", fontSize: "12px"
+                    };
+                    const rowStyle = {
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      flexWrap: "wrap", gap: "8px", padding: "10px 0",
+                      borderBottom: "1px solid #333"
+                    };
+                    const labelStyle = { color: "var(--text-primary)", fontWeight: "600", fontSize: "13px" };
+                    const statusStyle = { color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase" };
+
+                    return (
+                      <div style={{ marginTop: "18px", padding: "16px", background: "var(--bg-primary)", border: "1px solid #333", borderRadius: "10px" }}>
+                        <h4 style={{ color: "var(--text-primary)", margin: "0 0 12px" }}>TechMart Seller Verification</h4>
+
+                        <div style={rowStyle}>
+                          <div>
+                            <div style={labelStyle}>CAC / Business Registration</div>
+                            <div style={statusStyle}>
+                              {s.sellerType === "business"
+                                ? `${getStatus(v.cac)} · ${s.businessLegalName || "No legal name"} · ${s.cacRegistrationNumber || "No CAC number"}`
+                                : "NOT APPLICABLE — INDIVIDUAL SELLER"}
+                            </div>
+                          </div>
+                          {s.sellerType === "business" && (
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "cac", "under_review")}>Review</button>
+                              <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "cac", "verified")}>Approve CAC</button>
+                              <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "cac", "rejected")}>Reject</button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={rowStyle}>
+                          <div>
+                            <div style={labelStyle}>Bank Account Name</div>
+                            <div style={statusStyle}>
+                              {getStatus(v.bank)} · {s.bankName || "Bank not supplied"} · {s.accountName || "Account name not supplied"}
+                            </div>
+                          </div>
+                          <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>PAYSTACK CHECK ONLY</span>
+                        </div>
+
+                        <div style={rowStyle}>
+                          <div>
+                            <div style={labelStyle}>NIN / Face Match</div>
+                            <div style={statusStyle}>
+                              {getStatus(v.ninFaceMatch)} · Face match: {v.ninFaceMatch?.faceMatchStatus || "not_checked"}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "ninFaceMatch", "under_review")}>Review</button>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "ninFaceMatch", "failed")}>Mark failed</button>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "ninFaceMatch", "rejected")}>Reject</button>
+                          </div>
+                        </div>
+
+                        <div style={rowStyle}>
+                          <div style={{ width: "100%" }}>
+                            <div style={labelStyle}>Guarantor / Community References</div>
+                            <div style={statusStyle}>{getStatus(v.guarantors)}</div>
+                            {(v.guarantors?.references || []).length === 0 ? (
+                              <p style={{ color: "var(--text-muted)", fontSize: "12px" }}>No references submitted yet.</p>
+                            ) : (v.guarantors.references || []).map((ref, index) => (
+                              <div key={index} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", padding: "8px", marginTop: "6px", background: "var(--bg-card)", borderRadius: "6px" }}>
+                                <span style={{ color: "var(--text-secondary)", fontSize: "12px" }}>
+                                  {ref.name || `Reference ${index + 1}`} · {ref.relationship || "Relationship not specified"} · Consent: {ref.consent ? "Yes" : "No"} · {ref.status || "pending"}
+                                </span>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "guarantors", null, { referenceUpdates: [{ index, status: "contacted" }] })}>Contacted</button>
+                                  <button disabled={!ref.consent} style={{ ...actionStyle, opacity: ref.consent ? 1 : 0.45 }} onClick={() => reviewSellerVerification(s._id, "guarantors", null, { referenceUpdates: [{ index, status: "verified" }] })}>Verify reference</button>
+                                </div>
+                              </div>
+                            ))}
+                            <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+                              <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "guarantors", "under_review")}>Review references</button>
+                              <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "guarantors", "rejected")}>Reject references</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={rowStyle}>
+                          <div>
+                            <div style={labelStyle}>Live Address Verification</div>
+                            <div style={statusStyle}>
+                              {getStatus(v.liveAddress)} · {v.liveAddress?.address || "Address not submitted"}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "liveAddress", "under_review")}>Review</button>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "liveAddress", "verified")}>Approve</button>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "liveAddress", "rejected")}>Reject</button>
+                          </div>
+                        </div>
+
+                        <div style={{ ...rowStyle, borderBottom: "none" }}>
+                          <div>
+                            <div style={labelStyle}>Physical Shop Verification</div>
+                            <div style={statusStyle}>
+                              {getStatus(v.shop)} · {(v.shop?.photoReferences || []).length} evidence photo(s)
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "shop", "under_review")}>Review</button>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "shop", "verified")}>Approve</button>
+                            <button style={actionStyle} onClick={() => reviewSellerVerification(s._id, "shop", "rejected")}>Reject</button>
+                          </div>
+                        </div>
+
+                        <p style={{ color: "var(--text-muted)", fontSize: "11px", margin: "10px 0 0" }}>
+                          NIN face matching requires an authorized verification provider. Address and shop approval require submitted evidence.
+                        </p>
+                        <p style={{ color: s.verified ? "#22c55e" : "var(--text-muted)", fontSize: "12px", fontWeight: "700", marginBottom: 0 }}>
+                          TechMart Verified badge: {s.verified ? "ACTIVE" : "NOT ACTIVE"}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

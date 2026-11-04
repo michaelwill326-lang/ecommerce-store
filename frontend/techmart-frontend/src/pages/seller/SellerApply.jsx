@@ -5,7 +5,7 @@ const API = import.meta.env.VITE_API_URL || "https://techmart-backend-ecbi.onren
 
 export default function SellerApply() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", storeName: "", storeDescription: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", storeName: "", storeDescription: "", sellerType: "individual", businessLegalName: "", cacRegistrationNumber: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -14,6 +14,11 @@ export default function SellerApply() {
     setError(""); setSuccess("");
     if (!form.name || !form.email || !form.password || !form.storeName) {
       setError("Please fill all required fields"); return;
+    }
+
+    if (form.sellerType === "business" && (!form.businessLegalName.trim() || !form.cacRegistrationNumber.trim())) {
+      setError("Registered businesses must provide their legal business name and CAC registration number.");
+      return;
     }
 
     const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
@@ -26,7 +31,7 @@ export default function SellerApply() {
       setLoading(true);
       await axios.post(`${API}/api/seller/apply`, form);
       setSuccess("Application submitted! We will review and get back to you within 24 hours.");
-      setForm({ name: "", email: "", password: "", phone: "", storeName: "", storeDescription: "" });
+      setForm({ name: "", email: "", password: "", phone: "", storeName: "", storeDescription: "", sellerType: "individual", businessLegalName: "", cacRegistrationNumber: "" });
     } catch (err) {
       setError(err.response?.data?.error || "Failed to submit application");
     } finally { setLoading(false); }
@@ -91,6 +96,37 @@ export default function SellerApply() {
             </div>
           )}
           <input placeholder="Phone Number" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} style={inp} />
+
+          <label style={{ display: "block", color: "var(--text-muted)", fontSize: "13px", marginBottom: "6px" }}>Seller Type *</label>
+          <select
+            value={form.sellerType}
+            onChange={e => setForm({...form, sellerType: e.target.value, businessLegalName: "", cacRegistrationNumber: ""})}
+            style={inp}
+          >
+            <option value="individual">Individual Seller</option>
+            <option value="business">Registered Business</option>
+          </select>
+
+          {form.sellerType === "business" && (
+            <>
+              <input
+                placeholder="Registered Legal Business Name *"
+                value={form.businessLegalName}
+                onChange={e => setForm({...form, businessLegalName: e.target.value})}
+                style={inp}
+              />
+              <input
+                placeholder="CAC Registration Number *"
+                value={form.cacRegistrationNumber}
+                onChange={e => setForm({...form, cacRegistrationNumber: e.target.value})}
+                style={inp}
+              />
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "-6px", marginBottom: "12px" }}>
+                Your CAC details will be reviewed as part of business verification.
+              </p>
+            </>
+          )}
+
           <input placeholder="Store Name *" value={form.storeName} onChange={e => setForm({...form, storeName: e.target.value})} style={inp} />
           <textarea placeholder="Tell us about your store and what you sell..." value={form.storeDescription} onChange={e => setForm({...form, storeDescription: e.target.value})} style={{ ...inp, height: "100px", resize: "vertical" }} />
           <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #f97316, #dc2626)", color: "var(--text-primary)", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: "700", cursor: "pointer", opacity: loading ? 0.7 : 1 }}>

@@ -1856,6 +1856,97 @@ const SellerSchema = new mongoose.Schema({
   storeBanner: { type: String, default: "" },
   storeLogo: { type: String, default: "" },
   storeColor: { type: String, default: "#f97316" },
+  // Seller classification and registered-business details
+  sellerType: {
+    type: String,
+    enum: ["individual", "business"],
+    default: "individual"
+  },
+  businessLegalName: { type: String, default: "" },
+  cacRegistrationNumber: { type: String, default: "" },
+
+  // Seller bank details (also used by existing payout workflows)
+  bankCode: { type: String, default: "" },
+  bankName: { type: String, default: "" },
+  accountNumber: { type: String, default: "" },
+  accountName: { type: String, default: "" },
+
+  // Independent verification layers
+  verification: {
+    cac: {
+      status: {
+        type: String,
+        enum: ["not_submitted", "pending", "under_review", "verified", "failed", "rejected", "not_applicable"],
+        default: "not_submitted"
+      },
+      verifiedAt: { type: Date, default: null },
+      reviewerNote: { type: String, default: "" }
+    },
+    bank: {
+      status: {
+        type: String,
+        enum: ["not_submitted", "pending", "under_review", "verified", "failed", "rejected"],
+        default: "not_submitted"
+      },
+      verifiedAccountName: { type: String, default: "" },
+      providerReference: { type: String, default: "" },
+      verifiedAt: { type: Date, default: null }
+    },
+    ninFaceMatch: {
+      status: {
+        type: String,
+        enum: ["not_submitted", "pending", "under_review", "verified", "failed", "rejected"],
+        default: "not_submitted"
+      },
+      faceMatchStatus: {
+        type: String,
+        enum: ["not_checked", "matched", "not_matched", "inconclusive"],
+        default: "not_checked"
+      },
+      providerReference: { type: String, default: "" },
+      verifiedAt: { type: Date, default: null }
+    },
+    guarantors: {
+      status: {
+        type: String,
+        enum: ["not_submitted", "pending", "under_review", "verified", "failed", "rejected"],
+        default: "not_submitted"
+      },
+      references: [{
+        name: { type: String, default: "" },
+        phone: { type: String, default: "" },
+        relationship: { type: String, default: "" },
+        consent: { type: Boolean, default: false },
+        status: {
+          type: String,
+          enum: ["pending", "contacted", "verified", "rejected"],
+          default: "pending"
+        }
+      }],
+      verifiedAt: { type: Date, default: null }
+    },
+    liveAddress: {
+      status: {
+        type: String,
+        enum: ["not_submitted", "pending", "under_review", "verified", "failed", "rejected"],
+        default: "not_submitted"
+      },
+      address: { type: String, default: "" },
+      proofReference: { type: String, default: "" },
+      verifiedAt: { type: Date, default: null }
+    },
+    shop: {
+      status: {
+        type: String,
+        enum: ["not_submitted", "pending", "under_review", "verified", "failed", "rejected"],
+        default: "not_submitted"
+      },
+      photoReferences: [{ type: String }],
+      verifiedAt: { type: Date, default: null },
+      reviewerNote: { type: String, default: "" }
+    }
+  },
+
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   verified: { type: Boolean, default: false },
   techmartVerifiedAt: { type: Date, default: null },
@@ -4336,23 +4427,206 @@ app.put("/api/admin/sellers/:id/commission", adminOnly, async (req, res) => {
   }
 });
 
-// --- SELLER VERIFICATION (Admin) ---
+// --- SELLER VERIFICATION SUMMARY ---
+function getSellerVerificationSummary(seller) {
+  const v = seller.verification || {};
+
+  const checks = {
+    cac: seller.sellerType === "business"
+      ? v.cac?.status === "verified"
+      : true,
+    bank: v.bank?.status === "verified",
+    ninFaceMatch:
+      v.ninFaceMatch?.status === "verified" &&
+      v.ninFaceMatch?.faceMatchStatus === "matched",
+    guarantors: v.guarantors?.status === "verified",
+    liveAddress: v.liveAddress?.status === "verified",
+    shop: v.shop?.status === "verified"
+  };
+
+  const incompleteChecks = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+
+  return {
+    checks,
+    incompleteChecks,
+    eligible: seller.status === "approved" && incompleteChecks.length === 0
+  };
+}
+
+// --- SELLER VERIFICATION REVIEW (Admin) ---
+app.patch("/api/admin/sellers/:id/verification/:check", adminOnly, async (req, res) => {
+  try {
+    const allowedChecks = [
+      "cac",
+      "ninFaceMatch",
+      "guarantors",
+      "liveAddress",
+      "shop"
+    ];
+
+    const { check } = req.params;
+    const { status, reviewerNote, referenceUpdates } = req.body;
+
+    if (!allowedChecks.includes(check)) {
+      return res.status(400).json({ error: "Invalid verification check" });
+    }
+
+    const allowedStatuses = [
+      "pending",
+      "under_review",
+      "verified",
+      "failed",
+      "rejected"
+    ];
+
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid verification status" });
+    }
+
+    const seller = await Seller.findById(req.params.id);
+
+    if (!seller) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    if (check === "cac" && seller.sellerType !== "business") {
+      return res.status(400).json({
+        error: "CAC verification does not apply to individual sellers"
+      });
+    }
+
+    if (check === "cac" && status === "verified") {
+      if (!seller.businessLegalName || !seller.cacRegistrationNumber) {
+        return res.status(400).json({
+          error: "Business legal name and CAC registration number are required"
+        });
+      }
+    }
+
+    if (check === "ninFaceMatch" && status === "verified") {
+      return res.status(400).json({
+        error: "NIN and face-match verification must be confirmed by an authorized identity-verification provider"
+      });
+    }
+
+    if (check === "guarantors") {
+      const references = seller.verification.guarantors.references || [];
+
+      if (Array.isArray(referenceUpdates)) {
+        for (const update of referenceUpdates) {
+          const index = Number(update.index);
+          const referenceStatus = update.status;
+
+          if (
+            !Number.isInteger(index) ||
+            index < 0 ||
+            index >= references.length ||
+            !["contacted", "verified", "rejected"].includes(referenceStatus)
+          ) {
+            return res.status(400).json({
+              error: "Invalid guarantor reference update"
+            });
+          }
+
+          if (referenceStatus === "verified" && !references[index].consent) {
+            return res.status(400).json({
+              error: "Guarantor consent is required before verification"
+            });
+          }
+
+          references[index].status = referenceStatus;
+        }
+      }
+
+      if (status === "verified") {
+        const allReferencesVerified =
+          references.length > 0 &&
+          references.every(ref => ref.consent && ref.status === "verified");
+
+        if (!allReferencesVerified) {
+          return res.status(400).json({
+            error: "Every guarantor must provide consent and pass verification"
+          });
+        }
+      }
+    }
+
+    if (check === "liveAddress" && status === "verified") {
+      if (!seller.verification.liveAddress.address ||
+          !seller.verification.liveAddress.proofReference) {
+        return res.status(400).json({
+          error: "Address and proof reference are required before approval"
+        });
+      }
+    }
+
+    if (check === "shop" && status === "verified") {
+      if (!seller.verification.shop.photoReferences?.length) {
+        return res.status(400).json({
+          error: "Shop photos are required before approval"
+        });
+      }
+    }
+
+    if (status) {
+      seller.verification[check].status = status;
+      seller.verification[check].verifiedAt =
+        status === "verified" ? new Date() : null;
+    }
+
+    if (
+      typeof reviewerNote === "string" &&
+      ["cac", "shop"].includes(check)
+    ) {
+      seller.verification[check].reviewerNote = reviewerNote.trim();
+    }
+
+    const summary = getSellerVerificationSummary(seller);
+
+    seller.verified = summary.eligible;
+    seller.techmartVerifiedAt = summary.eligible
+      ? (seller.techmartVerifiedAt || new Date())
+      : null;
+    seller.verificationLevel = summary.eligible ? "seller" : "none";
+
+    await seller.save();
+
+    res.json({
+      success: true,
+      data: seller.toObject(),
+      verificationSummary: getSellerVerificationSummary(seller)
+    });
+  } catch (err) {
+    console.error("Seller verification review failed:", err.message);
+    res.status(500).json({ error: "Failed to review seller verification" });
+  }
+});
+
+// Bank verification is exclusively handled by the Paystack account-resolution route.
+// NIN/face-match verification cannot be manually approved by an administrator.
+
+// --- LEGACY SELLER VERIFICATION ENDPOINT ---
 app.put("/api/admin/sellers/:id/verify", adminOnly, async (req, res) => {
   try {
-    const { verified } = req.body;
-    const isVerified = Boolean(verified);
+    if (req.body.verified !== false) {
+      return res.status(400).json({
+        error: "Direct verification is disabled. Complete the required verification checks first."
+      });
+    }
 
-    const update = {
-      verified: isVerified,
-      techmartVerifiedAt: isVerified ? new Date() : null,
-      verificationLevel: isVerified ? "seller" : "none"
-    };
+    const seller = await Seller.findById(req.params.id);
 
-    const seller = await Seller.findByIdAndUpdate(
-      req.params.id,
-      update,
-      { new: true }
-    ).select("-password");
+    if (!seller) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    seller.verified = false;
+    seller.techmartVerifiedAt = null;
+    seller.verificationLevel = "none";
+
+    await seller.save();
 
     res.json({ success: true, data: seller });
   } catch (err) {
@@ -4412,29 +4686,86 @@ app.post("/api/seller/payouts", sellerAuth, async (req, res) => {
 app.post("/api/seller/bank-details", sellerAuth, async (req, res) => {
   try {
     const { bankCode, bankName, accountNumber, accountName } = req.body;
+
     if (!bankCode || !bankName || !accountNumber || !accountName) {
       return res.status(400).json({ error: "All bank details are required" });
     }
-    if (!/^d{10}$/.test(accountNumber)) {
+
+    const cleanAccountNumber = String(accountNumber).trim();
+
+    if (!/^\d{10}$/.test(cleanAccountNumber)) {
       return res.status(400).json({ error: "Account number must be exactly 10 digits" });
     }
-    // Verify account with Paystack before saving
+
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      return res.status(503).json({ error: "Bank verification is not configured" });
+    }
+
+    let verifiedName;
+
     try {
       const verify = await axios.get(
-        `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
-        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+        `https://api.paystack.co/bank/resolve?account_number=${encodeURIComponent(cleanAccountNumber)}&bank_code=${encodeURIComponent(bankCode)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+          }
+        }
       );
-      const verifiedName = verify.data?.data?.account_name;
-      if (!verifiedName) return res.status(400).json({ error: "Could not verify account. Please check your details." });
+
+      verifiedName = verify.data?.data?.account_name;
+
+      if (!verifiedName) {
+        return res.status(400).json({
+          error: "Could not verify account. Please check your details."
+        });
+      }
     } catch (e) {
-      return res.status(400).json({ error: "Account verification failed. Please check your bank details." });
+      console.error("Paystack bank verification failed:", e.response?.data || e.message);
+      return res.status(400).json({
+        error: "Account verification failed. Please check your bank details."
+      });
     }
+
+    const normalizeName = value =>
+      String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    if (normalizeName(verifiedName) !== normalizeName(accountName)) {
+      return res.status(400).json({
+        error: "The submitted account name does not match the name verified by the bank.",
+        verifiedAccountName: verifiedName
+      });
+    }
+
     const seller = await Seller.findByIdAndUpdate(
-      req.user.id,
-      { bankCode, bankName, accountNumber, accountName },
-      { new: true }
+      req.seller.id,
+      {
+        bankCode,
+        bankName,
+        accountNumber: cleanAccountNumber,
+        accountName: verifiedName,
+        "verification.bank.status": "verified",
+        "verification.bank.verifiedAccountName": verifiedName,
+        "verification.bank.verifiedAt": new Date()
+      },
+      { new: true, runValidators: true }
     );
-    res.json({ success: true, message: "Bank details saved successfully", bank: { bankCode, bankName, accountNumber, accountName } });
+
+    if (!seller) {
+      return res.status(404).json({ error: "Seller account not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Bank details verified and saved successfully",
+      bank: {
+        bankCode: seller.bankCode,
+        bankName: seller.bankName,
+        accountNumber: seller.accountNumber,
+        accountName: seller.accountName
+      },
+      verificationStatus: seller.verification.bank.status
+    });
   } catch (err) {
     console.error("Save bank details error:", err.message);
     res.status(500).json({ error: "Failed to save bank details" });
@@ -4443,9 +4774,25 @@ app.post("/api/seller/bank-details", sellerAuth, async (req, res) => {
 
 app.get("/api/seller/bank-details", sellerAuth, async (req, res) => {
   try {
-    const seller = await Seller.findById(req.user.id).select("bankCode bankName accountNumber accountName");
-    res.json({ success: true, bank: { bankCode: seller.bankCode, bankName: seller.bankName, accountNumber: seller.accountNumber, accountName: seller.accountName } });
+    const seller = await Seller.findById(req.seller.id)
+      .select("bankCode bankName accountNumber accountName verification.bank");
+
+    if (!seller) {
+      return res.status(404).json({ error: "Seller account not found" });
+    }
+
+    res.json({
+      success: true,
+      bank: {
+        bankCode: seller.bankCode,
+        bankName: seller.bankName,
+        accountNumber: seller.accountNumber,
+        accountName: seller.accountName
+      },
+      verificationStatus: seller.verification?.bank?.status || "not_submitted"
+    });
   } catch (err) {
+    console.error("Fetch bank details error:", err.message);
     res.status(500).json({ error: "Failed to fetch bank details" });
   }
 });
@@ -5391,24 +5738,92 @@ app.post("/api/admin/wallets/:userId", adminOnly, async (req, res) => {
 // Seller application
 app.post("/api/seller/apply", async (req, res) => {
   try {
-    const { name, password, phone, storeName, storeDescription } = req.body;
-    const email = req.body.email ? String(req.body.email).toLowerCase().trim() : req.body.email;
+    const {
+      name,
+      password,
+      phone,
+      storeName,
+      storeDescription,
+      sellerType = "individual",
+      businessLegalName,
+      cacRegistrationNumber
+    } = req.body;
+
+    const email = req.body.email
+      ? String(req.body.email).toLowerCase().trim()
+      : "";
+
     if (!name || !email || !password || !storeName) {
-      return res.status(400).json({ error: "Name, email, password and store name are required" });
-    }
-    const existing = await Seller.findOne({ email });
-    if (existing) return res.status(400).json({ error: "A seller account with this email already exists" });
-    const hashedPassword = await bcrypt.hash(password, 10);
-    if (!isStrongPassword(password)) {
       return res.status(400).json({
-        error:"Password must be 8+ characters with uppercase, lowercase, number and special character."
+        error: "Name, email, password and store name are required"
       });
     }
 
-    const seller = await Seller.create({ name, email, password: hashedPassword, phone, storeName, storeDescription });
-    res.status(201).json({ success: true, message: "Application submitted! We will review and get back to you shortly." });
+    if (!["individual", "business"].includes(sellerType)) {
+      return res.status(400).json({
+        error: "Seller type must be individual or business"
+      });
+    }
+
+    if (
+      sellerType === "business" &&
+      (!String(businessLegalName || "").trim() ||
+       !String(cacRegistrationNumber || "").trim())
+    ) {
+      return res.status(400).json({
+        error: "Registered businesses must provide their legal business name and CAC registration number"
+      });
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        error: "Password must be 8+ characters with uppercase, lowercase, number and special character."
+      });
+    }
+
+    const existing = await Seller.findOne({ email });
+    if (existing) {
+      return res.status(400).json({
+        error: "A seller account with this email already exists"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const seller = await Seller.create({
+      name: String(name).trim(),
+      email,
+      password: hashedPassword,
+      phone: phone || "",
+      storeName: String(storeName).trim(),
+      storeDescription: storeDescription || "",
+      sellerType,
+      businessLegalName: sellerType === "business"
+        ? String(businessLegalName).trim()
+        : "",
+      cacRegistrationNumber: sellerType === "business"
+        ? String(cacRegistrationNumber).trim()
+        : "",
+      verification: {
+        cac: {
+          status: sellerType === "business"
+            ? "pending"
+            : "not_applicable"
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Application submitted! We will review and get back to you shortly.",
+      sellerType: seller.sellerType,
+      cacVerificationStatus: seller.verification.cac.status
+    });
   } catch (err) {
-    res.status(500).json({ error: "Failed to submit application" });
+    console.error("Seller application failed:", err.message);
+    res.status(500).json({
+      error: "Failed to submit application"
+    });
   }
 });
 
