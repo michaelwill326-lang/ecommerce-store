@@ -6184,13 +6184,42 @@ app.get("/api/admin/sellers", adminOnly, async (req, res) => {
   }
 });
 
-// Admin - approve/reject seller
+// Admin - approve/reject seller while keeping verification badge in sync
 app.put("/api/admin/sellers/:id", adminOnly, async (req, res) => {
   try {
     const { status } = req.body;
-    const seller = await Seller.findByIdAndUpdate(req.params.id, { status }, { new: true }).select("-password");
-    res.json({ success: true, data: seller });
+    if (!["pending", "approved", "rejected"].includes(status)) {
+      return res.status(400).json({ error: "Invalid seller status" });
+    }
+
+    const seller = await Seller.findById(req.params.id);
+    if (!seller) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    seller.status = status;
+
+    // Seller approval and TechMart Verified are separate:
+    // approval permits selling; the badge requires every applicable check.
+    const summary = getSellerVerificationSummary(seller);
+    seller.verified = summary.eligible;
+    seller.techmartVerifiedAt = summary.eligible
+      ? (seller.techmartVerifiedAt || new Date())
+      : null;
+    seller.verificationLevel = summary.eligible ? "seller" : "none";
+
+    await seller.save();
+
+    const data = seller.toObject();
+    delete data.password;
+
+    res.json({
+      success: true,
+      data,
+      verificationSummary: getSellerVerificationSummary(seller)
+    });
   } catch (err) {
+    console.error("Seller approval update failed:", err.message);
     res.status(500).json({ error: "Failed to update seller" });
   }
 });
