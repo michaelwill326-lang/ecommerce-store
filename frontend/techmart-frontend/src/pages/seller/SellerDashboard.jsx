@@ -677,39 +677,78 @@ export default function SellerDashboard() {
               <option value="">Select Bank</option>
               {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
             </select>
+
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-              <input placeholder="Account Number (10 digits)" value={bankForm.accountNumber} maxLength={10} onChange={e => setBankForm({ ...bankForm, accountNumber: e.target.value.replace(/\D/g, ""), accountName: "" })} style={{ ...inp, marginBottom: 0, flex: 1 }} />
-              <button onClick={async () => {
-                if (!bankForm.bankCode || bankForm.accountNumber.length !== 10) return setBankMsg("Select a bank and enter 10-digit account number");
-                setBankVerifying(true); setBankMsg("");
-                try {
-                  const res = await axios.post(`${API}/api/pay/verify-account`, { accountNumber: bankForm.accountNumber, bankCode: bankForm.bankCode }, { headers });
-                  setBankForm(prev => ({ ...prev, accountName: res.data.accountName }));
-                  setBankMsg("✅ Account verified: " + res.data.accountName);
-                } catch { setBankMsg("❌ Could not verify account. Check details."); }
-                finally { setBankVerifying(false); }
-              }} disabled={bankVerifying || bankForm.accountNumber.length !== 10} style={{ padding: "12px 16px", background: "#333", color: "var(--text-primary)", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap" }}>
-                {bankVerifying ? "Verifying..." : "Verify"}
-              </button>
+              <input
+                placeholder="Account Number (10 digits)"
+                value={bankForm.accountNumber}
+                maxLength={10}
+                onChange={e => setBankForm({
+                  ...bankForm,
+                  accountNumber: e.target.value.replace(/\D/g, ""),
+                  accountName: ""
+                })}
+                style={{ ...inp, marginBottom: 0, flex: 1 }}
+              />
             </div>
-            {bankForm.accountName && (
-              <div style={{ background: "#0a2a1a", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px" }}>
-                <p style={{ color: "#22c55e", margin: 0, fontSize: "13px" }}>✅ {bankForm.accountName}</p>
-              </div>
+
+            {bankMsg && (
+              <p style={{
+                color: bankMsg.startsWith("✅") ? "#22c55e" : "#ef4444",
+                fontSize: "13px",
+                margin: "0 0 10px"
+              }}>{bankMsg}</p>
             )}
-            {bankMsg && <p style={{ color: bankMsg.startsWith("✅") ? "#22c55e" : "#ef4444", fontSize: "13px", margin: "0 0 10px" }}>{bankMsg}</p>}
-            <button onClick={async () => {
-              if (!bankForm.accountName) return setBankMsg("Please verify your account first");
-              setBankSaving(true);
-              try {
-                await axios.post(`${API}/api/seller/bank-details`, bankForm, { headers });
-                setBankDetails({ ...bankForm });
-                setBankMsg("✅ Bank details saved successfully!");
-                setBankForm({ bankCode: "", bankName: "", accountNumber: "", accountName: "" });
-              } catch (e) { setBankMsg(e.response?.data?.error || "Failed to save bank details"); }
-              finally { setBankSaving(false); }
-            }} disabled={bankSaving || !bankForm.accountName} style={{ width: "100%", padding: "12px", background: bankForm.accountName ? "linear-gradient(135deg,#22c55e,#16a34a)" : "#333", color: "#fff", border: "none", borderRadius: "10px", cursor: bankForm.accountName ? "pointer" : "not-allowed", fontWeight: "700" }}>
-              {bankSaving ? "Saving..." : "💾 Save Bank Details"}
+
+            <button
+              onClick={async () => {
+                if (!bankForm.bankCode || bankForm.accountNumber.length !== 10) {
+                  return setBankMsg("Select a bank and enter a valid 10-digit account number");
+                }
+
+                setBankSaving(true);
+                setBankMsg("");
+
+                try {
+                  const res = await axios.post(
+                    `${API}/api/seller/bank-details`,
+                    {
+                      bankCode: bankForm.bankCode,
+                      bankName: bankForm.bankName,
+                      accountNumber: bankForm.accountNumber
+                    },
+                    { headers }
+                  );
+
+                  setBankDetails(res.data.bank);
+                  setBankMsg("✅ Verified and saved: " + res.data.bank.accountName);
+                  setBankForm({
+                    bankCode: "",
+                    bankName: "",
+                    accountNumber: "",
+                    accountName: ""
+                  });
+                } catch (e) {
+                  setBankMsg(e.response?.data?.error || "Bank verification and saving failed");
+                } finally {
+                  setBankSaving(false);
+                }
+              }}
+              disabled={bankSaving || !bankForm.bankCode || bankForm.accountNumber.length !== 10}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: !bankSaving && bankForm.bankCode && bankForm.accountNumber.length === 10
+                  ? "linear-gradient(135deg,#22c55e,#16a34a)"
+                  : "#333",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontWeight: "700"
+              }}
+            >
+              {bankSaving ? "Verifying & Saving..." : "🏦 Verify & Save Bank Account"}
             </button>
           </div>
 

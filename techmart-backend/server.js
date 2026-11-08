@@ -2003,6 +2003,7 @@ const PayoutSchema = new mongoose.Schema({
   accountName: String,
   reference: String,
   payoutType: { type: String, enum: ["manual", "withdrawal", "auto_weekly"], default: "manual" },
+  fundsReserved: { type: Boolean, default: false },
   transferStatus: { type: String, enum: ["pending", "processing", "success", "failed", "reversed"], default: "pending" },
   transferCode: String,
   transferId: String,
@@ -4593,9 +4594,15 @@ app.patch("/api/admin/sellers/:id/verification/:check", adminOnly, async (req, r
 
     await seller.save();
 
+    const safeSeller = seller.toObject();
+    delete safeSeller.password;
+    delete safeSeller.passwordHash;
+    delete safeSeller.resetPasswordToken;
+    delete safeSeller.emailVerificationToken;
+
     res.json({
       success: true,
-      data: seller.toObject(),
+      data: safeSeller,
       verificationSummary: getSellerVerificationSummary(seller)
     });
   } catch (err) {
@@ -4628,7 +4635,13 @@ app.put("/api/admin/sellers/:id/verify", adminOnly, async (req, res) => {
 
     await seller.save();
 
-    res.json({ success: true, data: seller });
+    const safeSeller = seller.toObject();
+    delete safeSeller.password;
+    delete safeSeller.passwordHash;
+    delete safeSeller.resetPasswordToken;
+    delete safeSeller.emailVerificationToken;
+
+    res.json({ success: true, data: safeSeller });
   } catch (err) {
     console.error("Seller verification update failed:", err.message);
     res.status(500).json({ error: "Failed to update verification" });
@@ -4663,137 +4676,111 @@ app.get("/api/seller/store/:id", async (req, res) => {
 });
 
 // --- PAYOUT REQUESTS ---
+
+async function createSellerPayoutRequest(sellerId, amountInput) {
+  const amount = Number(amountInput);
+
+  if (!Number.isSafeInteger(amount) || amount < 1000) {
+    const error = new Error("Enter a valid payout amount of at least N1,000");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const reference = `manual-${sellerId}-${crypto.randomBytes(12).toString("hex")}`;
+  const session = await mongoose.startSession();
+  let payout;
+
+  try {
+    await session.withTransaction(async () => {
+      const seller = await Seller.findById(sellerId).session(session);
+
+      if (!seller) {
+        const error = new Error("Seller account not found");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      if (seller.status !== "approved") {
+        const error = new Error("Your seller account must be approved before requesting a payout");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const bank = seller.verification?.bank || {};
+      const normalize = value => String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const accountNameMatches =
+        bank.verifiedAccountName &&
+        normalize(seller.accountName) === normalize(bank.verifiedAccountName);
+
+      if (
+        bank.status !== "verified" ||
+        !seller.bankCode ||
+        !seller.bankName ||
+        !/^\d{10}$/.test(String(seller.accountNumber || "")) ||
+        !seller.accountName ||
+        !accountNameMatches
+      ) {
+        const error = new Error("Save and verify your bank account before requesting a payout");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (Number(seller.walletBalance || 0) < amount) {
+        const error = new Error("Insufficient available seller wallet balance");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      seller.walletBalance = Number(seller.walletBalance || 0) - amount;
+      seller.walletTransactions = seller.walletTransactions || [];
+      seller.walletTransactions.push({
+        type: "debit",
+        amount,
+        description: `Payout funds reserved for ${seller.accountName}`,
+        reference
+      });
+      await seller.save({ session });
+
+      const created = await Payout.create([{
+        sellerId: seller._id,
+        sellerName: seller.name,
+        sellerEmail: seller.email,
+        storeName: seller.storeName,
+        amount,
+        bankCode: seller.bankCode,
+        bankName: seller.bankName,
+        accountNumber: seller.accountNumber,
+        accountName: seller.accountName,
+        reference,
+        payoutType: "manual",
+        transferStatus: "pending",
+        status: "pending",
+        fundsReserved: true,
+        note: "Funds reserved; awaiting admin approval and Paystack transfer"
+      }], { session });
+
+      payout = created[0];
+    });
+
+    return payout;
+  } finally {
+    await session.endSession();
+  }
+}
+
 app.post("/api/seller/payouts", sellerAuth, async (req, res) => {
   try {
-    const { amount, bankName, accountNumber, accountName } = req.body;
-    if (!amount || !bankName || !accountNumber || !accountName) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
-    const seller = await Seller.findById(req.seller.id);
-    const payout = await Payout.create({
-      sellerId: req.seller.id,
-      sellerName: seller.name,
-      storeName: seller.storeName,
-      amount: Number(amount),
-      bankName, accountNumber, accountName
-    });
-    res.status(201).json({ success: true, data: payout });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to request payout" });
-  }
-});
-
-app.post("/api/seller/bank-details", sellerAuth, async (req, res) => {
-  try {
-    const { bankCode, bankName, accountNumber, accountName } = req.body;
-
-    if (!bankCode || !bankName || !accountNumber || !accountName) {
-      return res.status(400).json({ error: "All bank details are required" });
-    }
-
-    const cleanAccountNumber = String(accountNumber).trim();
-
-    if (!/^\d{10}$/.test(cleanAccountNumber)) {
-      return res.status(400).json({ error: "Account number must be exactly 10 digits" });
-    }
-
-    if (!process.env.PAYSTACK_SECRET_KEY) {
-      return res.status(503).json({ error: "Bank verification is not configured" });
-    }
-
-    let verifiedName;
-
-    try {
-      const verify = await axios.get(
-        `https://api.paystack.co/bank/resolve?account_number=${encodeURIComponent(cleanAccountNumber)}&bank_code=${encodeURIComponent(bankCode)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-          }
-        }
-      );
-
-      verifiedName = verify.data?.data?.account_name;
-
-      if (!verifiedName) {
-        return res.status(400).json({
-          error: "Could not verify account. Please check your details."
-        });
-      }
-    } catch (e) {
-      console.error("Paystack bank verification failed:", e.response?.data || e.message);
-      return res.status(400).json({
-        error: "Account verification failed. Please check your bank details."
-      });
-    }
-
-    const normalizeName = value =>
-      String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-    if (normalizeName(verifiedName) !== normalizeName(accountName)) {
-      return res.status(400).json({
-        error: "The submitted account name does not match the name verified by the bank.",
-        verifiedAccountName: verifiedName
-      });
-    }
-
-    const seller = await Seller.findByIdAndUpdate(
-      req.seller.id,
-      {
-        bankCode,
-        bankName,
-        accountNumber: cleanAccountNumber,
-        accountName: verifiedName,
-        "verification.bank.status": "verified",
-        "verification.bank.verifiedAccountName": verifiedName,
-        "verification.bank.verifiedAt": new Date()
-      },
-      { new: true, runValidators: true }
-    );
-
-    if (!seller) {
-      return res.status(404).json({ error: "Seller account not found" });
-    }
-
-    res.json({
+    const payout = await createSellerPayoutRequest(req.seller.id, req.body.amount);
+    res.status(201).json({
       success: true,
-      message: "Bank details verified and saved successfully",
-      bank: {
-        bankCode: seller.bankCode,
-        bankName: seller.bankName,
-        accountNumber: seller.accountNumber,
-        accountName: seller.accountName
-      },
-      verificationStatus: seller.verification.bank.status
+      data: payout,
+      message: "Payout request submitted. Funds are reserved pending approval."
     });
   } catch (err) {
-    console.error("Save bank details error:", err.message);
-    res.status(500).json({ error: "Failed to save bank details" });
-  }
-});
-
-app.get("/api/seller/bank-details", sellerAuth, async (req, res) => {
-  try {
-    const seller = await Seller.findById(req.seller.id)
-      .select("bankCode bankName accountNumber accountName verification.bank");
-
-    if (!seller) {
-      return res.status(404).json({ error: "Seller account not found" });
-    }
-
-    res.json({
-      success: true,
-      bank: {
-        bankCode: seller.bankCode,
-        bankName: seller.bankName,
-        accountNumber: seller.accountNumber,
-        accountName: seller.accountName
-      },
-      verificationStatus: seller.verification?.bank?.status || "not_submitted"
+    console.error("Seller payout request error:", err.message);
+    res.status(err.statusCode || 500).json({
+      error: err.statusCode ? err.message : "Failed to request payout"
     });
-  } catch (err) {
-    console.error("Fetch bank details error:", err.message);
-    res.status(500).json({ error: "Failed to fetch bank details" });
   }
 });
 
@@ -4817,12 +4804,218 @@ app.get("/api/admin/payouts", adminOnly, async (req, res) => {
 });
 
 app.put("/api/admin/payouts/:id", adminOnly, async (req, res) => {
+  const { status, note } = req.body || {};
+
+  if (!["approved", "rejected"].includes(status)) {
+    return res.status(400).json({
+      error: "Choose approved or rejected. Payouts cannot be marked paid manually."
+    });
+  }
+
   try {
-    const { status, note } = req.body;
-    const payout = await Payout.findByIdAndUpdate(req.params.id, { status, note }, { new: true });
-    res.json({ success: true, data: payout });
+    if (status === "rejected") {
+      const session = await mongoose.startSession();
+      let payout;
+
+      try {
+        await session.withTransaction(async () => {
+          payout = await Payout.findById(req.params.id).session(session);
+
+          if (!payout) {
+            const error = new Error("Payout not found");
+            error.statusCode = 404;
+            throw error;
+          }
+
+          if (payout.status !== "pending") {
+            const error = new Error("Only pending payouts can be rejected");
+            error.statusCode = 409;
+            throw error;
+          }
+
+          if (payout.fundsReserved === true) {
+            const seller = await Seller.findById(payout.sellerId).session(session);
+
+            if (!seller) {
+              const error = new Error("Seller account not found; payout was not changed");
+              error.statusCode = 404;
+              throw error;
+            }
+
+            const refundReference = `REFUND-${payout.reference}`;
+            const alreadyRefunded = (seller.walletTransactions || []).some(
+              transaction => transaction.reference === refundReference
+            );
+
+            if (!alreadyRefunded) {
+              seller.walletBalance = Number(seller.walletBalance || 0) + payout.amount;
+              seller.walletTransactions = seller.walletTransactions || [];
+              seller.walletTransactions.push({
+                type: "credit",
+                amount: payout.amount,
+                description: `Rejected payout returned — ${payout.reference}`,
+                reference: refundReference
+              });
+              await seller.save({ session });
+            }
+
+            payout.fundsReserved = false;
+          }
+
+          payout.status = "rejected";
+          payout.transferStatus = "failed";
+          payout.processedAt = new Date();
+          payout.note = String(note || "Payout rejected by administrator").slice(0, 500);
+          await payout.save({ session });
+        });
+      } finally {
+        await session.endSession();
+      }
+
+      return res.json({ success: true, data: payout });
+    }
+
+    // Approval: reserve the payout state before contacting Paystack.
+    const payout = await Payout.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        status: "pending",
+        payoutType: "manual",
+        fundsReserved: true
+      },
+      {
+        $set: {
+          status: "approved",
+          transferStatus: "processing",
+          note: "Approved; Paystack transfer is being initiated"
+        }
+      },
+      { new: true }
+    );
+
+    if (!payout) {
+      const existing = await Payout.findById(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Payout not found" });
+      return res.status(409).json({
+        error: "Payout is not an eligible pending reserved manual payout",
+        data: existing
+      });
+    }
+
+    const seller = await Seller.findById(payout.sellerId);
+    const bank = seller?.verification?.bank || {};
+    const normalize = value => String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    if (
+      !seller ||
+      seller.status !== "approved" ||
+      bank.status !== "verified" ||
+      !seller.bankCode ||
+      seller.accountNumber !== payout.accountNumber ||
+      seller.bankCode !== payout.bankCode ||
+      normalize(seller.accountName) !== normalize(payout.accountName) ||
+      normalize(bank.verifiedAccountName) !== normalize(payout.accountName)
+    ) {
+      await Payout.findByIdAndUpdate(payout._id, {
+        status: "pending",
+        transferStatus: "pending",
+        note: "Approval stopped: seller approval or verified bank details need review"
+      });
+      return res.status(409).json({
+        error: "Seller approval or verified bank details no longer match this payout"
+      });
+    }
+
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      await Payout.findByIdAndUpdate(payout._id, {
+        status: "pending",
+        transferStatus: "pending",
+        note: "Paystack secret key is not configured"
+      });
+      return res.status(503).json({ error: "Paystack is not configured" });
+    }
+
+    try {
+      const headers = {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+      };
+
+      const recipientRes = await axios.post(
+        "https://api.paystack.co/transferrecipient",
+        {
+          type: "nuban",
+          name: payout.accountName,
+          account_number: payout.accountNumber,
+          bank_code: payout.bankCode,
+          currency: "NGN"
+        },
+        { headers, timeout: 20000 }
+      );
+
+      const recipientCode = recipientRes.data?.data?.recipient_code;
+      if (!recipientCode) throw new Error("Paystack did not return a recipient code");
+
+      const transferRes = await axios.post(
+        "https://api.paystack.co/transfer",
+        {
+          source: "balance",
+          amount: Math.round(payout.amount * 100),
+          recipient: recipientCode,
+          reason: `TechMart seller payout — ${payout.storeName || payout.sellerName}`,
+          reference: payout.reference
+        },
+        { headers, timeout: 20000 }
+      );
+
+      const transfer = transferRes.data?.data;
+      if (!transfer?.transfer_code) {
+        throw new Error("Paystack did not confirm transfer submission");
+      }
+
+      const updated = await Payout.findByIdAndUpdate(
+        payout._id,
+        {
+          $set: {
+            status: "approved",
+            transferStatus: "processing",
+            transferCode: transfer.transfer_code,
+            transferId: transfer.id ? String(transfer.id) : undefined,
+            note: "Paystack transfer submitted; awaiting confirmed success or failure"
+          }
+        },
+        { new: true }
+      );
+
+      return res.json({ success: true, data: updated });
+    } catch (transferError) {
+      console.error(
+        "Paystack payout initiation error:",
+        transferError.response?.data || transferError.message
+      );
+
+      const updated = await Payout.findByIdAndUpdate(
+        payout._id,
+        {
+          $set: {
+            status: "approved",
+            transferStatus: "processing",
+            note: "Transfer outcome requires Paystack verification. Do not submit another transfer."
+          }
+        },
+        { new: true }
+      );
+
+      return res.status(202).json({
+        success: true,
+        message: "Payout approval recorded; transfer outcome requires reconciliation.",
+        data: updated
+      });
+    }
   } catch (err) {
-    res.status(500).json({ error: "Failed to update payout" });
+    console.error("Admin payout management error:", err.message);
+    return res.status(err.statusCode || 500).json({
+      error: err.statusCode ? err.message : "Failed to process payout"
+    });
   }
 });
 
@@ -5987,6 +6180,140 @@ function sellerAuth(req, res, next) {
   }
 };
 
+
+// Seller bank details — provider verification is performed server-side
+app.get("/api/seller/bank-details", sellerAuth, async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.seller.id)
+      .select("bankCode bankName accountNumber accountName verification.bank");
+
+    if (!seller) {
+      return res.status(404).json({ error: "Seller account not found" });
+    }
+
+    const accountNumber = String(seller.accountNumber || "");
+
+    res.json({
+      success: true,
+      bank: seller.accountName ? {
+        bankCode: seller.bankCode,
+        bankName: seller.bankName,
+        accountNumber: accountNumber.length === 10
+          ? `******${accountNumber.slice(-4)}`
+          : "",
+        accountName: seller.accountName,
+        verificationStatus: seller.verification?.bank?.status || "not_submitted"
+      } : null
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load seller bank details" });
+  }
+});
+
+app.post("/api/seller/bank-details", sellerAuth, async (req, res) => {
+  try {
+    const bankCode = String(req.body?.bankCode || "").trim();
+    const bankName = String(req.body?.bankName || "").trim();
+    const accountNumber = String(req.body?.accountNumber || "").trim();
+
+    if (!bankCode || !bankName || !/^\d{10}$/.test(accountNumber)) {
+      return res.status(400).json({
+        error: "Select a bank and enter a valid 10-digit account number"
+      });
+    }
+
+    const seller = await Seller.findById(req.seller.id);
+    if (!seller) {
+      return res.status(404).json({ error: "Seller account not found" });
+    }
+
+    let accountName = "";
+    let providerReference = "";
+
+    if (process.env.FLUTTERWAVE_SECRET_KEY) {
+      const response = await axios.post(
+        "https://api.flutterwave.com/v3/accounts/resolve",
+        {
+          account_number: accountNumber,
+          account_bank: bankCode
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`
+          }
+        }
+      );
+
+      accountName = String(response.data?.data?.account_name || "").trim();
+      providerReference = String(
+        response.data?.data?.reference || response.data?.reference || ""
+      );
+
+      if (response.data?.status !== "success" || !accountName) {
+        return res.status(422).json({ error: "Bank account verification failed" });
+      }
+    } else if (process.env.PAYSTACK_SECRET_KEY) {
+      const response = await axios.get(
+        "https://api.paystack.co/bank/resolve",
+        {
+          params: {
+            account_number: accountNumber,
+            bank_code: bankCode
+          },
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+          }
+        }
+      );
+
+      accountName = String(response.data?.data?.account_name || "").trim();
+      providerReference = String(
+        response.data?.data?.reference || response.data?.reference || ""
+      );
+
+      if (response.data?.status !== true || !accountName) {
+        return res.status(422).json({ error: "Bank account verification failed" });
+      }
+    } else {
+      return res.status(503).json({
+        error: "Bank verification provider is not configured"
+      });
+    }
+
+    seller.bankCode = bankCode;
+    seller.bankName = bankName;
+    seller.accountNumber = accountNumber;
+    seller.accountName = accountName;
+
+    seller.set("verification.bank.status", "verified");
+    seller.set("verification.bank.verifiedAccountName", accountName);
+    seller.set("verification.bank.providerReference", providerReference);
+    seller.set("verification.bank.verifiedAt", new Date());
+
+    await seller.save();
+
+    res.json({
+      success: true,
+      message: "Bank account verified and saved successfully",
+      bank: {
+        bankCode,
+        bankName,
+        accountNumber: `******${accountNumber.slice(-4)}`,
+        accountName,
+        verificationStatus: "verified"
+      }
+    });
+  } catch (err) {
+    console.error(
+      "Seller bank verification error:",
+      err.response?.data?.message || err.message
+    );
+    res.status(502).json({
+      error: "Could not verify bank account. Check the details and try again."
+    });
+  }
+});
+
 // Get seller dashboard stats
 app.get("/api/seller/dashboard", sellerAuth, async (req, res) => {
   try {
@@ -6397,107 +6724,104 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
       reference: event.data?.reference
     });
 
-    // 💸 Automatic seller payout transfer events
+    // Seller payout transfer events: manual and automatic.
     if (["transfer.success", "transfer.failed", "transfer.reversed"].includes(event.event)) {
       const reference = event.data?.reference;
 
       if (!reference) {
-        console.warn("⚠️ Paystack transfer webhook missing reference");
+        console.warn("Paystack transfer webhook missing reference");
         return res.status(200).send("Transfer reference missing");
       }
 
-      const payout = await Payout.findOne({
-        reference,
-        payoutType: "auto_weekly"
-      });
+      const payout = await Payout.findOne({ reference });
 
       if (!payout) {
-        console.log(`ℹ️ No automatic payout found for transfer: ${reference}`);
+        console.log(`No seller payout found for transfer: ${reference}`);
         return res.status(200).send("Transfer payout not found");
       }
 
-      // Successful transfer: finalize the payout.
       if (event.event === "transfer.success") {
-        await Payout.findOneAndUpdate(
+        const updated = await Payout.findOneAndUpdate(
           {
             _id: payout._id,
-            transferStatus: { $ne: "success" }
+            transferStatus: { $in: ["pending", "processing"] },
+            status: { $in: ["pending", "approved"] }
           },
           {
-            transferStatus: "success",
-            status: "paid",
-            transferCode: event.data?.transfer_code || payout.transferCode,
-            transferId: event.data?.id ? String(event.data.id) : payout.transferId,
-            processedAt: new Date(),
-            note: "Paystack transfer completed successfully"
-          }
+            $set: {
+              transferStatus: "success",
+              status: "paid",
+              fundsReserved: false,
+              transferCode: event.data?.transfer_code || payout.transferCode,
+              transferId: event.data?.id ? String(event.data.id) : payout.transferId,
+              processedAt: new Date(),
+              note: "Paystack transfer confirmed successful"
+            }
+          },
+          { new: true }
         );
 
-        console.log(`✅ Auto payout completed: ${reference}`);
+        console.log(updated
+          ? `Seller payout confirmed successful: ${reference}`
+          : `Duplicate or terminal success webhook ignored: ${reference}`);
         return res.status(200).send("Transfer success processed");
       }
 
-      // Failed/reversed transfer: return the reserved money exactly once.
       const session = await mongoose.startSession();
 
       try {
         await session.withTransaction(async () => {
-          const currentPayout = await Payout.findOne({
-            _id: payout._id
-          }).session(session);
+          const current = await Payout.findById(payout._id).session(session);
+          if (!current || ["success", "failed", "reversed"].includes(current.transferStatus)) return;
 
-          if (!currentPayout) return;
+          const seller = await Seller.findById(current.sellerId).session(session);
+          if (!seller) throw new Error(`Seller not found for payout ${reference}`);
 
-          if (["success", "failed", "reversed"].includes(currentPayout.transferStatus)) {
-            return;
+          const hasLegacyAutoReservation =
+            current.payoutType === "auto_weekly" &&
+            (seller.walletTransactions || []).some(transaction =>
+              transaction.reference === reference &&
+              transaction.type === "debit" &&
+              Number(transaction.amount) === Number(current.amount)
+            );
+
+          if (current.fundsReserved === true || hasLegacyAutoReservation) {
+            const refundReference = `REFUND-${reference}`;
+            const alreadyRefunded = (seller.walletTransactions || []).some(
+              transaction => transaction.reference === refundReference
+            );
+
+            if (!alreadyRefunded) {
+              seller.walletBalance = Number(seller.walletBalance || 0) + current.amount;
+              seller.walletTransactions = seller.walletTransactions || [];
+              seller.walletTransactions.push({
+                type: "credit",
+                amount: current.amount,
+                description: `Failed payout returned — ${reference}`,
+                reference: refundReference
+              });
+              await seller.save({ session });
+            }
+
+            current.fundsReserved = false;
           }
 
-          const seller = await Seller.findById(currentPayout.sellerId).session(session);
+          current.transferStatus = event.event === "transfer.reversed" ? "reversed" : "failed";
+          current.status = "rejected";
+          current.processedAt = new Date();
+          current.transferCode = event.data?.transfer_code || current.transferCode;
+          current.transferId = event.data?.id ? String(event.data.id) : current.transferId;
+          current.note = event.event === "transfer.reversed"
+            ? "Paystack transfer reversed; reserved funds returned where applicable"
+            : "Paystack transfer failed; reserved funds returned where applicable";
 
-          if (!seller) {
-            throw new Error(`Seller not found for payout ${reference}`);
-          }
-
-          const refundReference = `REFUND-${reference}`;
-
-          const alreadyRefunded = (seller.walletTransactions || []).some(
-            transaction => transaction.reference === refundReference
-          );
-
-          if (!alreadyRefunded) {
-            seller.walletBalance = (seller.walletBalance || 0) + currentPayout.amount;
-            seller.walletTransactions = seller.walletTransactions || [];
-            seller.walletTransactions.push({
-              type: "credit",
-              amount: currentPayout.amount,
-              description: `Auto weekly payout returned — ${reference}`,
-              reference: refundReference
-            });
-
-            await seller.save({ session });
-          }
-
-          currentPayout.transferStatus =
-            event.event === "transfer.reversed" ? "reversed" : "failed";
-          currentPayout.status = "rejected";
-          currentPayout.processedAt = new Date();
-          currentPayout.transferCode =
-            event.data?.transfer_code || currentPayout.transferCode;
-          currentPayout.transferId =
-            event.data?.id ? String(event.data.id) : currentPayout.transferId;
-          currentPayout.note =
-            event.event === "transfer.reversed"
-              ? "Paystack transfer reversed; funds returned to seller wallet"
-              : "Paystack transfer failed; funds returned to seller wallet";
-
-          await currentPayout.save({ session });
+          await current.save({ session });
         });
-
-        console.log(`↩️ Auto payout returned to seller: ${reference}`);
       } finally {
         await session.endSession();
       }
 
+      console.log(`Seller payout failure processed: ${reference}`);
       return res.status(200).send("Transfer failure processed");
     }
 
@@ -8979,82 +9303,21 @@ app.post("/api/orders/:orderId/release-escrow", adminOnly, async (req, res) => {
 
 // 5. Seller requests withdrawal from wallet
 app.post("/api/seller/withdraw", sellerAuth, async (req, res) => {
-  const session = await mongoose.startSession();
-
   try {
-    const { amount, bankCode, accountNumber, accountName, bankName } = req.body;
-    const withdrawalAmount = Number(amount);
-
-    if (!amount || !bankCode || !accountNumber || !accountName) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
-
-    if (!Number.isFinite(withdrawalAmount) || withdrawalAmount < 1000) {
-      return res.status(400).json({ error: "Minimum seller withdrawal is ₦1,000" });
-    }
-
-    let reference = null;
-
-    await session.withTransaction(async () => {
-      const seller = await Seller.findById(req.seller.id).session(session);
-
-      if (!seller) {
-        const err = new Error("Seller not found");
-        err.statusCode = 404;
-        throw err;
-      }
-
-      if ((seller.walletBalance || 0) < withdrawalAmount) {
-        const err = new Error("Insufficient wallet balance");
-        err.statusCode = 400;
-        throw err;
-      }
-
-      reference = "PAY-" + new mongoose.Types.ObjectId().toString();
-
-      const payout = new Payout({
-        sellerId: seller._id,
-        sellerName: seller.name,
-        sellerEmail: seller.email,
-        storeName: seller.storeName,
-        amount: withdrawalAmount,
-        bankCode,
-        bankName: bankName || "",
-        accountNumber,
-        accountName,
-        reference,
-        status: "pending"
-      });
-
-      seller.walletBalance = (seller.walletBalance || 0) - withdrawalAmount;
-      seller.walletTransactions = seller.walletTransactions || [];
-      seller.walletTransactions.push({
-        type: "debit",
-        amount: withdrawalAmount,
-        description: `Withdrawal request to ${accountName} (${accountNumber})`,
-        reference
-      });
-
-      await seller.save({ session });
-      await payout.save({ session });
-    });
-
-    res.json({
+    const payout = await createSellerPayoutRequest(req.seller.id, req.body.amount);
+    res.status(201).json({
       success: true,
-      reference,
-      message: `Withdrawal of ₦${withdrawalAmount.toLocaleString()} requested. Processing within 24 hours.`
+      reference: payout.reference,
+      message: `₦${payout.amount.toLocaleString()} reserved. Your withdrawal is awaiting admin approval and Paystack processing.`
     });
   } catch (err) {
-    console.error("Seller withdrawal error:", err.message);
+    console.error("Seller withdrawal request error:", err.message);
     res.status(err.statusCode || 500).json({
       error: err.statusCode ? err.message : "Withdrawal request failed"
     });
-  } finally {
-    await session.endSession();
   }
 });
 
-// 6. Get seller wallet balance + earnings
 app.get("/api/seller/wallet", sellerAuth, async (req, res) => {
   try {
     const seller = await Seller.findById(req.seller.id).select("walletBalance walletTransactions name email");
@@ -9291,19 +9554,28 @@ cron.schedule("0 9 * * *", async () => {
 });
 
 // ── Auto Seller Payout Cron (every Friday at 10am)
-cron.schedule("0 10 * * 5", async () => {
+cron.schedule("0 10 * * 5", { timezone: "Africa/Lagos" }, async () => {
   const monitorStartedAt = Date.now();
 
   try {
     console.log("💸 Running auto seller payout...");
 
     const now = new Date();
-    const payoutDate = now.toISOString().slice(0, 10);
+    const payoutDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Lagos",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(now);
 
     const sellers = await Seller.find({
+      status: "approved",
+      "verification.bank.status": "verified",
       walletBalance: { $gte: 1000 },
-      bankCode: { $ne: null },
-      accountNumber: { $ne: null }
+      bankCode: { $exists: true, $nin: [null, ""] },
+      bankName: { $exists: true, $nin: [null, ""] },
+      accountNumber: { $regex: /^\d{10}$/ },
+      accountName: { $exists: true, $nin: [null, ""] }
     }).lean();
 
     for (const candidate of sellers) {
@@ -9327,8 +9599,26 @@ cron.schedule("0 10 * * 5", async () => {
           await session.withTransaction(async () => {
             const seller = await Seller.findById(candidate._id).session(session);
 
-            if (!seller || seller.walletBalance < 1000) {
-              throw new Error("Seller no longer has enough available balance");
+            const normalizeAutoPayoutBankName = value =>
+              String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+            const verifiedAccountName =
+              seller?.verification?.bank?.verifiedAccountName;
+
+            if (
+              !seller ||
+              seller.status !== "approved" ||
+              seller.verification?.bank?.status !== "verified" ||
+              !seller.bankCode ||
+              !seller.bankName ||
+              !/^\d{10}$/.test(String(seller.accountNumber || "")) ||
+              !seller.accountName ||
+              !verifiedAccountName ||
+              normalizeAutoPayoutBankName(seller.accountName) !==
+                normalizeAutoPayoutBankName(verifiedAccountName) ||
+              seller.walletBalance < 1000
+            ) {
+              throw new Error("Seller is not eligible or no longer has enough available balance");
             }
 
             const amount = seller.walletBalance;
@@ -9369,8 +9659,9 @@ cron.schedule("0 10 * * 5", async () => {
               reference,
               payoutType: "auto_weekly",
               transferStatus: "pending",
-              status: "pending",
-              note: "Weekly automatic seller payout"
+              status: "approved",
+              fundsReserved: true,
+              note: "Weekly automatic seller payout; funds reserved"
             }], { session });
 
             payout = created[0];
@@ -9462,121 +9753,257 @@ cron.schedule("0 10 * * 5", async () => {
   }
 });
 
-// ── Auto Seller Payout Reconciliation Cron (every 30 minutes)
+// ── Seller Payout Reconciliation Cron (every 30 minutes)
 cron.schedule("*/30 * * * *", async () => {
   const monitorStartedAt = Date.now();
 
   try {
     const payouts = await Payout.find({
-      payoutType: "auto_weekly",
-      transferStatus: "processing",
+      $or: [
+        { status: "approved" },
+        { status: "pending", payoutType: "auto_weekly" }
+      ],
+      transferStatus: { $in: ["pending", "processing"] },
       reference: { $exists: true, $ne: "" }
     }).limit(50);
 
     for (const payout of payouts) {
       try {
-        const verifyRes = await axios.get(
-          `https://api.paystack.co/transfer/verify/${encodeURIComponent(payout.reference)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        let transfer;
+
+        try {
+          const verifyRes = await axios.get(
+            `https://api.paystack.co/transfer/verify/${encodeURIComponent(payout.reference)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+              },
+              timeout: 15000
             }
-          }
-        );
-
-        const transfer = verifyRes.data?.data;
-        const transferStatus = transfer?.status;
-
-        if (!transferStatus) {
-          console.warn(
-            `⚠️ Auto payout reconciliation returned no status: ${payout.reference}`
           );
+
+          transfer = verifyRes.data?.data;
+        } catch (verifyError) {
+          const notFound = verifyError.response?.status === 404;
+
+          // Only an untouched automatic payout may be submitted here.
+          // Processing payouts are never blindly retried after an ambiguous result.
+          if (
+            !notFound ||
+            payout.payoutType !== "auto_weekly" ||
+            payout.transferStatus !== "pending"
+          ) {
+            throw verifyError;
+          }
+
+          const claimed = await Payout.findOneAndUpdate(
+            {
+              _id: payout._id,
+              payoutType: "auto_weekly",
+              transferStatus: "pending",
+              status: { $in: ["approved", "pending"] }
+            },
+            {
+              $set: {
+                transferStatus: "processing",
+                note: "Recovery claimed payout; submitting transfer with original reference"
+              }
+            },
+            { new: true }
+          );
+
+          if (!claimed) continue;
+
+          try {
+            const recipientRes = await axios.post(
+              "https://api.paystack.co/transferrecipient",
+              {
+                type: "nuban",
+                name: claimed.accountName || claimed.sellerName,
+                account_number: claimed.accountNumber,
+                bank_code: claimed.bankCode,
+                currency: "NGN"
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+                },
+                timeout: 15000
+              }
+            );
+
+            const recipientCode = recipientRes.data?.data?.recipient_code;
+            if (!recipientCode) {
+              throw new Error("Paystack did not return a transfer recipient code");
+            }
+
+            const transferRes = await axios.post(
+              "https://api.paystack.co/transfer",
+              {
+                source: "balance",
+                amount: Math.round(Number(claimed.amount) * 100),
+                recipient: recipientCode,
+                reason: `TechMart recovered weekly payout for ${claimed.sellerName}`,
+                reference: claimed.reference
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+                },
+                timeout: 20000
+              }
+            );
+
+            const submitted = transferRes.data?.data;
+
+            await Payout.findOneAndUpdate(
+              { _id: claimed._id, transferStatus: "processing" },
+              {
+                $set: {
+                  transferCode: submitted?.transfer_code || claimed.transferCode,
+                  transferId: submitted?.id ? String(submitted.id) : claimed.transferId,
+                  note: "Recovered transfer submitted; awaiting Paystack confirmation"
+                }
+              }
+            );
+
+            console.log(`Recovered pending automatic payout: ${claimed.reference}`);
+          } catch (submitError) {
+            await Payout.findOneAndUpdate(
+              { _id: claimed._id, transferStatus: "processing" },
+              {
+                $set: {
+                  note: `Recovery submission outcome requires Paystack verification: ${submitError.message}`
+                }
+              }
+            );
+
+            console.error(
+              `Automatic payout recovery requires verification ${claimed.reference}:`,
+              submitError.response?.data || submitError.message
+            );
+          }
+
+          continue;
+        }
+
+        const transferStatus = transfer?.status;
+        if (!transferStatus) {
+          console.warn(`Paystack verification returned no status: ${payout.reference}`);
           continue;
         }
 
         if (transferStatus === "success") {
-          await Payout.findOneAndUpdate(
+          const updated = await Payout.findOneAndUpdate(
             {
               _id: payout._id,
-              transferStatus: "processing"
+              transferStatus: { $in: ["pending", "processing"] },
+              status: { $in: ["approved", "pending"] }
             },
             {
-              transferStatus: "success",
-              status: "paid",
-              transferCode: transfer.transfer_code || payout.transferCode,
-              transferId: transfer.id ? String(transfer.id) : payout.transferId,
-              processedAt: new Date(),
-              note: "Paystack transfer confirmed by reconciliation"
-            }
+              $set: {
+                transferStatus: "success",
+                status: "paid",
+                fundsReserved: false,
+                transferCode: transfer.transfer_code || payout.transferCode,
+                transferId: transfer.id ? String(transfer.id) : payout.transferId,
+                processedAt: new Date(),
+                note: "Paystack transfer confirmed successful by reconciliation"
+              }
+            },
+            { new: true }
           );
 
-          console.log(`🔎✅ Auto payout reconciled successfully: ${payout.reference}`);
+          console.log(updated
+            ? `Payout reconciled successful: ${payout.reference}`
+            : `Terminal or duplicate payout success ignored: ${payout.reference}`);
           continue;
         }
 
-        if (["failed", "reversed"].includes(transferStatus)) {
+        if (["failed", "reversed", "abandoned", "blocked", "rejected"].includes(transferStatus)) {
           const session = await mongoose.startSession();
 
           try {
             await session.withTransaction(async () => {
-              const currentPayout = await Payout.findById(payout._id).session(session);
+              const current = await Payout.findById(payout._id).session(session);
 
-              if (!currentPayout) return;
+              if (
+                !current ||
+                ["success", "failed", "reversed"].includes(current.transferStatus)
+              ) return;
 
-              if (["success", "failed", "reversed"].includes(currentPayout.transferStatus)) {
-                return;
-              }
-
-              const seller = await Seller.findById(currentPayout.sellerId).session(session);
-
+              const seller = await Seller.findById(current.sellerId).session(session);
               if (!seller) {
                 throw new Error(`Seller not found for payout ${payout.reference}`);
               }
 
-              const refundReference = `REFUND-${payout.reference}`;
+              const hasLegacyAutoReservation =
+                current.payoutType === "auto_weekly" &&
+                (seller.walletTransactions || []).some(transaction =>
+                  transaction.reference === current.reference &&
+                  transaction.type === "debit" &&
+                  Number(transaction.amount) === Number(current.amount)
+                );
 
-              const alreadyRefunded = (seller.walletTransactions || []).some(
-                transaction => transaction.reference === refundReference
-              );
+              if (current.fundsReserved === true || hasLegacyAutoReservation) {
+                const refundReference = `REFUND-${current.reference}`;
+                const alreadyRefunded = (seller.walletTransactions || []).some(
+                  transaction => transaction.reference === refundReference
+                );
 
-              if (!alreadyRefunded) {
-                seller.walletBalance = (seller.walletBalance || 0) + currentPayout.amount;
-                seller.walletTransactions = seller.walletTransactions || [];
-                seller.walletTransactions.push({
-                  type: "credit",
-                  amount: currentPayout.amount,
-                  description: `Auto weekly payout returned — ${payout.reference}`,
-                  reference: refundReference
-                });
+                if (!alreadyRefunded) {
+                  seller.walletBalance = Number(seller.walletBalance || 0) + current.amount;
+                  seller.walletTransactions = seller.walletTransactions || [];
+                  seller.walletTransactions.push({
+                    type: "credit",
+                    amount: current.amount,
+                    description: `Seller payout returned — ${current.reference}`,
+                    reference: refundReference
+                  });
+                  await seller.save({ session });
+                }
 
-                await seller.save({ session });
+                current.fundsReserved = false;
               }
 
-              currentPayout.transferStatus = transferStatus;
-              currentPayout.status = "rejected";
-              currentPayout.processedAt = new Date();
-              currentPayout.transferCode =
-                transfer.transfer_code || currentPayout.transferCode;
-              currentPayout.transferId =
-                transfer.id ? String(transfer.id) : currentPayout.transferId;
-              currentPayout.note =
-                transferStatus === "reversed"
-                  ? "Paystack transfer confirmed reversed by reconciliation; funds returned to seller wallet"
-                  : "Paystack transfer confirmed failed by reconciliation; funds returned to seller wallet";
+              current.transferStatus = transferStatus === "reversed" ? "reversed" : "failed";
+              current.status = "rejected";
+              current.processedAt = new Date();
+              current.transferCode = transfer.transfer_code || current.transferCode;
+              current.transferId = transfer.id ? String(transfer.id) : current.transferId;
+              current.note = `Paystack confirmed terminal transfer status "${transferStatus}"; reserved funds returned where applicable`;
 
-              await currentPayout.save({ session });
+              await current.save({ session });
             });
-
-            console.log(
-              `🔎↩️ Auto payout reconciled ${transferStatus}: ${payout.reference}`
-            );
           } finally {
             await session.endSession();
           }
+
+          console.log(`Payout reconciled ${transferStatus}: ${payout.reference}`);
+          continue;
+        }
+
+        // A transfer already known to Paystack remains processing until terminal confirmation.
+        if (["pending", "otp", "queued", "received"].includes(transferStatus)) {
+          await Payout.findOneAndUpdate(
+            {
+              _id: payout._id,
+              transferStatus: { $in: ["pending", "processing"] },
+              status: { $in: ["approved", "pending"] }
+            },
+            {
+              $set: {
+                transferStatus: "processing",
+                transferCode: transfer.transfer_code || payout.transferCode,
+                transferId: transfer.id ? String(transfer.id) : payout.transferId,
+                note: `Paystack transfer status: ${transferStatus}; awaiting final confirmation`
+              }
+            }
+          );
         }
       } catch (e) {
         console.error(
-          `❌ Auto payout reconciliation failed for ${payout.reference}:`,
+          `Payout reconciliation failed for ${payout.reference}:`,
           e.response?.data || e.message
         );
       }
@@ -9586,7 +10013,7 @@ cron.schedule("*/30 * * * *", async () => {
       responseTimeMs: Date.now() - monitorStartedAt
     });
   } catch (e) {
-    console.error("❌ Auto payout reconciliation cron error:", e.message);
+    console.error("Seller payout reconciliation cron error:", e.message);
 
     await recordSystemStatus("auto-seller-payout-reconciliation", "down", {
       responseTimeMs: Date.now() - monitorStartedAt,

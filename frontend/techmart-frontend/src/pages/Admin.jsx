@@ -673,9 +673,9 @@ ${url}`, "success");
                       {p.status === "pending" && (
                         <>
                           <button onClick={async () => {
-                            const res = await axios.put(`${API}/api/admin/payouts/${p._id}`, { status: "paid" }, { headers });
+                            const res = await axios.put(`${API}/api/admin/payouts/${p._id}`, { status: "approved" }, { headers });
                             setPayouts(payouts.map(x => x._id === p._id ? res.data.data : x));
-                          }} style={{ background: "#22c55e", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Mark Paid</button>
+                          }} style={{ background: "#22c55e", color: "var(--text-primary)", border: "none", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", fontSize: "13px", fontWeight: "700" }}>Approve &amp; Pay</button>
                           <button onClick={async () => {
                             const note = prompt("Reason for rejection:");
                             if (!note) return;
