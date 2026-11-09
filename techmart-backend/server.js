@@ -9554,7 +9554,7 @@ cron.schedule("0 9 * * *", async () => {
 });
 
 // ── Auto Seller Payout Cron (every Friday at 10am)
-cron.schedule("0 10 * * 5", { timezone: "Africa/Lagos" }, async () => {
+cron.schedule("0 10 * * 5", async () => {
   const monitorStartedAt = Date.now();
 
   try {
@@ -9751,7 +9751,7 @@ cron.schedule("0 10 * * 5", { timezone: "Africa/Lagos" }, async () => {
       error: e.message
     });
   }
-});
+}, { timezone: "Africa/Lagos" });
 
 // ── Seller Payout Reconciliation Cron (every 30 minutes)
 cron.schedule("*/30 * * * *", async () => {
