@@ -184,6 +184,8 @@ export default function SellerDashboard() {
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", bankCode: "", accountNumber: "", accountName: "", bankName: "" });
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [banks, setBanks] = useState([]);
+  const [withdrawBankSearch, setWithdrawBankSearch] = useState("");
+  const [bankFormSearch, setBankFormSearch] = useState("");
   const [verifyingAccount, setVerifyingAccount] = useState(false);
   const [bankDetails, setBankDetails] = useState(null);
   const [bankForm, setBankForm] = useState({ bankCode: "", bankName: "", accountNumber: "", accountName: "" });
@@ -591,12 +593,22 @@ export default function SellerDashboard() {
 
               <div style={{ background: "var(--bg-card)", border: "1px solid #2a2a2a", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
                 <h3 style={{ color: "var(--text-primary)", marginBottom: "16px", fontSize: "15px" }}>Withdraw to Bank</h3>
-                <select value={withdrawForm.bankCode} onChange={async e => {
+                <input
+                  type="text"
+                  placeholder="Search bank by name..."
+                  value={withdrawBankSearch}
+                  onChange={e => setWithdrawBankSearch(e.target.value)}
+                  style={{ ...inp, marginBottom: "8px" }}
+                />
+                <select value={withdrawForm.bankCode} onChange={e => {
                   const bank = banks.find(b => b.code === e.target.value);
                   setWithdrawForm({...withdrawForm, bankCode: e.target.value, bankName: bank?.name || "", accountName: ""});
                 }} style={{ ...inp, marginBottom: "12px" }}>
                   <option value="">Select Bank</option>
-                  {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+                  {[...banks]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .filter(b => b.name.toLowerCase().includes(withdrawBankSearch.trim().toLowerCase()))
+                    .map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
                 </select>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input placeholder="Account Number" value={withdrawForm.accountNumber} onChange={e => setWithdrawForm({...withdrawForm, accountNumber: e.target.value, accountName: ""})} style={{ ...inp, flex: 1 }} maxLength={10} />
@@ -670,12 +682,22 @@ export default function SellerDashboard() {
                 <p style={{ color: "#f59e0b", fontSize: "13px", margin: 0 }}>⚠️ No bank account saved. Add one below to receive automatic payouts.</p>
               </div>
             )}
-            <select value={bankForm.bankCode} onChange={async e => {
+            <input
+              type="text"
+              placeholder="Search bank by name..."
+              value={bankFormSearch}
+              onChange={e => setBankFormSearch(e.target.value)}
+              style={{ ...inp, marginBottom: "8px" }}
+            />
+            <select value={bankForm.bankCode} onChange={e => {
               const bank = banks.find(b => b.code === e.target.value);
               setBankForm({ ...bankForm, bankCode: e.target.value, bankName: bank?.name || "", accountName: "", accountNumber: "" });
             }} style={{ ...inp, marginBottom: "10px" }}>
               <option value="">Select Bank</option>
-              {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+              {[...banks]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .filter(b => b.name.toLowerCase().includes(bankFormSearch.trim().toLowerCase()))
+                .map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
             </select>
 
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
